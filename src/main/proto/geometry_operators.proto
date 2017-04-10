@@ -31,7 +31,7 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 option java_package = "com.fogmodel.service.geometry";
-option java_outer_classname = "GeometryOperatosProto";
+option java_outer_classname = "GeometryOperatorsProto";
 option objc_class_prefix = "RTG";
 
 package routeguide;
