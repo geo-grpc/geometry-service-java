@@ -117,9 +117,9 @@ public class GeometryOperatorsClientTest {
    */
   @Test
   public void getFeature() {
-    Point requestPoint =  Point.newBuilder().setLatitude(-1).setLongitude(-1).build();
-    Point responsePoint = Point.newBuilder().setLatitude(-123).setLongitude(-123).build();
-    final AtomicReference<Point> pointDelivered = new AtomicReference<Point>();
+    ReplacePoint requestPoint =  ReplacePoint.newBuilder().setLatitude(-1).setLongitude(-1).build();
+    ReplacePoint responsePoint = ReplacePoint.newBuilder().setLatitude(-123).setLongitude(-123).build();
+    final AtomicReference<ReplacePoint> pointDelivered = new AtomicReference<ReplacePoint>();
     final Feature responseFeature =
         Feature.newBuilder().setName("dummyFeature").setLocation(responsePoint).build();
 
@@ -127,7 +127,7 @@ public class GeometryOperatorsClientTest {
     GeometryOperatorsImplBase getFeatureImpl =
         new GeometryOperatorsImplBase() {
           @Override
-          public void getFeature(Point point, StreamObserver<Feature> responseObserver) {
+          public void getFeature(ReplacePoint point, StreamObserver<Feature> responseObserver) {
             pointDelivered.set(point);
             responseObserver.onNext(responseFeature);
             responseObserver.onCompleted();
@@ -147,15 +147,15 @@ public class GeometryOperatorsClientTest {
    */
   @Test
   public void getFeature_error() {
-    Point requestPoint =  Point.newBuilder().setLatitude(-1).setLongitude(-1).build();
-    final AtomicReference<Point> pointDelivered = new AtomicReference<Point>();
+    ReplacePoint requestPoint =  ReplacePoint.newBuilder().setLatitude(-1).setLongitude(-1).build();
+    final AtomicReference<ReplacePoint> pointDelivered = new AtomicReference<ReplacePoint>();
     final StatusRuntimeException fakeError = new StatusRuntimeException(Status.DATA_LOSS);
 
     // implement the fake service
     GeometryOperatorsImplBase getFeatureImpl =
         new GeometryOperatorsImplBase() {
           @Override
-          public void getFeature(Point point, StreamObserver<Feature> responseObserver) {
+          public void getFeature(ReplacePoint point, StreamObserver<Feature> responseObserver) {
             pointDelivered.set(point);
             responseObserver.onError(fakeError);
           }
@@ -199,8 +199,8 @@ public class GeometryOperatorsClientTest {
     client.listFeatures(1, 2, 3, 4);
 
     assertEquals(Rectangle.newBuilder()
-                     .setLo(Point.newBuilder().setLatitude(1).setLongitude(2).build())
-                     .setHi(Point.newBuilder().setLatitude(3).setLongitude(4).build())
+                     .setLo(ReplacePoint.newBuilder().setLatitude(1).setLongitude(2).build())
+                     .setHi(ReplacePoint.newBuilder().setLatitude(3).setLongitude(4).build())
                      .build(),
                  rectangleDelivered.get());
     verify(testHelper).onMessage(responseFeature1);
@@ -237,8 +237,8 @@ public class GeometryOperatorsClientTest {
     client.listFeatures(1, 2, 3, 4);
 
     assertEquals(Rectangle.newBuilder()
-                     .setLo(Point.newBuilder().setLatitude(1).setLongitude(2).build())
-                     .setHi(Point.newBuilder().setLatitude(3).setLongitude(4).build())
+                     .setLo(ReplacePoint.newBuilder().setLatitude(1).setLongitude(2).build())
+                     .setHi(ReplacePoint.newBuilder().setLatitude(3).setLongitude(4).build())
                      .build(),
                  rectangleDelivered.get());
     ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
@@ -253,9 +253,9 @@ public class GeometryOperatorsClientTest {
   @Test
   public void recordRoute() throws Exception {
     client.setRandom(noRandomness);
-    Point point1 = Point.newBuilder().setLatitude(1).setLongitude(1).build();
-    Point point2 = Point.newBuilder().setLatitude(2).setLongitude(2).build();
-    Point point3 = Point.newBuilder().setLatitude(3).setLongitude(3).build();
+    ReplacePoint point1 = ReplacePoint.newBuilder().setLatitude(1).setLongitude(1).build();
+    ReplacePoint point2 = ReplacePoint.newBuilder().setLatitude(2).setLongitude(2).build();
+    ReplacePoint point3 = ReplacePoint.newBuilder().setLatitude(3).setLongitude(3).build();
     Feature requestFeature1 =
         Feature.newBuilder().setLocation(point1).build();
     Feature requestFeature2 =
@@ -264,7 +264,7 @@ public class GeometryOperatorsClientTest {
         Feature.newBuilder().setLocation(point3).build();
     final List<Feature> features = Arrays.asList(
         requestFeature1, requestFeature2, requestFeature3);
-    final List<Point> pointsDelivered = new ArrayList<Point>();
+    final List<ReplacePoint> pointsDelivered = new ArrayList<ReplacePoint>();
     final RouteSummary fakeResponse = RouteSummary
         .newBuilder()
         .setPointCount(7)
@@ -277,11 +277,11 @@ public class GeometryOperatorsClientTest {
     GeometryOperatorsImplBase recordRouteImpl =
         new GeometryOperatorsImplBase() {
           @Override
-          public StreamObserver<Point> recordRoute(
+          public StreamObserver<ReplacePoint> recordRoute(
               final StreamObserver<RouteSummary> responseObserver) {
-            StreamObserver<Point> requestObserver = new StreamObserver<Point>() {
+            StreamObserver<ReplacePoint> requestObserver = new StreamObserver<ReplacePoint>() {
               @Override
-              public void onNext(Point value) {
+              public void onNext(ReplacePoint value) {
                 pointsDelivered.add(value);
               }
 
@@ -321,7 +321,7 @@ public class GeometryOperatorsClientTest {
   @Test
   public void recordRoute_wrongResponse() throws Exception {
     client.setRandom(noRandomness);
-    Point point1 = Point.newBuilder().setLatitude(1).setLongitude(1).build();
+    ReplacePoint point1 = ReplacePoint.newBuilder().setLatitude(1).setLongitude(1).build();
     final Feature requestFeature1 =
         Feature.newBuilder().setLocation(point1).build();
     final List<Feature> features = Arrays.asList(requestFeature1);
@@ -330,16 +330,16 @@ public class GeometryOperatorsClientTest {
     GeometryOperatorsImplBase recordRouteImpl =
         new GeometryOperatorsImplBase() {
           @Override
-          public StreamObserver<Point> recordRoute(StreamObserver<RouteSummary> responseObserver) {
+          public StreamObserver<ReplacePoint> recordRoute(StreamObserver<RouteSummary> responseObserver) {
             RouteSummary response = RouteSummary.getDefaultInstance();
             // sending more than one responses is not right for client-streaming call.
             responseObserver.onNext(response);
             responseObserver.onNext(response);
             responseObserver.onCompleted();
 
-            return new StreamObserver<Point>() {
+            return new StreamObserver<ReplacePoint>() {
               @Override
-              public void onNext(Point value) {
+              public void onNext(ReplacePoint value) {
               }
 
               @Override
@@ -367,7 +367,7 @@ public class GeometryOperatorsClientTest {
   @Test
   public void recordRoute_serverError() throws Exception {
     client.setRandom(noRandomness);
-    Point point1 = Point.newBuilder().setLatitude(1).setLongitude(1).build();
+    ReplacePoint point1 = ReplacePoint.newBuilder().setLatitude(1).setLongitude(1).build();
     final Feature requestFeature1 =
         Feature.newBuilder().setLocation(point1).build();
     final List<Feature> features = Arrays.asList(requestFeature1);
@@ -377,13 +377,13 @@ public class GeometryOperatorsClientTest {
     GeometryOperatorsImplBase recordRouteImpl =
         new GeometryOperatorsImplBase() {
           @Override
-          public StreamObserver<Point> recordRoute(StreamObserver<RouteSummary> responseObserver) {
+          public StreamObserver<ReplacePoint> recordRoute(StreamObserver<RouteSummary> responseObserver) {
             // send an error immediately
             responseObserver.onError(fakeError);
 
-            StreamObserver<Point> requestObserver = new StreamObserver<Point>() {
+            StreamObserver<ReplacePoint> requestObserver = new StreamObserver<ReplacePoint>() {
               @Override
-              public void onNext(Point value) {
+              public void onNext(ReplacePoint value) {
               }
 
               @Override
@@ -414,7 +414,7 @@ public class GeometryOperatorsClientTest {
     RouteNote fakeResponse1 = RouteNote.newBuilder().setMessage("dummy msg1").build();
     RouteNote fakeResponse2 = RouteNote.newBuilder().setMessage("dummy msg2").build();
     final List<String> messagesDelivered = new ArrayList<String>();
-    final List<Point> locationsDelivered = new ArrayList<Point>();
+    final List<ReplacePoint> locationsDelivered = new ArrayList<ReplacePoint>();
     final AtomicReference<StreamObserver<RouteNote>> responseObserverRef =
         new AtomicReference<StreamObserver<RouteNote>>();
     final CountDownLatch allRequestsDelivered = new CountDownLatch(1);
@@ -457,10 +457,10 @@ public class GeometryOperatorsClientTest {
         messagesDelivered);
     assertEquals(
         Arrays.asList(
-            Point.newBuilder().setLatitude(0).setLongitude(0).build(),
-            Point.newBuilder().setLatitude(0).setLongitude(1).build(),
-            Point.newBuilder().setLatitude(1).setLongitude(0).build(),
-            Point.newBuilder().setLatitude(1).setLongitude(1).build()
+            ReplacePoint.newBuilder().setLatitude(0).setLongitude(0).build(),
+            ReplacePoint.newBuilder().setLatitude(0).setLongitude(1).build(),
+            ReplacePoint.newBuilder().setLatitude(1).setLongitude(0).build(),
+            ReplacePoint.newBuilder().setLatitude(1).setLongitude(1).build()
         ),
         locationsDelivered);
 

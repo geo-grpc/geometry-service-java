@@ -85,7 +85,7 @@ public class GeometryOperatorsClient {
     public void getFeature(int lat, int lon) {
         info("*** GetFeature: lat={0} lon={1}", lat, lon);
 
-        Point request = Point.newBuilder().setLatitude(lat).setLongitude(lon).build();
+        ReplacePoint request = ReplacePoint.newBuilder().setLatitude(lat).setLongitude(lon).build();
 
         Feature feature;
         try {
@@ -122,8 +122,8 @@ public class GeometryOperatorsClient {
 
         Rectangle request =
                 Rectangle.newBuilder()
-                        .setLo(Point.newBuilder().setLatitude(lowLat).setLongitude(lowLon).build())
-                        .setHi(Point.newBuilder().setLatitude(hiLat).setLongitude(hiLon).build()).build();
+                        .setLo(ReplacePoint.newBuilder().setLatitude(lowLat).setLongitude(lowLon).build())
+                        .setHi(ReplacePoint.newBuilder().setLatitude(hiLat).setLongitude(hiLon).build()).build();
         Iterator<Feature> features;
         try {
             features = blockingStub.listFeatures(request);
@@ -177,12 +177,12 @@ public class GeometryOperatorsClient {
             }
         };
 
-        StreamObserver<Point> requestObserver = asyncStub.recordRoute(responseObserver);
+        StreamObserver<ReplacePoint> requestObserver = asyncStub.recordRoute(responseObserver);
         try {
             // Send numPoints points randomly selected from the features list.
             for (int i = 0; i < numPoints; ++i) {
                 int index = random.nextInt(features.size());
-                Point point = features.get(index).getLocation();
+                ReplacePoint point = features.get(index).getLocation();
                 info("Visiting point {0}, {1}", GeometryOperatorsUtil.getLatitude(point),
                         GeometryOperatorsUtil.getLongitude(point));
                 requestObserver.onNext(point);
@@ -309,7 +309,7 @@ public class GeometryOperatorsClient {
 
     private RouteNote newNote(String message, int lat, int lon) {
         return RouteNote.newBuilder().setMessage(message)
-                .setLocation(Point.newBuilder().setLatitude(lat).setLongitude(lon).build()).build();
+                .setLocation(ReplacePoint.newBuilder().setLatitude(lat).setLongitude(lon).build()).build();
     }
 
     /**

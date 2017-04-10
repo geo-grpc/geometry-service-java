@@ -43,7 +43,7 @@ import static org.mockito.Mockito.verify;
 import io.grpc.ManagedChannel;
 import com.fogmodel.service.geometry.*;
 import com.fogmodel.service.geometry.Feature;
-import com.fogmodel.service.geometry.Point;
+import com.fogmodel.service.geometry.ReplacePoint;
 import com.fogmodel.service.geometry.RouteNote;
 import com.fogmodel.service.geometry.RouteSummary;
 import io.grpc.inprocess.InProcessChannelBuilder;
@@ -97,7 +97,7 @@ public class GeometryOperatorsServerTest {
 
   @Test
   public void getFeature() {
-    com.fogmodel.service.geometry.Point point = com.fogmodel.service.geometry.Point.newBuilder().setLongitude(1).setLatitude(1).build();
+    com.fogmodel.service.geometry.ReplacePoint point = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(1).setLatitude(1).build();
     com.fogmodel.service.geometry.Feature unnamedFeature = com.fogmodel.service.geometry.Feature.newBuilder()
         .setName("").setLocation(point).build();
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
@@ -121,23 +121,23 @@ public class GeometryOperatorsServerTest {
   public void listFeatures() throws Exception {
     // setup
     com.fogmodel.service.geometry.Rectangle rect = com.fogmodel.service.geometry.Rectangle.newBuilder()
-        .setLo(com.fogmodel.service.geometry.Point.newBuilder().setLongitude(0).setLatitude(0).build())
-        .setHi(com.fogmodel.service.geometry.Point.newBuilder().setLongitude(10).setLatitude(10).build())
+        .setLo(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(0).setLatitude(0).build())
+        .setHi(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(10).setLatitude(10).build())
         .build();
     com.fogmodel.service.geometry.Feature f1 = com.fogmodel.service.geometry.Feature.newBuilder()
-        .setLocation(com.fogmodel.service.geometry.Point.newBuilder().setLongitude(-1).setLatitude(-1).build())
+        .setLocation(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(-1).setLatitude(-1).build())
         .setName("f1")
         .build(); // not inside rect
     com.fogmodel.service.geometry.Feature f2 = com.fogmodel.service.geometry.Feature.newBuilder()
-        .setLocation(com.fogmodel.service.geometry.Point.newBuilder().setLongitude(2).setLatitude(2).build())
+        .setLocation(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(2).setLatitude(2).build())
         .setName("f2")
         .build();
     com.fogmodel.service.geometry.Feature f3 = com.fogmodel.service.geometry.Feature.newBuilder()
-        .setLocation(com.fogmodel.service.geometry.Point.newBuilder().setLongitude(3).setLatitude(3).build())
+        .setLocation(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(3).setLatitude(3).build())
         .setName("f3")
         .build();
     com.fogmodel.service.geometry.Feature f4 = com.fogmodel.service.geometry.Feature.newBuilder()
-        .setLocation(com.fogmodel.service.geometry.Point.newBuilder().setLongitude(4).setLatitude(4).build())
+        .setLocation(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(4).setLatitude(4).build())
         .build(); // unamed
     features.add(f1);
     features.add(f2);
@@ -174,10 +174,10 @@ public class GeometryOperatorsServerTest {
 
   @Test
   public void recordRoute() {
-    com.fogmodel.service.geometry.Point p1 = com.fogmodel.service.geometry.Point.newBuilder().setLongitude(1000).setLatitude(1000).build();
-    com.fogmodel.service.geometry.Point p2 = com.fogmodel.service.geometry.Point.newBuilder().setLongitude(2000).setLatitude(2000).build();
-    com.fogmodel.service.geometry.Point p3 = com.fogmodel.service.geometry.Point.newBuilder().setLongitude(3000).setLatitude(3000).build();
-    com.fogmodel.service.geometry.Point p4 = com.fogmodel.service.geometry.Point.newBuilder().setLongitude(4000).setLatitude(4000).build();
+    com.fogmodel.service.geometry.ReplacePoint p1 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(1000).setLatitude(1000).build();
+    com.fogmodel.service.geometry.ReplacePoint p2 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(2000).setLatitude(2000).build();
+    com.fogmodel.service.geometry.ReplacePoint p3 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(3000).setLatitude(3000).build();
+    com.fogmodel.service.geometry.ReplacePoint p4 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(4000).setLatitude(4000).build();
     com.fogmodel.service.geometry.Feature f1 = com.fogmodel.service.geometry.Feature.newBuilder().setLocation(p1).build(); // unamed
     com.fogmodel.service.geometry.Feature f2 = com.fogmodel.service.geometry.Feature.newBuilder().setLocation(p2).setName("f2").build();
     com.fogmodel.service.geometry.Feature f3 = com.fogmodel.service.geometry.Feature.newBuilder().setLocation(p3).setName("f3").build();
@@ -193,7 +193,7 @@ public class GeometryOperatorsServerTest {
     GeometryOperatorsGrpc.GeometryOperatorsStub stub = GeometryOperatorsGrpc.newStub(inProcessChannel);
     ArgumentCaptor<com.fogmodel.service.geometry.RouteSummary> routeSummaryCaptor = ArgumentCaptor.forClass(com.fogmodel.service.geometry.RouteSummary.class);
 
-    StreamObserver<com.fogmodel.service.geometry.Point> requestObserver = stub.recordRoute(responseObserver);
+    StreamObserver<com.fogmodel.service.geometry.ReplacePoint> requestObserver = stub.recordRoute(responseObserver);
 
     requestObserver.onNext(p1);
     requestObserver.onNext(p2);
@@ -215,8 +215,8 @@ public class GeometryOperatorsServerTest {
 
   @Test
   public void routeChat() {
-    com.fogmodel.service.geometry.Point p1 = com.fogmodel.service.geometry.Point.newBuilder().setLongitude(1).setLatitude(1).build();
-    com.fogmodel.service.geometry.Point p2 = Point.newBuilder().setLongitude(2).setLatitude(2).build();
+    com.fogmodel.service.geometry.ReplacePoint p1 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(1).setLatitude(1).build();
+    com.fogmodel.service.geometry.ReplacePoint p2 = ReplacePoint.newBuilder().setLongitude(2).setLatitude(2).build();
     com.fogmodel.service.geometry.RouteNote n1 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p1).setMessage("m1").build();
     com.fogmodel.service.geometry.RouteNote n2 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p2).setMessage("m2").build();
     com.fogmodel.service.geometry.RouteNote n3 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p1).setMessage("m3").build();

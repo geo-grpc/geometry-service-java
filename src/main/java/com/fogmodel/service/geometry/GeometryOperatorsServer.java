@@ -97,22 +97,22 @@ public class GeometryOperatorsServer {
      */
     private static class GeometryOperatorsService extends GeometryOperatorsGrpc.GeometryOperatorsImplBase {
         private final Collection<Feature> features;
-        private final ConcurrentMap<Point, List<RouteNote>> routeNotes =
-                new ConcurrentHashMap<Point, List<RouteNote>>();
+        private final ConcurrentMap<ReplacePoint, List<RouteNote>> routeNotes =
+                new ConcurrentHashMap<ReplacePoint, List<RouteNote>>();
 
         GeometryOperatorsService(Collection<Feature> features) {
             this.features = features;
         }
 
         /**
-         * Gets the {@link Feature} at the requested {@link Point}. If no feature at that location
+         * Gets the {@link Feature} at the requested {@link ReplacePoint}. If no feature at that location
          * exists, an unnamed feature is returned at the provided location.
          *
          * @param request the requested location for the feature.
          * @param responseObserver the observer that will receive the feature at the requested point.
          */
         @Override
-        public void getFeature(Point request, StreamObserver<Feature> responseObserver) {
+        public void getFeature(ReplacePoint request, StreamObserver<Feature> responseObserver) {
             responseObserver.onNext(checkFeature(request));
             responseObserver.onCompleted();
         }
@@ -152,16 +152,16 @@ public class GeometryOperatorsServer {
          * @return an observer to receive the requested route points.
          */
         @Override
-        public StreamObserver<Point> recordRoute(final StreamObserver<RouteSummary> responseObserver) {
-            return new StreamObserver<Point>() {
+        public StreamObserver<ReplacePoint> recordRoute(final StreamObserver<RouteSummary> responseObserver) {
+            return new StreamObserver<ReplacePoint>() {
                 int pointCount;
                 int featureCount;
                 int distance;
-                Point previous;
+                ReplacePoint previous;
                 final long startTime = System.nanoTime();
 
                 @Override
-                public void onNext(Point point) {
+                public void onNext(ReplacePoint point) {
                     pointCount++;
                     if (GeometryOperatorsUtil.exists(checkFeature(point))) {
                         featureCount++;
@@ -228,7 +228,7 @@ public class GeometryOperatorsServer {
         /**
          * Get the notes list for the given location. If missing, create it.
          */
-        private List<RouteNote> getOrCreateNotes(Point location) {
+        private List<RouteNote> getOrCreateNotes(ReplacePoint location) {
             List<RouteNote> notes = Collections.synchronizedList(new ArrayList<RouteNote>());
             List<RouteNote> prevNotes = routeNotes.putIfAbsent(location, notes);
             return prevNotes != null ? prevNotes : notes;
@@ -240,7 +240,7 @@ public class GeometryOperatorsServer {
          * @param location the location to check.
          * @return The feature object at the point. Note that an empty name indicates no feature.
          */
-        private Feature checkFeature(Point location) {
+        private Feature checkFeature(ReplacePoint location) {
             for (Feature feature : features) {
                 if (feature.getLocation().getLatitude() == location.getLatitude()
                         && feature.getLocation().getLongitude() == location.getLongitude()) {
@@ -260,7 +260,7 @@ public class GeometryOperatorsServer {
          * @param end The end point
          * @return The distance between the points in meters
          */
-        private static int calcDistance(Point start, Point end) {
+        private static int calcDistance(ReplacePoint start, Point end) {
             double lat1 = GeometryOperatorsUtil.getLatitude(start);
             double lat2 = GeometryOperatorsUtil.getLatitude(end);
             double lon1 = GeometryOperatorsUtil.getLongitude(start);

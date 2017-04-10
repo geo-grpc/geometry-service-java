@@ -44,7 +44,7 @@ service GeometryOperators {
     //
     // A feature with an empty name is returned if there's no feature at the given
     // position.
-    rpc GetFeature(Point) returns (Feature) {}
+    rpc GetFeature(ReplacePoint) returns (Feature) {}
 
     // A server-to-client streaming RPC.
     //
@@ -58,7 +58,7 @@ service GeometryOperators {
     //
     // Accepts a stream of Points on a route being traversed, returning a
     // RouteSummary when traversal is completed.
-    rpc RecordRoute(stream Point) returns (RouteSummary) {}
+    rpc RecordRoute(stream ReplacePoint) returns (RouteSummary) {}
 
     // A Bidirectional streaming RPC.
     //
@@ -71,7 +71,7 @@ service GeometryOperators {
 // (degrees multiplied by 10**7 and rounded to the nearest integer).
 // Latitudes should be in the range +/- 90 degrees and longitude should be in
 // the range +/- 180 degrees (inclusive).
-message Point {
+message ReplacePoint {
     int32 latitude = 1;
     int32 longitude = 2;
 }
@@ -80,10 +80,10 @@ message Point {
 // points "lo" and "hi".
 message Rectangle {
     // One corner of the rectangle.
-    Point lo = 1;
+    ReplacePoint lo = 1;
 
     // The other corner of the rectangle.
-    Point hi = 2;
+    ReplacePoint hi = 2;
 }
 
 // A feature names something at a given point.
@@ -94,7 +94,7 @@ message Feature {
     string name = 1;
 
     // The point where the feature is detected.
-    Point location = 2;
+    ReplacePoint location = 2;
 }
 
 // Not used in the RPC.  Instead, this is here for the form serialized to disk.
@@ -105,7 +105,7 @@ message FeatureDatabase {
 // A RouteNote is a message sent while at a given point.
 message RouteNote {
     // The location from which the message is sent.
-    Point location = 1;
+    ReplacePoint location = 1;
 
     // The message to be sent.
     string message = 2;

@@ -47,14 +47,14 @@ public class GeometryOperatorsUtil {
     /**
      * Gets the latitude for the given point.
      */
-    public static double getLatitude(Point location) {
+    public static double getLatitude(ReplacePoint location) {
         return location.getLatitude() / COORD_FACTOR;
     }
 
     /**
      * Gets the longitude for the given point.
      */
-    public static double getLongitude(Point location) {
+    public static double getLongitude(ReplacePoint location) {
         return location.getLongitude() / COORD_FACTOR;
     }
 
