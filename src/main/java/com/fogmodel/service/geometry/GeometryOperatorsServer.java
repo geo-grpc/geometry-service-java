@@ -260,7 +260,7 @@ public class GeometryOperatorsServer {
          * @param end The end point
          * @return The distance between the points in meters
          */
-        private static int calcDistance(ReplacePoint start, Point end) {
+        private static int calcDistance(ReplacePoint start, ReplacePoint end) {
             double lat1 = GeometryOperatorsUtil.getLatitude(start);
             double lat2 = GeometryOperatorsUtil.getLatitude(end);
             double lon1 = GeometryOperatorsUtil.getLongitude(start);
