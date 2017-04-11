@@ -9,17 +9,21 @@ import static java.lang.Math.sqrt;
 import static java.lang.Math.toRadians;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
+import com.fogmodel.service.geometry.GeometryOperatorsUtil;
+import com.esri.core.geometry.Geometry;
+import com.esri.core.geometry.OperatorImportFromGeoJson;
+import com.esri.core.geometry.*;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import com.fogmodel.service.geometry.*;
 
 import io.grpc.stub.StreamObserver;
+import org.json.JSONException;
+
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.nio.ByteBuffer;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
@@ -117,6 +121,12 @@ public class GeometryOperatorsServer {
             responseObserver.onCompleted();
         }
 
+        @Override
+        public void executeOperation(ServiceOperator request, StreamObserver<ServiceGeometry> responseObserver) {
+            responseObserver.onNext(__executeOperator(request));
+            responseObserver.onCompleted();
+        }
+
         /**
          * Gets all features contained within the given bounding {@link Rectangle}.
          *
@@ -143,6 +153,7 @@ public class GeometryOperatorsServer {
             }
             responseObserver.onCompleted();
         }
+
 
         /**
          * Gets a stream of points, and responds with statistics about the "trip": number of points,
@@ -233,6 +244,16 @@ public class GeometryOperatorsServer {
             List<RouteNote> prevNotes = routeNotes.putIfAbsent(location, notes);
             return prevNotes != null ? prevNotes : notes;
         }
+
+
+        private ServiceGeometry __executeOperator(ServiceOperator serviceOperator) {
+            GeometryCursor geometryCursor =  GeometryOperatorsUtil.createOperatorCursor(serviceOperator);
+            Geometry geometry = geometryCursor.next();
+            String wkt = OperatorExportToWkt.local().execute(0,geometry , null);
+            return ServiceGeometry.newBuilder().setGeometryString(wkt).build();
+        }
+
+
 
         /**
          * Gets the feature at the given point.

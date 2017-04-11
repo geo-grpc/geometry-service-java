@@ -46,6 +46,9 @@ service GeometryOperators {
     // position.
     rpc GetFeature(ReplacePoint) returns (Feature) {}
 
+    // Execute a geometry operation
+    rpc ExecuteOperation(ServiceOperator) returns (ServiceGeometry) {}
+
     // A server-to-client streaming RPC.
     //
     // Obtains the Features available within the given Rectangle.  Results are
@@ -65,7 +68,43 @@ service GeometryOperators {
     // Accepts a stream of RouteNotes sent while a route is being traversed,
     // while receiving other RouteNotes (e.g. from other users).
     rpc RouteChat(stream RouteNote) returns (stream RouteNote) {}
+
+
+
 }
+
+
+message ServiceGeometry {
+    // String that is a wkt, wkid, esri_wkt, or a proj4 string
+    string spatial_reference = 1;
+
+    // type is either 'wkid', 'esri_wkt'
+    string spatial_reference_type = 2;
+
+    // id is usually associated with position in file format or database
+    int64 geometry_id = 3;
+
+    // TODO review esri encoding typename (this is for the esri shape binary format)
+    // type can be 'wkt', 'wkb', 'geojson', or 'esri'
+    string geometry_encoding_type = 4;
+
+    // the geometry encoded as base64 (wkb or esri) or as a string (wkt or geojson)
+    string geometry_string = 5;
+}
+
+
+
+
+
+message ServiceOperator {
+    ServiceGeometry left_geometry = 1;
+    ServiceGeometry right_geometry = 2;
+    string OperatorInputs = 3;
+    string OperatorType = 4;
+    // SpatialReference operationSR = 5;
+    // SpatialReference outputSR = 6;
+}
+
 
 // Points are represented as latitude-longitude pairs in the E7 representation
 // (degrees multiplied by 10**7 and rounded to the nearest integer).

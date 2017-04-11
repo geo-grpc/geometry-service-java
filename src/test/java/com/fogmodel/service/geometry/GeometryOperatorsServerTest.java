@@ -40,6 +40,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
+import com.esri.core.geometry.OperatorExportToWkt;
+import com.esri.core.geometry.Polyline;
 import io.grpc.ManagedChannel;
 import com.fogmodel.service.geometry.*;
 import com.fogmodel.service.geometry.Feature;
@@ -115,6 +117,24 @@ public class GeometryOperatorsServerTest {
     feature = stub.getFeature(point);
 
     assertEquals(namedFeature, feature);
+  }
+
+  @Test
+  public void getWKTGeometry() {
+    Polyline polyline = new Polyline();
+    polyline.startPath(0,0);
+    polyline.lineTo(2, 3);
+    polyline.lineTo(3, 3);
+    OperatorExportToWkt op = OperatorExportToWkt.local();
+    String geom = op.execute(0, polyline, null);
+    ServiceGeometry serviceGeom = ServiceGeometry.newBuilder().setGeometryString(geom).setGeometryEncodingType("wkt").build();
+    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeom).build();
+
+
+    GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+    ServiceGeometry resultGeom = stub.executeOperation(serviceOp);
+
+    assertEquals(resultGeom.getGeometryString(), serviceGeom.getGeometryString());
   }
 
   @Test

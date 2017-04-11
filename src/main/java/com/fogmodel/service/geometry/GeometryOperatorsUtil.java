@@ -30,12 +30,17 @@
  */
 package com.fogmodel.service.geometry;
 
+import com.esri.core.geometry.*;
+
 import com.google.protobuf.util.JsonFormat;
+import org.json.JSONException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
@@ -89,5 +94,64 @@ public class GeometryOperatorsUtil {
      */
     public static boolean exists(Feature feature) {
         return feature != null && !feature.getName().isEmpty();
+    }
+
+    public static GeometryCursor createOperatorCursor(ServiceOperator serviceOperator) {
+        GeometryCursor geometryCursor = null;
+        try {
+            GeometryCursor leftCursor = __createGeometryCursor(serviceOperator.getLeftGeometry());
+            GeometryCursor rightCursor = null;
+            if (!serviceOperator.getRightGeometry().getGeometryString().isEmpty())
+                rightCursor = __createGeometryCursor(serviceOperator.getRightGeometry());
+
+            return leftCursor;
+
+        } catch (JSONException j) {
+            return null;
+        }
+        //return geometryCursor;
+    }
+
+    private static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws JSONException {
+        MapGeometry mapGeometry = __extractGeometry(serviceGeometry);
+        GeometryCursor geometryCursor = new SimpleGeometryCursor(mapGeometry.getGeometry());
+        return geometryCursor;
+    }
+
+    private static MapGeometry __extractGeometry(ServiceGeometry serviceGeometry) throws JSONException {
+        MapGeometry mapGeometry = null;
+        Geometry geometry = null;
+        SpatialReference spatialReference = null;
+        ByteBuffer byteBuffer = null;
+        switch (serviceGeometry.getGeometryEncodingType()) {
+            case "wkt":
+                geometry = OperatorImportFromWkt.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(), null);
+                break;
+            case "geojson":
+                mapGeometry = OperatorImportFromGeoJson.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(), null);
+                break;
+            case "wkb":
+                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryStringBytes().toByteArray());
+                geometry = OperatorImportFromWkb.local().execute(0, Geometry.Type.Unknown, byteBuffer, null);
+                break;
+            case "esrishape":
+                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryStringBytes().toByteArray());
+                geometry = OperatorImportFromESRIShape.local().execute(0, Geometry.Type.Unknown, byteBuffer);
+            default:
+                break;
+        }
+        if (mapGeometry == null) {
+            // TODO this could be moved out of the method
+            String srType = serviceGeometry.getSpatialReferenceType();
+            if (srType == "wkid") {
+                int wkid = Integer.valueOf(serviceGeometry.getSpatialReference());
+                spatialReference = SpatialReference.create(wkid);
+            } else if (srType == "esri_wkt") {
+                spatialReference = SpatialReference.create(serviceGeometry.getSpatialReference());
+            }
+            mapGeometry = new MapGeometry(geometry, spatialReference);
+        }
+
+        return mapGeometry;
     }
 }
