@@ -90,6 +90,8 @@ message ServiceGeometry {
 
     // the geometry encoded as base64 (wkb or esri) or as a string (wkt or geojson)
     string geometry_string = 5;
+
+    bytes geometry_binary = 6;
 }
 
 

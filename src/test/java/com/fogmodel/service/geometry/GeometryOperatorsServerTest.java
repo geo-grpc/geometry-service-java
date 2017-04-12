@@ -40,8 +40,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
+import com.esri.core.geometry.OperatorExportToWkb;
 import com.esri.core.geometry.OperatorExportToWkt;
 import com.esri.core.geometry.Polyline;
+import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import com.fogmodel.service.geometry.*;
 import com.fogmodel.service.geometry.Feature;
@@ -51,10 +53,9 @@ import com.fogmodel.service.geometry.RouteSummary;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+
+import java.nio.ByteBuffer;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
@@ -135,6 +136,27 @@ public class GeometryOperatorsServerTest {
     ServiceGeometry resultGeom = stub.executeOperation(serviceOp);
 
     assertEquals(resultGeom.getGeometryString(), serviceGeom.getGeometryString());
+  }
+
+  @Test
+  public void getWKTGeometryFromWKB() {
+    Polyline polyline = new Polyline();
+    polyline.startPath(0,0);
+    polyline.lineTo(2, 3);
+    polyline.lineTo(3, 3);
+    OperatorExportToWkb op = OperatorExportToWkb.local();
+
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeometry).build();
+
+
+    GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+    ServiceGeometry resultGeom = stub.executeOperation(serviceOp);
+
+
+    OperatorExportToWkt op2 = OperatorExportToWkt.local();
+    String geom = op2.execute(0, polyline, null);
+    assertEquals(resultGeom.getGeometryString(), geom);
   }
 
   @Test

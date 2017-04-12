@@ -131,11 +131,11 @@ public class GeometryOperatorsUtil {
                 mapGeometry = OperatorImportFromGeoJson.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(), null);
                 break;
             case "wkb":
-                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryStringBytes().toByteArray());
+                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary().toByteArray());
                 geometry = OperatorImportFromWkb.local().execute(0, Geometry.Type.Unknown, byteBuffer, null);
                 break;
             case "esrishape":
-                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryStringBytes().toByteArray());
+                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary().toByteArray());
                 geometry = OperatorImportFromESRIShape.local().execute(0, Geometry.Type.Unknown, byteBuffer);
             default:
                 break;
