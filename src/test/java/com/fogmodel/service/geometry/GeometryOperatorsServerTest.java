@@ -40,9 +40,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
-import com.esri.core.geometry.OperatorExportToWkb;
-import com.esri.core.geometry.OperatorExportToWkt;
-import com.esri.core.geometry.Polyline;
+import com.esri.core.geometry.*;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import com.fogmodel.service.geometry.*;
@@ -129,7 +127,7 @@ public class GeometryOperatorsServerTest {
     OperatorExportToWkt op = OperatorExportToWkt.local();
     String geom = op.execute(0, polyline, null);
     ServiceGeometry serviceGeom = ServiceGeometry.newBuilder().setGeometryString(geom).setGeometryEncodingType("wkt").build();
-    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeom).build();
+    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeom).setOperatorType(Operator.Type.ExportToWkt.toString()).build();
 
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
@@ -147,7 +145,7 @@ public class GeometryOperatorsServerTest {
     OperatorExportToWkb op = OperatorExportToWkb.local();
 
     ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
-    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeometry).build();
+    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeometry).setOperatorType(Operator.Type.ExportToWkt.toString()).build();
 
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
@@ -157,6 +155,34 @@ public class GeometryOperatorsServerTest {
     OperatorExportToWkt op2 = OperatorExportToWkt.local();
     String geom = op2.execute(0, polyline, null);
     assertEquals(resultGeom.getGeometryString(), geom);
+  }
+
+  @Test
+  public void getConvexHullGeometryFromWKB() {
+    Polyline polyline = new Polyline();
+    polyline.startPath(-200, -90);
+    polyline.lineTo(-180, -85);
+    polyline.lineTo(-90, -70);
+    polyline.lineTo(0, 0);
+    polyline.lineTo(100, 25);
+    polyline.lineTo(170, 45);
+    polyline.lineTo(225, 65);
+    OperatorExportToWkb op = OperatorExportToWkb.local();
+    //TODO why does esri shape fail
+//    OperatorExportToESRIShape op = OperatorExportToESRIShape.local();
+//    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("esrishape").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline))).build();
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeometry).setOperatorType(Operator.Type.ConvexHull.toString()).build();
+
+    GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+    ServiceGeometry resultGeom = stub.executeOperation(serviceOp);
+
+    OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
+    Geometry result = op2.execute(0, Geometry.Type.Unknown, resultGeom.getGeometryString(), null);
+
+    boolean bcontains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
+
+    assertTrue(bcontains);
   }
 
   @Test

@@ -101,10 +101,108 @@ public class GeometryOperatorsUtil {
         try {
             GeometryCursor leftCursor = __createGeometryCursor(serviceOperator.getLeftGeometry());
             GeometryCursor rightCursor = null;
-            if (!serviceOperator.getRightGeometry().getGeometryString().isEmpty())
+            if (serviceOperator.hasRightGeometry())
                 rightCursor = __createGeometryCursor(serviceOperator.getRightGeometry());
 
-            return leftCursor;
+            // TODO this could throw an exception if unknown operator type provided
+            Operator.Type operatorType = Operator.Type.valueOf(serviceOperator.getOperatorType());
+            switch (operatorType) {
+                case Project:
+                    break;
+                case ExportToJson:
+                    break;
+                case ImportFromJson:
+                    break;
+                case ImportMapGeometryFromJson:
+                    break;
+                case ExportToESRIShape:
+                    break;
+                case ImportFromESRIShape:
+                    break;
+                case Union:
+                    break;
+                case Difference:
+                    break;
+                case Proximity2D:
+                    break;
+                case Relate:
+                    break;
+                case Equals:
+                    break;
+                case Disjoint:
+                    break;
+                case Intersects:
+                    break;
+                case Within:
+                    break;
+                case Contains:
+                    break;
+                case Crosses:
+                    break;
+                case Touches:
+                    break;
+                case Overlaps:
+                    break;
+                case Buffer:
+                    break;
+                case Distance:
+                    break;
+                case Intersection:
+                    break;
+                case Clip:
+                    break;
+                case Cut:
+                    break;
+                case DensifyByLength:
+                    break;
+                case DensifyByAngle:
+                    break;
+                case LabelPoint:
+                    break;
+                case GeodesicBuffer:
+                    break;
+                case GeodeticDensifyByLength:
+                    break;
+                case ShapePreservingDensify:
+                    break;
+                case GeodeticLength:
+                    break;
+                case GeodeticArea:
+                    break;
+                case Simplify:
+                    break;
+                case SimplifyOGC:
+                    break;
+                case Offset:
+                    break;
+                case Generalize:
+                    break;
+                case ExportToWkb:
+                    break;
+                case ImportFromWkb:
+                    break;
+                case ExportToWkt:
+                    geometryCursor = leftCursor;
+                    break;
+                case ImportFromWkt:
+                    break;
+                case ImportFromGeoJson:
+                    break;
+                case ExportToGeoJson:
+                    break;
+                case SymmetricDifference:
+                    break;
+                case ConvexHull:
+                    geometryCursor = OperatorConvexHull.local().execute(leftCursor, serviceOperator.getConvexHullMerge(), null);
+                    break;
+                case Boundary:
+                    break;
+                default:
+                    geometryCursor = leftCursor;
+
+            }
+
+            return geometryCursor;
 
         } catch (JSONException j) {
             return null;

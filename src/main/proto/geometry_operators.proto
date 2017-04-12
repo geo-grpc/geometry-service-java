@@ -101,10 +101,13 @@ message ServiceGeometry {
 message ServiceOperator {
     ServiceGeometry left_geometry = 1;
     ServiceGeometry right_geometry = 2;
-    string OperatorInputs = 3;
-    string OperatorType = 4;
-    // SpatialReference operationSR = 5;
-    // SpatialReference outputSR = 6;
+
+    string OperatorType = 3;
+
+//    SpatialReference operationSR = 5;
+//    SpatialReference outputSR = 6;
+
+    bool convex_hull_merge = 4;
 }
 
 
