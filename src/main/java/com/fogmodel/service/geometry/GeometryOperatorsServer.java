@@ -122,7 +122,7 @@ public class GeometryOperatorsServer {
         }
 
         @Override
-        public void executeOperation(ServiceOperator request, StreamObserver<ServiceGeometry> responseObserver) {
+        public void executeOperation(OperatorRequest request, StreamObserver<OperatorResult> responseObserver) {
             responseObserver.onNext(__executeOperator(request));
             responseObserver.onCompleted();
         }
@@ -246,11 +246,8 @@ public class GeometryOperatorsServer {
         }
 
 
-        private ServiceGeometry __executeOperator(ServiceOperator serviceOperator) {
-            GeometryCursor geometryCursor =  GeometryOperatorsUtil.createOperatorCursor(serviceOperator);
-            Geometry geometry = geometryCursor.next();
-            String wkt = OperatorExportToWkt.local().execute(0,geometry , null);
-            return ServiceGeometry.newBuilder().setGeometryString(wkt).build();
+        private OperatorResult __executeOperator(OperatorRequest serviceOperator) {
+            return GeometryOperatorsUtil.executeOperator(serviceOperator);
         }
 
 

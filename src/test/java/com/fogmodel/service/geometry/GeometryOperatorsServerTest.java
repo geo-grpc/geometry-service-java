@@ -127,13 +127,15 @@ public class GeometryOperatorsServerTest {
     OperatorExportToWkt op = OperatorExportToWkt.local();
     String geom = op.execute(0, polyline, null);
     ServiceGeometry serviceGeom = ServiceGeometry.newBuilder().setGeometryString(geom).setGeometryEncodingType("wkt").build();
-    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeom).setOperatorType(Operator.Type.ExportToWkt.toString()).build();
-
+    OperatorRequest requestOp = OperatorRequest.newBuilder()
+            .setLeftGeometry(serviceGeom)
+            .setOperatorType(Operator.Type.ExportToWkt.toString())
+            .build();
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-    ServiceGeometry resultGeom = stub.executeOperation(serviceOp);
+    OperatorResult operatorResult = stub.executeOperation(requestOp);
 
-    assertEquals(resultGeom.getGeometryString(), serviceGeom.getGeometryString());
+    assertEquals(operatorResult.getGeometry().getGeometryString(), serviceGeom.getGeometryString());
   }
 
   @Test
@@ -145,16 +147,17 @@ public class GeometryOperatorsServerTest {
     OperatorExportToWkb op = OperatorExportToWkb.local();
 
     ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
-    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeometry).setOperatorType(Operator.Type.ExportToWkt.toString()).build();
-
+    OperatorRequest requestOp = OperatorRequest.newBuilder()
+            .setLeftGeometry(serviceGeometry )
+            .setOperatorType(Operator.Type.ExportToWkt.toString())
+            .build();
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-    ServiceGeometry resultGeom = stub.executeOperation(serviceOp);
-
+    OperatorResult operatorResult = stub.executeOperation(requestOp);
 
     OperatorExportToWkt op2 = OperatorExportToWkt.local();
     String geom = op2.execute(0, polyline, null);
-    assertEquals(resultGeom.getGeometryString(), geom);
+    assertEquals(operatorResult.getGeometry().getGeometryString(), geom);
   }
 
   @Test
@@ -172,17 +175,21 @@ public class GeometryOperatorsServerTest {
 //    OperatorExportToESRIShape op = OperatorExportToESRIShape.local();
 //    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("esrishape").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline))).build();
     ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
-    ServiceOperator serviceOp = ServiceOperator.newBuilder().setLeftGeometry(serviceGeometry).setOperatorType(Operator.Type.ConvexHull.toString()).build();
+    OperatorRequest serviceOp = OperatorRequest
+            .newBuilder()
+            .setLeftGeometry(serviceGeometry)
+            .setOperatorType(Operator.Type.ConvexHull.toString())
+            .build();
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-    ServiceGeometry resultGeom = stub.executeOperation(serviceOp);
+    OperatorResult operatorResult = stub.executeOperation(serviceOp);
 
     OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-    Geometry result = op2.execute(0, Geometry.Type.Unknown, resultGeom.getGeometryString(), null);
+    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(), null);
 
-    boolean bcontains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
+    boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 
-    assertTrue(bcontains);
+    assertTrue(bContains);
   }
 
   @Test

@@ -47,7 +47,7 @@ service GeometryOperators {
     rpc GetFeature(ReplacePoint) returns (Feature) {}
 
     // Execute a geometry operation
-    rpc ExecuteOperation(ServiceOperator) returns (ServiceGeometry) {}
+    rpc ExecuteOperation(OperatorRequest) returns (OperatorResult) {}
 
     // A server-to-client streaming RPC.
     //
@@ -68,46 +68,53 @@ service GeometryOperators {
     // Accepts a stream of RouteNotes sent while a route is being traversed,
     // while receiving other RouteNotes (e.g. from other users).
     rpc RouteChat(stream RouteNote) returns (stream RouteNote) {}
-
-
-
 }
 
 
 message ServiceGeometry {
-    // String that is a wkt, wkid, esri_wkt, or a proj4 string
-    string spatial_reference = 1;
-
-    // type is either 'wkid', 'esri_wkt'
-    string spatial_reference_type = 2;
-
     // id is usually associated with position in file format or database
-    int64 geometry_id = 3;
+    int64 geometry_id = 1;
 
     // TODO review esri encoding typename (this is for the esri shape binary format)
     // type can be 'wkt', 'wkb', 'geojson', or 'esri'
-    string geometry_encoding_type = 4;
+    string geometry_encoding_type = 2;
 
     // the geometry encoded as base64 (wkb or esri) or as a string (wkt or geojson)
-    string geometry_string = 5;
+    string geometry_string = 3;
 
-    bytes geometry_binary = 6;
+    bytes geometry_binary = 4;
+
+    ServiceSpatialReference spatial_reference = 5;
+}
+
+message ServiceSpatialReference {
+    // String that is a wkt, wkid, esri_wkt, or a proj4 string
+    string esri_wkt = 5;
+
+    // type is either 'wkid', 'esri_wkt'
+    int32 wkid = 6;
 }
 
 
+message OperatorResult {
+    ServiceGeometry geometry = 1;
+    bool spatial_relationship = 2;
+}
 
 
-
-message ServiceOperator {
+message OperatorRequest {
     ServiceGeometry left_geometry = 1;
     ServiceGeometry right_geometry = 2;
 
-    string OperatorType = 3;
+    string operator_type = 3;
 
-//    SpatialReference operationSR = 5;
-//    SpatialReference outputSR = 6;
+    string results_encoding_type = 4;
 
-    bool convex_hull_merge = 4;
+    ServiceSpatialReference operation_spatial_reference = 5;
+
+    ServiceSpatialReference result_spatial_reference = 6;
+
+    bool convex_hull_merge = 7;
 }
 
 

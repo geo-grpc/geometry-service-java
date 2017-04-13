@@ -32,6 +32,7 @@ package com.fogmodel.service.geometry;
 
 import com.esri.core.geometry.*;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.util.JsonFormat;
 import org.json.JSONException;
 
@@ -96,26 +97,188 @@ public class GeometryOperatorsUtil {
         return feature != null && !feature.getName().isEmpty();
     }
 
-    public static GeometryCursor createOperatorCursor(ServiceOperator serviceOperator) {
-        GeometryCursor geometryCursor = null;
-        try {
-            GeometryCursor leftCursor = __createGeometryCursor(serviceOperator.getLeftGeometry());
-            GeometryCursor rightCursor = null;
-            if (serviceOperator.hasRightGeometry())
-                rightCursor = __createGeometryCursor(serviceOperator.getRightGeometry());
 
+
+//    public static GeometryCursor executeOperator(OperatorRequest serviceOperator) {
+//        GeometryCursor geometryCursor = null;
+//        try {
+//            GeometryCursor leftCursor = __createGeometryCursor(serviceOperator.getLeftGeometry());
+//            GeometryCursor rightCursor = null;
+//            if (serviceOperator.hasRightGeometry())
+//                rightCursor = __createGeometryCursor(serviceOperator.getRightGeometry());
+//
+//            // TODO this could throw an exception if unknown operator type provided
+//            Operator.Type operatorType = Operator.Type.valueOf(serviceOperator.getOperatorType());
+//            switch (operatorType) {
+//                case Project:
+//                    break;
+//                case ImportFromJson:
+//                    break;
+//                case ImportFromESRIShape:
+//                    break;
+//                case Union:
+////                    geometryCursor = OperatorUnion.local().execute(leftCursor, )
+//                    break;
+//                case Difference:
+//                    break;
+//                case Proximity2D:
+//                    break;
+//                case Relate:
+//                    break;
+//                case Equals:
+//                    break;
+//                case Disjoint:
+//                    break;
+//                case Intersects:
+//                    break;
+//                case Within:
+//                    break;
+//                case Contains:
+//                    break;
+//                case Crosses:
+//                    break;
+//                case Touches:
+//                    break;
+//                case Overlaps:
+//                    break;
+//                case Buffer:
+//                    break;
+//                case Distance:
+//                    break;
+//                case Intersection:
+//                    break;
+//                case Clip:
+//                    break;
+//                case Cut:
+//                    break;
+//                case DensifyByLength:
+//                    break;
+//                case DensifyByAngle:
+//                    break;
+//                case LabelPoint:
+//                    break;
+//                case GeodesicBuffer:
+//                    break;
+//                case GeodeticDensifyByLength:
+//                    break;
+//                case ShapePreservingDensify:
+//                    break;
+//                case GeodeticLength:
+//                    break;
+//                case GeodeticArea:
+//                    break;
+//                case Simplify:
+//                    break;
+//                case SimplifyOGC:
+//                    break;
+//                case Offset:
+//                    break;
+//                case Generalize:
+//                    break;
+//                case ExportToWkb:
+//                    break;
+//                case ImportFromWkb:
+//                    break;
+//                case ExportToWkt:
+//                    break;
+//                case ImportFromWkt:
+//                    break;
+//                case ImportFromGeoJson:
+//                    break;
+//                case ExportToGeoJson:
+//                    break;
+//                case SymmetricDifference:
+//                    break;
+//                case ConvexHull:
+//
+//                    geometryCursor = OperatorConvexHull.local().execute(leftCursor, serviceOperator.getConvexHullMerge(), null);
+//                    break;
+//                case Boundary:
+//                    break;
+//                default:
+//                    geometryCursor = leftCursor;
+//
+//            }
+//
+//            return geometryCursor;
+//
+//        } catch (JSONException j) {
+//            return null;
+//        }
+//    }
+
+    public static ServiceGeometry __encodeGeometry(GeometryCursor geometryCursor, OperatorRequest operatorRequest, String encodingType) {
+        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder();
+
+        // TODO not getting stubbed out due to grpc proto stubbing bug
+//        if (operatorRequest.hasResultsEncodingType()) {
+//
+//        }
+        if (!operatorRequest.getResultsEncodingType().isEmpty()) {
+            encodingType = operatorRequest.getResultsEncodingType();
+        } else if (encodingType == null || encodingType.isEmpty()) {
+            // Sets default export to wkt
+            encodingType = "wkt";
+        }
+
+
+        switch (encodingType) {
+            case "wkb":
+                serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometryCursor.next(), null)));
+                break;
+            case "wkt":
+                serviceGeometryBuilder.setGeometryString(OperatorExportToWkt.local().execute(0, geometryCursor.next(), null));
+                break;
+            case "esrishape":
+                serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0, geometryCursor.next())));
+                break;
+            case "geojson":
+                //TODO I'm just blindly setting the spatial reference here instead of projecting the result into the spatial reference
+                serviceGeometryBuilder.setGeometryString(OperatorExportToGeoJson.local().execute(null, geometryCursor.next()));
+                break;
+        }
+
+        //TODO I'm just blindly setting the spatial reference here instead of projecting the result into the spatial reference
+        serviceGeometryBuilder.setSpatialReference(operatorRequest.getResultSpatialReference());
+
+        return serviceGeometryBuilder.build();
+    }
+
+
+    // TODO this is ignoring the differences between the geometry spatial references, the result spatial references and the operator spatial references
+    public static OperatorResult executeOperator(OperatorRequest operatorRequest) {
+        GeometryCursor geometryCursor = null;
+        OperatorResult.Builder operatorResultBuilder = OperatorResult.newBuilder();
+        try {
+            GeometryCursor leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometry());
+            SpatialReference leftSpatialReference = __extractSpatialReference(operatorRequest.getLeftGeometry());
+            GeometryCursor rightCursor = null;
+            SpatialReference rightSpatialReference = null;
+            if (operatorRequest.hasRightGeometry()) {
+                rightCursor = __createGeometryCursor(operatorRequest.getRightGeometry());
+                rightSpatialReference = __extractSpatialReference(operatorRequest.getRightGeometry());
+            }
+
+            SpatialReference operatorSpatialReference = __extractSpatialReference(operatorRequest.getOperationSpatialReference());
+            SpatialReference resultSpatialReference = __extractSpatialReference(operatorRequest.getResultSpatialReference());
             // TODO this could throw an exception if unknown operator type provided
-            Operator.Type operatorType = Operator.Type.valueOf(serviceOperator.getOperatorType());
+            Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType());
+            String encodingType = null;
             switch (operatorType) {
                 case Project:
                     break;
                 case ExportToJson:
+                    // TODO I don't know what this is yet....
+                    geometryCursor = leftCursor;
+                    encodingType = "geojson";
                     break;
                 case ImportFromJson:
                     break;
                 case ImportMapGeometryFromJson:
                     break;
                 case ExportToESRIShape:
+                    geometryCursor = leftCursor;
+                    encodingType = "esrishape";
                     break;
                 case ImportFromESRIShape:
                     break;
@@ -130,6 +293,7 @@ public class GeometryOperatorsUtil {
                 case Equals:
                     break;
                 case Disjoint:
+                    boolean result = OperatorDisjoint.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null);
                     break;
                 case Intersects:
                     break;
@@ -178,22 +342,27 @@ public class GeometryOperatorsUtil {
                 case Generalize:
                     break;
                 case ExportToWkb:
+                    geometryCursor = leftCursor;
+                    encodingType = "wkb";
                     break;
                 case ImportFromWkb:
                     break;
                 case ExportToWkt:
                     geometryCursor = leftCursor;
+                    encodingType = "wkt";
                     break;
                 case ImportFromWkt:
                     break;
                 case ImportFromGeoJson:
                     break;
                 case ExportToGeoJson:
+                    geometryCursor = leftCursor;
+                    encodingType = "geojson";
                     break;
                 case SymmetricDifference:
                     break;
                 case ConvexHull:
-                    geometryCursor = OperatorConvexHull.local().execute(leftCursor, serviceOperator.getConvexHullMerge(), null);
+                    geometryCursor = OperatorConvexHull.local().execute(leftCursor, operatorRequest.getConvexHullMerge(), null);
                     break;
                 case Boundary:
                     break;
@@ -202,7 +371,10 @@ public class GeometryOperatorsUtil {
 
             }
 
-            return geometryCursor;
+            if (geometryCursor != null)
+                operatorResultBuilder.setGeometry(__encodeGeometry(geometryCursor, operatorRequest, encodingType));
+
+            return operatorResultBuilder.build();
 
         } catch (JSONException j) {
             return null;
@@ -214,6 +386,45 @@ public class GeometryOperatorsUtil {
         MapGeometry mapGeometry = __extractGeometry(serviceGeometry);
         GeometryCursor geometryCursor = new SimpleGeometryCursor(mapGeometry.getGeometry());
         return geometryCursor;
+    }
+
+
+    private static ServiceGeometry __decodeGeometry(Geometry geometry, SpatialReference spatialReference, String encoding_type) {
+        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder().setGeometryEncodingType(encoding_type);
+        switch (encoding_type) {
+            case "wkt":
+                serviceGeometryBuilder.setGeometryString(OperatorExportToWkt.local().execute(0, geometry, null));
+                break;
+            case "geojson":
+                serviceGeometryBuilder.setGeometryString(OperatorExportToGeoJson.local().execute(spatialReference, geometry));
+                break;
+            case "wkb":
+                serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometry, null)));
+                break;
+            case "esrishape":
+                serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0,geometry)));
+                break;
+            default:
+                break;
+        }
+        // TODO set spatial reference!!
+
+        return serviceGeometryBuilder.build();
+    }
+
+
+    private static SpatialReference __extractSpatialReference(ServiceGeometry serviceGeometry) {
+        return serviceGeometry.hasSpatialReference() ? __extractSpatialReference(serviceGeometry.getSpatialReference()) : null;
+    }
+
+    private static SpatialReference __extractSpatialReference(ServiceSpatialReference serviceSpatialReference) {
+        // TODO there seems to be a bug where hasWkid() is not getting generated. check back later
+        if (serviceSpatialReference.getWkid() != 0)
+            return SpatialReference.create(serviceSpatialReference.getWkid());
+        else if (serviceSpatialReference.getEsriWkt().length() > 0)
+            return SpatialReference.create(serviceSpatialReference.getEsriWkt());
+
+        return null;
     }
 
     private static MapGeometry __extractGeometry(ServiceGeometry serviceGeometry) throws JSONException {
@@ -240,13 +451,7 @@ public class GeometryOperatorsUtil {
         }
         if (mapGeometry == null) {
             // TODO this could be moved out of the method
-            String srType = serviceGeometry.getSpatialReferenceType();
-            if (srType == "wkid") {
-                int wkid = Integer.valueOf(serviceGeometry.getSpatialReference());
-                spatialReference = SpatialReference.create(wkid);
-            } else if (srType == "esri_wkt") {
-                spatialReference = SpatialReference.create(serviceGeometry.getSpatialReference());
-            }
+            spatialReference = __extractSpatialReference(serviceGeometry);
             mapGeometry = new MapGeometry(geometry, spatialReference);
         }
 
