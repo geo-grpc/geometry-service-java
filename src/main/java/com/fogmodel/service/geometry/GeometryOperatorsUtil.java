@@ -98,115 +98,6 @@ public class GeometryOperatorsUtil {
     }
 
 
-
-//    public static GeometryCursor executeOperator(OperatorRequest serviceOperator) {
-//        GeometryCursor geometryCursor = null;
-//        try {
-//            GeometryCursor leftCursor = __createGeometryCursor(serviceOperator.getLeftGeometry());
-//            GeometryCursor rightCursor = null;
-//            if (serviceOperator.hasRightGeometry())
-//                rightCursor = __createGeometryCursor(serviceOperator.getRightGeometry());
-//
-//            // TODO this could throw an exception if unknown operator type provided
-//            Operator.Type operatorType = Operator.Type.valueOf(serviceOperator.getOperatorType());
-//            switch (operatorType) {
-//                case Project:
-//                    break;
-//                case ImportFromJson:
-//                    break;
-//                case ImportFromESRIShape:
-//                    break;
-//                case Union:
-////                    geometryCursor = OperatorUnion.local().execute(leftCursor, )
-//                    break;
-//                case Difference:
-//                    break;
-//                case Proximity2D:
-//                    break;
-//                case Relate:
-//                    break;
-//                case Equals:
-//                    break;
-//                case Disjoint:
-//                    break;
-//                case Intersects:
-//                    break;
-//                case Within:
-//                    break;
-//                case Contains:
-//                    break;
-//                case Crosses:
-//                    break;
-//                case Touches:
-//                    break;
-//                case Overlaps:
-//                    break;
-//                case Buffer:
-//                    break;
-//                case Distance:
-//                    break;
-//                case Intersection:
-//                    break;
-//                case Clip:
-//                    break;
-//                case Cut:
-//                    break;
-//                case DensifyByLength:
-//                    break;
-//                case DensifyByAngle:
-//                    break;
-//                case LabelPoint:
-//                    break;
-//                case GeodesicBuffer:
-//                    break;
-//                case GeodeticDensifyByLength:
-//                    break;
-//                case ShapePreservingDensify:
-//                    break;
-//                case GeodeticLength:
-//                    break;
-//                case GeodeticArea:
-//                    break;
-//                case Simplify:
-//                    break;
-//                case SimplifyOGC:
-//                    break;
-//                case Offset:
-//                    break;
-//                case Generalize:
-//                    break;
-//                case ExportToWkb:
-//                    break;
-//                case ImportFromWkb:
-//                    break;
-//                case ExportToWkt:
-//                    break;
-//                case ImportFromWkt:
-//                    break;
-//                case ImportFromGeoJson:
-//                    break;
-//                case ExportToGeoJson:
-//                    break;
-//                case SymmetricDifference:
-//                    break;
-//                case ConvexHull:
-//
-//                    geometryCursor = OperatorConvexHull.local().execute(leftCursor, serviceOperator.getConvexHullMerge(), null);
-//                    break;
-//                case Boundary:
-//                    break;
-//                default:
-//                    geometryCursor = leftCursor;
-//
-//            }
-//
-//            return geometryCursor;
-//
-//        } catch (JSONException j) {
-//            return null;
-//        }
-//    }
-
     public static ServiceGeometry __encodeGeometry(GeometryCursor geometryCursor, OperatorRequest operatorRequest, String encodingType) {
         ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder();
 
@@ -243,6 +134,7 @@ public class GeometryOperatorsUtil {
 
         return serviceGeometryBuilder.build();
     }
+
 
     public static GeometryCursor cursorFromRequest(OperatorRequest operatorRequest) {
         GeometryCursor resultCursor = null;
@@ -343,11 +235,6 @@ public class GeometryOperatorsUtil {
     }
 
 
-    private static Envelope2D __extractEnvelope2D(ServiceEnvelope2D env) {
-        return Envelope2D.construct(env.getXmin(), env.getYmin(), env.getXmax(), env.getYmax());
-    }
-
-
     // TODO this is ignoring the differences between the geometry spatial references, the result spatial references and the operator spatial references
     public static OperatorResult executeOperator(OperatorRequest operatorRequest) {
         GeometryCursor resultCursor = null;
@@ -415,21 +302,6 @@ public class GeometryOperatorsUtil {
             switch (operatorType) {
                 case Project:
                     break;
-//                case ExportToJson:
-//                    // TODO I don't know what this is yet....
-//                    geometryCursor = leftCursor;
-//                    encodingType = "geojson";
-//                    break;
-//                case ImportFromJson:
-//                    break;
-//                case ImportMapGeometryFromJson:
-//                    break;
-//                case ExportToESRIShape:
-//                    geometryCursor = leftCursor;
-//                    encodingType = "esrishape";
-//                    break;
-//                case ImportFromESRIShape:
-//                    break;
                 // TODO I shouldn't be copying these
                 case Union:
                     resultCursor = OperatorUnion.local().execute(leftCursor, operatorSpatialReference, null);
@@ -554,6 +426,10 @@ public class GeometryOperatorsUtil {
                     break;
             }
 
+            if (resultSpatialReference != null && !resultSpatialReference.equals(operatorSpatialReference)) {
+                // TODO project cursor!!!
+            }
+
             if (resultCursor != null)
                 operatorResultBuilder.setGeometry(__encodeGeometry(resultCursor, operatorRequest, encodingType));
 
@@ -563,6 +439,7 @@ public class GeometryOperatorsUtil {
             return null;
         }
     }
+
 
     private static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws JSONException {
         MapGeometry mapGeometry = __extractGeometry(serviceGeometry);
@@ -599,6 +476,7 @@ public class GeometryOperatorsUtil {
         return serviceGeometry.hasSpatialReference() ? __extractSpatialReference(serviceGeometry.getSpatialReference()) : null;
     }
 
+
     private static SpatialReference __extractSpatialReference(ServiceSpatialReference serviceSpatialReference) {
         // TODO there seems to be a bug where hasWkid() is not getting generated. check back later
         if (serviceSpatialReference.getWkid() != 0)
@@ -608,6 +486,13 @@ public class GeometryOperatorsUtil {
 
         return null;
     }
+
+
+
+    private static Envelope2D __extractEnvelope2D(ServiceEnvelope2D env) {
+        return Envelope2D.construct(env.getXmin(), env.getYmin(), env.getXmax(), env.getYmax());
+    }
+
 
     private static MapGeometry __extractGeometry(ServiceGeometry serviceGeometry) throws JSONException {
         MapGeometry mapGeometry = null;
