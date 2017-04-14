@@ -244,142 +244,324 @@ public class GeometryOperatorsUtil {
         return serviceGeometryBuilder.build();
     }
 
+    public static GeometryCursor cursorFromRequest(OperatorRequest operatorRequest) {
+        GeometryCursor resultCursor = null;
+        try {
+            GeometryCursor leftCursor = null;
+            if (operatorRequest.hasLeftGeometry()) {
+                leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometry());
+            } else {
+                // assumes there is always a left geometry
+                leftCursor = cursorFromRequest(operatorRequest.getLeftCursor());
+            }
+
+            GeometryCursor rightCursor = null;
+            if (operatorRequest.hasRightGeometry()) {
+                rightCursor = __createGeometryCursor(operatorRequest.getRightGeometry());
+            } else if (operatorRequest.hasRightCursor()) {
+                rightCursor = cursorFromRequest(operatorRequest.getRightCursor());
+            }
+
+
+            Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType());
+
+            switch (operatorType) {
+                case Project:
+                    break;
+                case Union:
+                    resultCursor = OperatorUnion.local().execute(leftCursor, null, null);
+                    break;
+                case Difference:
+                    resultCursor = OperatorDifference.local().execute(leftCursor, rightCursor, null, null);
+                    break;
+                case Buffer:
+                    // TODO clean this up
+                    double [] d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
+                    resultCursor = OperatorBuffer.local().execute(leftCursor, null, d, operatorRequest.getBufferUnionResult(), null);
+                    break;
+                case Intersection:
+                    // TODO this is totally fucked up. 0 is a dimension. this defaults to 0. hasIntersectionDimensionMask needs to be automagically generated
+                    if (operatorRequest.getIntersectionDimensionMask() == 0) {
+                        resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, null, null);
+                    } else {
+                        resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, null, null, operatorRequest.getIntersectionDimensionMask());
+                    }
+                    break;
+                case Clip:
+                    Envelope2D envelope2D = __extractEnvelope2D(operatorRequest.getClipEnvelope());
+                    resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, null, null);
+                    break;
+                case Cut:
+                    resultCursor = OperatorCut.local().execute(operatorRequest.getCutConsiderTouch(), leftCursor.next(), (Polyline)rightCursor.next(), null, null);
+                    break;
+                case DensifyByLength:
+                    resultCursor = OperatorDensifyByLength.local().execute(leftCursor, operatorRequest.getDensifyMaxLength(), null);
+                    break;
+//                case DensifyByAngle:
+//                    break;
+//                case LabelPoint:
+//                    break;
+//                case GeodesicBuffer:
+//                    break;
+//                case GeodeticDensifyByLength:
+//                    break;
+//                case ShapePreservingDensify:
+//                    break;
+                case Simplify:
+                    resultCursor = OperatorSimplify.local().execute(leftCursor, null, operatorRequest.getSimplifyForce(), null);
+                    break;
+                case SimplifyOGC:
+                    resultCursor = OperatorSimplifyOGC.local().execute(leftCursor, null, operatorRequest.getSimplifyForce(), null);
+                    break;
+                case Offset:
+                    resultCursor = OperatorOffset.local().execute(
+                            leftCursor,
+                            null,
+                            operatorRequest.getOffsetDistance(),
+                            OperatorOffset.JoinType.valueOf(operatorRequest.getOffsetJoinType()),
+                            operatorRequest.getOffsetBevelRatio(),
+                            operatorRequest.getOffsetFlattenError(), null);
+                    break;
+                case Generalize:
+                    resultCursor = OperatorGeneralize.local().execute(leftCursor, operatorRequest.getGeneralizeMaxDeviation(), operatorRequest.getGeneralizeRemoveDegenerates(), null);
+                    break;
+                case SymmetricDifference:
+                    resultCursor = OperatorSymmetricDifference.local().execute(leftCursor, rightCursor, null, null);
+                    break;
+                case ConvexHull:
+                    resultCursor = OperatorConvexHull.local().execute(leftCursor, operatorRequest.getConvexHullMerge(), null);
+                    break;
+                case Boundary:
+                    resultCursor = OperatorBoundary.local().execute(leftCursor, null);
+                    break;
+            }
+        } catch (Exception j) {
+
+        }
+
+        return  resultCursor;
+    }
+
+
+    private static Envelope2D __extractEnvelope2D(ServiceEnvelope2D env) {
+        return Envelope2D.construct(env.getXmin(), env.getYmin(), env.getXmax(), env.getYmax());
+    }
+
 
     // TODO this is ignoring the differences between the geometry spatial references, the result spatial references and the operator spatial references
     public static OperatorResult executeOperator(OperatorRequest operatorRequest) {
-        GeometryCursor geometryCursor = null;
+        GeometryCursor resultCursor = null;
         OperatorResult.Builder operatorResultBuilder = OperatorResult.newBuilder();
+
         try {
-            GeometryCursor leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometry());
-            SpatialReference leftSpatialReference = __extractSpatialReference(operatorRequest.getLeftGeometry());
+            // optional: this is the spatial reference for performing the geometric operation
+            SpatialReference operatorSpatialReference = __extractSpatialReference(operatorRequest.getOperationSpatialReference());
+
+            // optionalish: this is the final spatial reference for the result (project after operator)
+            SpatialReference resultSpatialReference = __extractSpatialReference(operatorRequest.getResultSpatialReference());
+
+            GeometryCursor leftCursor = null;
+            SpatialReference leftSpatialReference = null;
+            if (operatorRequest.hasLeftGeometry()) {
+                leftSpatialReference = __extractSpatialReference(operatorRequest.getLeftGeometry());
+                leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometry());
+            } else {
+                // assumes there is always a left geometry
+                // TODO confirm that result spatial reference is the correct setting here...
+                leftSpatialReference = __extractSpatialReference(operatorRequest.getLeftCursor().getResultSpatialReference());
+                leftCursor = cursorFromRequest(operatorRequest.getLeftCursor());
+            }
+
             GeometryCursor rightCursor = null;
             SpatialReference rightSpatialReference = null;
             if (operatorRequest.hasRightGeometry()) {
-                rightCursor = __createGeometryCursor(operatorRequest.getRightGeometry());
                 rightSpatialReference = __extractSpatialReference(operatorRequest.getRightGeometry());
+                rightCursor = __createGeometryCursor(operatorRequest.getRightGeometry());
+            } else if (operatorRequest.hasRightCursor()) {
+                // TODO confirm that result spatial reference is the correct setting here...
+                rightSpatialReference = __extractSpatialReference(operatorRequest.getRightCursor().getResultSpatialReference());
+                rightCursor = cursorFromRequest(operatorRequest.getRightCursor());
             }
 
-            SpatialReference operatorSpatialReference = __extractSpatialReference(operatorRequest.getOperationSpatialReference());
-            SpatialReference resultSpatialReference = __extractSpatialReference(operatorRequest.getResultSpatialReference());
+
+            // TODO, there are possibilities for error in here. Also possiblities for too many assumptions. ass of you an me.
+            // if there is a right and a left geometry but no operator spatial reference, then set operatorSpatialReference
+            if (operatorSpatialReference == null && leftSpatialReference != null && leftSpatialReference.equals(rightSpatialReference)) {
+                operatorSpatialReference = leftSpatialReference;
+            }
+
+            // TODO improve geometry to work with local spatial references. This is super ugly as it stands
+            if ((leftSpatialReference != null && rightSpatialReference == null) || (leftSpatialReference == null && rightSpatialReference != null)) {
+                // TODO throw an error here!!
+            }
+
+            // if there is no resultSpatialReference set it to be the operatorSpatialReference
+            if (resultSpatialReference == null) {
+                resultSpatialReference = operatorSpatialReference;
+            }
+
+            // project left if needed
+            if (operatorSpatialReference != null && !operatorSpatialReference.equals(leftSpatialReference)) {
+                // TODO implement Project!!!
+            }
+
+            if (operatorSpatialReference != null && !operatorSpatialReference.equals(rightSpatialReference)) {
+                // TODO implement Project!!!
+            }
+
             // TODO this could throw an exception if unknown operator type provided
             Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType());
             String encodingType = null;
             switch (operatorType) {
                 case Project:
                     break;
-                case ExportToJson:
-                    // TODO I don't know what this is yet....
-                    geometryCursor = leftCursor;
-                    encodingType = "geojson";
-                    break;
-                case ImportFromJson:
-                    break;
-                case ImportMapGeometryFromJson:
-                    break;
-                case ExportToESRIShape:
-                    geometryCursor = leftCursor;
-                    encodingType = "esrishape";
-                    break;
-                case ImportFromESRIShape:
-                    break;
+//                case ExportToJson:
+//                    // TODO I don't know what this is yet....
+//                    geometryCursor = leftCursor;
+//                    encodingType = "geojson";
+//                    break;
+//                case ImportFromJson:
+//                    break;
+//                case ImportMapGeometryFromJson:
+//                    break;
+//                case ExportToESRIShape:
+//                    geometryCursor = leftCursor;
+//                    encodingType = "esrishape";
+//                    break;
+//                case ImportFromESRIShape:
+//                    break;
+                // TODO I shouldn't be copying these
                 case Union:
+                    resultCursor = OperatorUnion.local().execute(leftCursor, operatorSpatialReference, null);
                     break;
                 case Difference:
+                    resultCursor = OperatorDifference.local().execute(leftCursor, rightCursor, operatorSpatialReference, null);
                     break;
+                // TODO I shouldn't be copying these
+
                 case Proximity2D:
+                    // TODO complicated :)
                     break;
                 case Relate:
+                    // TODO complicated :)
                     break;
                 case Equals:
+                    operatorResultBuilder.setSpatialRelationship(OperatorEquals.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
                 case Disjoint:
-                    boolean result = OperatorDisjoint.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null);
+                    operatorResultBuilder.setSpatialRelationship(OperatorDisjoint.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
                 case Intersects:
+                    operatorResultBuilder.setSpatialRelationship(OperatorIntersects.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
                 case Within:
+                    operatorResultBuilder.setSpatialRelationship(OperatorWithin.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
                 case Contains:
+                    operatorResultBuilder.setSpatialRelationship(OperatorContains.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
                 case Crosses:
+                    operatorResultBuilder.setSpatialRelationship(OperatorCrosses.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
                 case Touches:
+                    operatorResultBuilder.setSpatialRelationship(OperatorTouches.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
                 case Overlaps:
+                    operatorResultBuilder.setSpatialRelationship(OperatorOverlaps.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
+
                 case Buffer:
-                    break;
-                case Distance:
+                    // TODO clean this up
+                    double [] d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
+                    resultCursor = OperatorBuffer.local().execute(leftCursor, operatorSpatialReference, d, operatorRequest.getBufferUnionResult(), null);
                     break;
                 case Intersection:
+                    // TODO this is totally fucked up. 0 is a dimension. this defaults to 0. hasIntersectionDimensionMask needs to be automagically generated
+                    if (operatorRequest.getIntersectionDimensionMask() == 0) {
+                        resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, operatorSpatialReference, null);
+                    } else {
+                        resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, operatorSpatialReference, null, operatorRequest.getIntersectionDimensionMask());
+                    }
+
                     break;
                 case Clip:
+                    Envelope2D envelope2D = __extractEnvelope2D(operatorRequest.getClipEnvelope());
+                    resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, operatorSpatialReference, null);
                     break;
                 case Cut:
+                    resultCursor = OperatorCut.local().execute(operatorRequest.getCutConsiderTouch(), leftCursor.next(), (Polyline)rightCursor.next(), operatorSpatialReference, null);
                     break;
                 case DensifyByLength:
+                    // TODO document that this isn't smart. getDensifyMaxLength is in whatever unit your data comes in as
+                    resultCursor = OperatorDensifyByLength.local().execute(leftCursor, operatorRequest.getDensifyMaxLength(), null);
                     break;
-                case DensifyByAngle:
+                case Distance:
+                    operatorResultBuilder.setDistance(OperatorDistance.local().execute(leftCursor.next(), rightCursor.next(), null));
                     break;
-                case LabelPoint:
-                    break;
-                case GeodesicBuffer:
-                    break;
-                case GeodeticDensifyByLength:
-                    break;
-                case ShapePreservingDensify:
-                    break;
-                case GeodeticLength:
-                    break;
-                case GeodeticArea:
-                    break;
-                case Simplify:
-                    break;
-                case SimplifyOGC:
-                    break;
-                case Offset:
-                    break;
-                case Generalize:
-                    break;
+//                case DensifyByAngle:
+//                    break;
+//                case LabelPoint:
+//                    break;
+//                case GeodesicBuffer:
+//                    break;
+//                case GeodeticDensifyByLength:
+//                    break;
+//                case ShapePreservingDensify:
+//                    break;
+//                case GeodeticLength:
+//                    break;
+//                case GeodeticArea:
+//                    break;
+
                 case ExportToWkb:
-                    geometryCursor = leftCursor;
+                    resultCursor = leftCursor;
                     encodingType = "wkb";
                     break;
-                case ImportFromWkb:
-                    break;
                 case ExportToWkt:
-                    geometryCursor = leftCursor;
+                    resultCursor = leftCursor;
                     encodingType = "wkt";
                     break;
-                case ImportFromWkt:
-                    break;
-                case ImportFromGeoJson:
-                    break;
                 case ExportToGeoJson:
-                    geometryCursor = leftCursor;
+                    resultCursor = leftCursor;
                     encodingType = "geojson";
                     break;
+                case Simplify:
+                    resultCursor = OperatorSimplify.local().execute(leftCursor, null, operatorRequest.getSimplifyForce(), null);
+                    break;
+                case SimplifyOGC:
+                    resultCursor = OperatorSimplifyOGC.local().execute(leftCursor, null, operatorRequest.getSimplifyForce(), null);
+                    break;
+                case Offset:
+                    resultCursor = OperatorOffset.local().execute(
+                            leftCursor,
+                            null,
+                            operatorRequest.getOffsetDistance(),
+                            OperatorOffset.JoinType.valueOf(operatorRequest.getOffsetJoinType()),
+                            operatorRequest.getOffsetBevelRatio(),
+                            operatorRequest.getOffsetFlattenError(), null);
+                    break;
+                case Generalize:
+                    resultCursor = OperatorGeneralize.local().execute(leftCursor, operatorRequest.getGeneralizeMaxDeviation(), operatorRequest.getGeneralizeRemoveDegenerates(), null);
+                    break;
                 case SymmetricDifference:
+                    resultCursor = OperatorSymmetricDifference.local().execute(leftCursor, rightCursor, null, null);
                     break;
                 case ConvexHull:
-                    geometryCursor = OperatorConvexHull.local().execute(leftCursor, operatorRequest.getConvexHullMerge(), null);
+                    resultCursor = OperatorConvexHull.local().execute(leftCursor, operatorRequest.getConvexHullMerge(), null);
                     break;
                 case Boundary:
+                    resultCursor = OperatorBoundary.local().execute(leftCursor, null);
                     break;
-                default:
-                    geometryCursor = leftCursor;
-
             }
 
-            if (geometryCursor != null)
-                operatorResultBuilder.setGeometry(__encodeGeometry(geometryCursor, operatorRequest, encodingType));
+            if (resultCursor != null)
+                operatorResultBuilder.setGeometry(__encodeGeometry(resultCursor, operatorRequest, encodingType));
 
             return operatorResultBuilder.build();
 
         } catch (JSONException j) {
             return null;
         }
-        //return geometryCursor;
     }
 
     private static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws JSONException {

@@ -98,7 +98,10 @@ message ServiceSpatialReference {
 
 message OperatorResult {
     ServiceGeometry geometry = 1;
+
     bool spatial_relationship = 2;
+
+    double distance = 3;
 }
 
 
@@ -106,15 +109,49 @@ message OperatorRequest {
     ServiceGeometry left_geometry = 1;
     ServiceGeometry right_geometry = 2;
 
-    string operator_type = 3;
+    OperatorRequest left_cursor = 3;
+    OperatorRequest right_cursor = 4;
 
-    string results_encoding_type = 4;
+    // TODO replace with Enum
+    string operator_type = 5;
 
-    ServiceSpatialReference operation_spatial_reference = 5;
+    string results_encoding_type = 6;
 
-    ServiceSpatialReference result_spatial_reference = 6;
+    ServiceSpatialReference operation_spatial_reference = 7;
 
-    bool convex_hull_merge = 7;
+    ServiceSpatialReference result_spatial_reference = 8;
+
+    bool convex_hull_merge = 9;
+
+    repeated double buffer_distances = 10;
+    bool buffer_union_result = 11;
+
+    int32 intersection_dimension_mask = 12;
+
+    ServiceEnvelope2D clip_envelope = 13;
+
+    bool cut_consider_touch = 14;
+
+    double densify_max_length = 15;
+
+    bool simplify_force = 16;
+
+    double offset_distance = 17;
+    //TODO replace with Enum
+    string offset_join_type = 18;
+    double offset_bevel_ratio = 19;
+    double offset_flatten_error = 20;
+
+    double generalize_max_deviation = 21;
+    bool generalize_remove_degenerates = 22;
+
+}
+
+message ServiceEnvelope2D {
+    double xmin = 1;
+    double ymin = 2;
+    double xmax = 3;
+    double ymax = 4;
 }
 
 
