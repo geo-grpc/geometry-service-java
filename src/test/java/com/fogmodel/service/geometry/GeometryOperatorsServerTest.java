@@ -13,16 +13,10 @@ import static org.mockito.Mockito.verify;
 import com.esri.core.geometry.*;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
-import com.fogmodel.service.geometry.*;
-import com.fogmodel.service.geometry.Feature;
-import com.fogmodel.service.geometry.ReplacePoint;
-import com.fogmodel.service.geometry.RouteNote;
-import com.fogmodel.service.geometry.RouteSummary;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -150,6 +144,47 @@ public class GeometryOperatorsServerTest {
             .setLeftGeometry(serviceGeometry)
             .setOperatorType(Operator.Type.ConvexHull.toString())
             .build();
+
+    GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+    OperatorResult operatorResult = stub.executeOperation(serviceOp);
+
+    OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
+    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(), null);
+
+    boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
+
+    assertTrue(bContains);
+  }
+
+  @Test
+  public void testChainingBufferConvexHull() {
+    Polyline polyline = new Polyline();
+    polyline.startPath(0,0);
+    polyline.lineTo(2, 3);
+    polyline.lineTo(3, 3);
+    // TODO inspect bug where it crosses dateline
+//    polyline.startPath(-200, -90);
+//    polyline.lineTo(-180, -85);
+//    polyline.lineTo(-90, -70);
+//    polyline.lineTo(0, 0);
+//    polyline.lineTo(100, 25);
+//    polyline.lineTo(170, 45);
+//    polyline.lineTo(225, 64);
+    OperatorExportToWkb op = OperatorExportToWkb.local();
+    //TODO why does esri shape fail
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    OperatorRequest serviceConvexOp = OperatorRequest
+            .newBuilder()
+            .setLeftGeometry(serviceGeometry)
+            .setOperatorType(Operator.Type.ConvexHull.toString())
+            .build();
+
+    OperatorRequest serviceOp = OperatorRequest.newBuilder()
+            .setLeftCursor(serviceConvexOp)
+            .addBufferDistances(1)
+            .setOperatorType(Operator.Type.Buffer.toString())
+            .build();
+
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
     OperatorResult operatorResult = stub.executeOperation(serviceOp);
