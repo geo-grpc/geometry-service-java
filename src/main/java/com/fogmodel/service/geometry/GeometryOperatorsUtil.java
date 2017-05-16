@@ -271,6 +271,8 @@ public class GeometryOperatorsUtil {
             String encodingType = null;
             switch (operatorType) {
                 case Project:
+                    ProjectionTransformation projectionTransformation = new ProjectionTransformation(leftSpatialReference, operatorSpatialReference);
+                    resultCursor = OperatorProject.local().execute(leftCursor, projectionTransformation, null);
                     break;
                 // TODO I shouldn't be copying these
                 case Union:
@@ -354,7 +356,6 @@ public class GeometryOperatorsUtil {
 //                    break;
 //                case GeodeticArea:
 //                    break;
-
                 case ExportToWkb:
                     resultCursor = leftCursor;
                     encodingType = "wkb";
@@ -398,6 +399,8 @@ public class GeometryOperatorsUtil {
 
             if (resultSpatialReference != null && !resultSpatialReference.equals(operatorSpatialReference)) {
                 // TODO project cursor!!!
+                ProjectionTransformation projectionTransformation = new ProjectionTransformation(operatorSpatialReference, resultSpatialReference);
+                resultCursor = OperatorProject.local().execute(resultCursor, projectionTransformation, null);
             }
 
             if (resultCursor != null)

@@ -1,6 +1,7 @@
 
 package com.fogmodel.service.geometry;
 
+import static junit.framework.TestCase.assertNull;
 import static junit.framework.TestCase.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -17,15 +18,24 @@ import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import junit.framework.TestCase;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
+import java.io.FileReader;
 
 /**
  * Unit tests for {@link GeometryOperatorsServer}.
@@ -157,6 +167,54 @@ public class GeometryOperatorsServerTest {
   }
 
   @Test
+  public void testProjection() {
+    Polyline polyline = new Polyline();
+    polyline.startPath( 500000,       0);
+    polyline.lineTo(400000,  100000);
+    polyline.lineTo(600000, -100000);
+    OperatorExportToWkb op = OperatorExportToWkb.local();
+
+    ServiceSpatialReference inputSpatialReference = ServiceSpatialReference.newBuilder()
+            .setWkid(32632)
+            .build();
+
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder()
+            .setGeometryEncodingType("wkb")
+            .setSpatialReference(inputSpatialReference)
+            .setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null)))
+            .build();
+
+      ServiceSpatialReference outputSpatialReference = ServiceSpatialReference.newBuilder()
+              .setWkid(4326)
+              .build();
+
+
+    OperatorRequest serviceProjectOp = OperatorRequest
+            .newBuilder()
+            .setLeftGeometry(serviceGeometry)
+            .setOperatorType(Operator.Type.Project.toString())
+            .setOperationSpatialReference(outputSpatialReference)
+            .build();
+
+    GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+    OperatorResult operatorResult = stub.executeOperation(serviceProjectOp);
+
+    OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
+    Polyline result = (Polyline)op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(), null);
+    TestCase.assertNotNull(result);
+
+    TestCase.assertFalse(polyline.equals(result));
+    assertEquals(polyline.getPointCount(), result.getPointCount());
+//    projectionTransformation = new ProjectionTransformation(SpatialReference.create(4326), SpatialReference.create(32632));
+//    Polyline originalPolyline = (Polyline)OperatorProject.local().execute(polylineOut, projectionTransformation, null);
+//
+//    for (int i = 0; i < polyline.getPointCount(); i++) {
+//      assertEquals(polyline.getPoint(i).getX(), originalPolyline.getPoint(i).getX(), 1e-10);
+//      assertEquals(polyline.getPoint(i).getY(), originalPolyline.getPoint(i).getY(), 1e-10);
+//    }
+  }
+
+  @Test
   public void testChainingBufferConvexHull() {
     Polyline polyline = new Polyline();
     polyline.startPath(0,0);
@@ -195,6 +253,42 @@ public class GeometryOperatorsServerTest {
     boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 
     assertTrue(bContains);
+  }
+
+
+
+    @Ignore @Test
+    public void testRicksSA() {
+      try {
+        OperatorImportFromGeoJson op = (OperatorImportFromGeoJson) OperatorFactoryLocal.getInstance().getOperator(Operator.Type.ImportFromGeoJson);
+
+        InputStreamReader isr = new FileReader("/Users/davidraleigh/data/descartes/crops/shapes_v1c.json");
+        JSONObject geoJsonObject = new JSONObject(isr);
+        Iterator<String> iter = geoJsonObject.keys();
+        List<Geometry> geometryList = new ArrayList<Geometry>();
+        OperatorSimplify operatorSimplify = (OperatorSimplify.local());
+        SpatialReference sr = SpatialReference.create(4326);
+        while (iter.hasNext())
+        {
+          JSONObject jsonObject = geoJsonObject.getJSONObject(iter.next());
+          MapGeometry mg = op.execute(0, Geometry.Type.Unknown, jsonObject.toString(), null);
+          Geometry mgSimple = operatorSimplify.execute(mg.getGeometry(), sr, true, null);
+          geometryList.add(mgSimple);
+        }
+        SimpleGeometryCursor sgc = new SimpleGeometryCursor(geometryList);
+        OperatorUnion union = (OperatorUnion) OperatorFactoryLocal.getInstance().getOperator(Operator.Type.Union);
+
+        GeometryCursor outputCursor = union.execute(sgc, sr, null);
+        Geometry result = outputCursor.next();
+        OperatorExportToGeoJson operatorExportToGeoJson = OperatorExportToGeoJson.local();
+
+        Geometry resSimple = operatorSimplify.execute(result, sr, true, null);
+
+        String s = operatorExportToGeoJson.execute(resSimple);
+        int a = 0;
+      } catch (Exception e) {
+        assertNull(e);
+      }
   }
 
   @Test
