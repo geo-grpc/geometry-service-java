@@ -1,1 +1,3 @@
 rootProject.name = 'geometry-service'
+include ':geometry-api-java'
+project(':geometry-api-java').projectDir = new File(settingsDir, '../geometry-api-java')

@@ -28,7 +28,7 @@ dependencies {
   compile "io.grpc:grpc-netty:${grpcVersion}"
   compile "io.grpc:grpc-protobuf:${grpcVersion}"
   compile "io.grpc:grpc-stub:${grpcVersion}"
-  compile 'com.esri.geometry:esri-geometry-api:1.2.1'
+  compile project(':geometry-api-java')
 
   testCompile "junit:junit:4.11"
   testCompile "org.mockito:mockito-core:1.9.5"
@@ -90,4 +90,8 @@ applicationDistribution.into('bin') {
   from(geometryOperatorsServer)
   from(geometryOperatorsClient)
   fileMode = 0755
+}
+
+tasks.withType(Test) {
+  systemProperty "java.library.path", "/usr/local/lib/"
 }
