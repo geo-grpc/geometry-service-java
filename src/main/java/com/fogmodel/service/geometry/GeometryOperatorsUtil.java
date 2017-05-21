@@ -128,7 +128,23 @@ public class GeometryOperatorsUtil {
             Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType());
 
             switch (operatorType) {
+                case DensifyByAngle:
+                    break;
+                case LabelPoint:
+                    break;
+                case GeodesicBuffer:
+                    break;
+                case GeodeticDensifyByLength:
+                    break;
+                case ShapePreservingDensify:
+                    break;
+                case GeneralizeByArea:
+                    break;
+                case RandomPoints:
+                    break;
                 case Project:
+/*                    ProjectionTransformation projectionTransformation = new ProjectionTransformation(leftSpatialReference, operatorSpatialReference);
+                    resultCursor = OperatorProject.local().execute(leftCursor, projectionTransformation, null);*/
                     break;
                 case Union:
                     resultCursor = OperatorUnion.local().execute(leftCursor, null, null);
@@ -159,16 +175,6 @@ public class GeometryOperatorsUtil {
                 case DensifyByLength:
                     resultCursor = OperatorDensifyByLength.local().execute(leftCursor, operatorRequest.getDensifyMaxLength(), null);
                     break;
-//                case DensifyByAngle:
-//                    break;
-//                case LabelPoint:
-//                    break;
-//                case GeodesicBuffer:
-//                    break;
-//                case GeodeticDensifyByLength:
-//                    break;
-//                case ShapePreservingDensify:
-//                    break;
                 case Simplify:
                     resultCursor = OperatorSimplify.local().execute(leftCursor, null, operatorRequest.getSimplifyForce(), null);
                     break;
@@ -274,20 +280,25 @@ public class GeometryOperatorsUtil {
                     ProjectionTransformation projectionTransformation = new ProjectionTransformation(leftSpatialReference, operatorSpatialReference);
                     resultCursor = OperatorProject.local().execute(leftCursor, projectionTransformation, null);
                     break;
-                // TODO I shouldn't be copying these
+                case ExportToJson:
+                    break;
+                case ImportFromJson:
+                    break;
+                case ImportMapGeometryFromJson:
+                    break;
+                case ExportToESRIShape:
+                    break;
+                case ImportFromESRIShape:
+                    break;
                 case Union:
                     resultCursor = OperatorUnion.local().execute(leftCursor, operatorSpatialReference, null);
                     break;
                 case Difference:
                     resultCursor = OperatorDifference.local().execute(leftCursor, rightCursor, operatorSpatialReference, null);
                     break;
-                // TODO I shouldn't be copying these
-
                 case Proximity2D:
-                    // TODO complicated :)
                     break;
                 case Relate:
-                    // TODO complicated :)
                     break;
                 case Equals:
                     operatorResultBuilder.setSpatialRelationship(OperatorEquals.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
@@ -313,20 +324,20 @@ public class GeometryOperatorsUtil {
                 case Overlaps:
                     operatorResultBuilder.setSpatialRelationship(OperatorOverlaps.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
                     break;
-
                 case Buffer:
                     // TODO clean this up
                     double [] d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
                     resultCursor = OperatorBuffer.local().execute(leftCursor, operatorSpatialReference, d, operatorRequest.getBufferUnionResult(), null);
                     break;
+                case Distance:
+                    operatorResultBuilder.setDistance(OperatorDistance.local().execute(leftCursor.next(), rightCursor.next(), null));
+                    break;
                 case Intersection:
                     // TODO this is totally fucked up. 0 is a dimension. this defaults to 0. hasIntersectionDimensionMask needs to be automagically generated
-                    if (operatorRequest.getIntersectionDimensionMask() == 0) {
+                    if (operatorRequest.getIntersectionDimensionMask() == 0)
                         resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, operatorSpatialReference, null);
-                    } else {
+                    else
                         resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, operatorSpatialReference, null, operatorRequest.getIntersectionDimensionMask());
-                    }
-
                     break;
                 case Clip:
                     Envelope2D envelope2D = __extractEnvelope2D(operatorRequest.getClipEnvelope());
@@ -339,34 +350,19 @@ public class GeometryOperatorsUtil {
                     // TODO document that this isn't smart. getDensifyMaxLength is in whatever unit your data comes in as
                     resultCursor = OperatorDensifyByLength.local().execute(leftCursor, operatorRequest.getDensifyMaxLength(), null);
                     break;
-                case Distance:
-                    operatorResultBuilder.setDistance(OperatorDistance.local().execute(leftCursor.next(), rightCursor.next(), null));
+                case DensifyByAngle:
                     break;
-//                case DensifyByAngle:
-//                    break;
-//                case LabelPoint:
-//                    break;
-//                case GeodesicBuffer:
-//                    break;
-//                case GeodeticDensifyByLength:
-//                    break;
-//                case ShapePreservingDensify:
-//                    break;
-//                case GeodeticLength:
-//                    break;
-//                case GeodeticArea:
-//                    break;
-                case ExportToWkb:
-                    resultCursor = leftCursor;
-                    encodingType = "wkb";
+                case LabelPoint:
                     break;
-                case ExportToWkt:
-                    resultCursor = leftCursor;
-                    encodingType = "wkt";
+                case GeodesicBuffer:
                     break;
-                case ExportToGeoJson:
-                    resultCursor = leftCursor;
-                    encodingType = "geojson";
+                case GeodeticDensifyByLength:
+                    break;
+                case ShapePreservingDensify:
+                    break;
+                case GeodeticLength:
+                    break;
+                case GeodeticArea:
                     break;
                 case Simplify:
                     resultCursor = OperatorSimplify.local().execute(leftCursor, null, operatorRequest.getSimplifyForce(), null);
@@ -386,6 +382,14 @@ public class GeometryOperatorsUtil {
                 case Generalize:
                     resultCursor = OperatorGeneralize.local().execute(leftCursor, operatorRequest.getGeneralizeMaxDeviation(), operatorRequest.getGeneralizeRemoveDegenerates(), null);
                     break;
+                case GeneralizeByArea:
+                    break;
+                case ImportFromWkb:
+                    break;
+                case ImportFromWkt:
+                    break;
+                case ImportFromGeoJson:
+                    break;
                 case SymmetricDifference:
                     resultCursor = OperatorSymmetricDifference.local().execute(leftCursor, rightCursor, null, null);
                     break;
@@ -394,6 +398,20 @@ public class GeometryOperatorsUtil {
                     break;
                 case Boundary:
                     resultCursor = OperatorBoundary.local().execute(leftCursor, null);
+                    break;
+                case RandomPoints:
+                    break;
+                case ExportToWkb:
+                    resultCursor = leftCursor;
+                    encodingType = "wkb";
+                    break;
+                case ExportToWkt:
+                    resultCursor = leftCursor;
+                    encodingType = "wkt";
+                    break;
+                case ExportToGeoJson:
+                    resultCursor = leftCursor;
+                    encodingType = "geojson";
                     break;
             }
 
