@@ -70,6 +70,69 @@ service GeometryOperators {
     rpc RouteChat(stream RouteNote) returns (stream RouteNote) {}
 }
 
+enum GeometryEncodingType {
+    wkt = 0;
+    wkb = 1;
+    geojson = 2;
+    esri = 3;
+}
+
+enum ServiceOperatorType {
+    Project = 0;
+
+    ExportToJson = 1;
+    ImportFromJson = 2;
+    ImportMapGeometryFromJson = 3;
+    ExportToESRIShape = 4;
+    ImportFromESRIShape = 5;
+
+    Union = 6;
+    Difference = 7;
+
+    Proximity2D = 8;
+
+    Relate = 9;
+    Equals = 10;
+    Disjoint = 11;
+    Intersects = 12;
+    Within = 13;
+    Contains = 14;
+    Crosses = 15;
+    Touches = 16;
+    Overlaps = 17;
+
+    Buffer = 18;
+    Distance = 19;
+    Intersection = 20;
+    Clip = 21;
+    Cut = 22;
+    DensifyByLength = 23;
+    DensifyByAngle = 24;
+    LabelPoint = 25;
+
+    GeodesicBuffer = 26;
+    GeodeticDensifyByLength = 27;
+    ShapePreservingDensify = 28;
+    GeodeticLength = 29;
+    GeodeticArea = 30;
+
+    Simplify = 31;
+    SimplifyOGC = 32;
+    Offset = 33;
+    Generalize = 34;
+    GeneralizeByArea = 35;
+
+    ExportToWkb = 36;
+    ImportFromWkb = 37;
+    ExportToWkt = 38;
+    ImportFromWkt = 39;
+    ImportFromGeoJson = 40;
+    ExportToGeoJson = 41;
+    SymmetricDifference = 42;
+    ConvexHull = 43;
+    Boundary = 44;
+    RandomPoints = 45;
+}
 
 message ServiceGeometry {
     // id is usually associated with position in file format or database
@@ -77,7 +140,7 @@ message ServiceGeometry {
 
     // TODO review esri encoding typename (this is for the esri shape binary format)
     // type can be 'wkt', 'wkb', 'geojson', or 'esri'
-    string geometry_encoding_type = 2;
+    GeometryEncodingType geometry_encoding_type = 2;
 
     // the geometry encoded as base64 (wkb or esri) or as a string (wkt or geojson)
     string geometry_string = 3;
@@ -113,7 +176,7 @@ message OperatorRequest {
     OperatorRequest right_cursor = 4;
 
     // TODO replace with Enum
-    string operator_type = 5;
+    ServiceOperatorType operator_type = 5;
 
     string results_encoding_type = 6;
 

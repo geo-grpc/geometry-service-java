@@ -125,7 +125,7 @@ public class GeometryOperatorsUtil {
             }
 
 
-            Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType());
+            Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
 
             switch (operatorType) {
                 case DensifyByAngle:
@@ -273,7 +273,7 @@ public class GeometryOperatorsUtil {
             }
 
             // TODO this could throw an exception if unknown operator type provided
-            Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType());
+            Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString() );
             String encodingType = null;
             switch (operatorType) {
                 case Project:
@@ -439,26 +439,26 @@ public class GeometryOperatorsUtil {
     }
 
 
-    private static ServiceGeometry __decodeGeometry(Geometry geometry, SpatialReference spatialReference, String encoding_type) {
+    private static ServiceGeometry __decodeGeometry(Geometry geometry, SpatialReference spatialReference, GeometryEncodingType encoding_type) {
         ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder().setGeometryEncodingType(encoding_type);
         switch (encoding_type) {
-            case "wkt":
+            case wkt:
                 serviceGeometryBuilder.setGeometryString(OperatorExportToWkt.local().execute(0, geometry, null));
                 break;
-            case "geojson":
-                serviceGeometryBuilder.setGeometryString(OperatorExportToGeoJson.local().execute(spatialReference, geometry));
-                break;
-            case "wkb":
+            case wkb:
                 serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometry, null)));
                 break;
-            case "esrishape":
+            case geojson:
+                serviceGeometryBuilder.setGeometryString(OperatorExportToGeoJson.local().execute(spatialReference, geometry));
+                break;
+            case esri:
                 serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0,geometry)));
                 break;
-            default:
+            case UNRECOGNIZED:
                 break;
         }
-        // TODO set spatial reference!!
 
+        // TODO set spatial reference!!
         return serviceGeometryBuilder.build();
     }
 
@@ -491,20 +491,21 @@ public class GeometryOperatorsUtil {
         SpatialReference spatialReference = null;
         ByteBuffer byteBuffer = null;
         switch (serviceGeometry.getGeometryEncodingType()) {
-            case "wkt":
+            case wkt:
                 geometry = OperatorImportFromWkt.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(), null);
                 break;
-            case "geojson":
-                mapGeometry = OperatorImportFromGeoJson.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(), null);
-                break;
-            case "wkb":
+            case wkb:
                 byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary().toByteArray());
                 geometry = OperatorImportFromWkb.local().execute(0, Geometry.Type.Unknown, byteBuffer, null);
                 break;
-            case "esrishape":
+            case geojson:
+                mapGeometry = OperatorImportFromGeoJson.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(), null);
+                break;
+            case esri:
                 byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary().toByteArray());
                 geometry = OperatorImportFromESRIShape.local().execute(0, Geometry.Type.Unknown, byteBuffer);
-            default:
+                break;
+            case UNRECOGNIZED:
                 break;
         }
         if (mapGeometry == null) {

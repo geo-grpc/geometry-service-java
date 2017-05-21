@@ -100,10 +100,10 @@ public class GeometryOperatorsServerTest {
     polyline.lineTo(3, 3);
     OperatorExportToWkt op = OperatorExportToWkt.local();
     String geom = op.execute(0, polyline, null);
-    ServiceGeometry serviceGeom = ServiceGeometry.newBuilder().setGeometryString(geom).setGeometryEncodingType("wkt").build();
+    ServiceGeometry serviceGeom = ServiceGeometry.newBuilder().setGeometryString(geom).setGeometryEncodingType(GeometryEncodingType.wkt).build();
     OperatorRequest requestOp = OperatorRequest.newBuilder()
             .setLeftGeometry(serviceGeom)
-            .setOperatorType(Operator.Type.ExportToWkt.toString())
+            .setOperatorType(ServiceOperatorType.ExportToWkt)
             .build();
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
@@ -120,10 +120,10 @@ public class GeometryOperatorsServerTest {
     polyline.lineTo(3, 3);
     OperatorExportToWkb op = OperatorExportToWkb.local();
 
-    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
     OperatorRequest requestOp = OperatorRequest.newBuilder()
             .setLeftGeometry(serviceGeometry )
-            .setOperatorType(Operator.Type.ExportToWkt.toString())
+            .setOperatorType(ServiceOperatorType.ExportToWkt)
             .build();
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
@@ -148,11 +148,11 @@ public class GeometryOperatorsServerTest {
     //TODO why does esri shape fail
 //    OperatorExportToESRIShape op = OperatorExportToESRIShape.local();
 //    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("esrishape").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline))).build();
-    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
     OperatorRequest serviceOp = OperatorRequest
             .newBuilder()
             .setLeftGeometry(serviceGeometry)
-            .setOperatorType(Operator.Type.ConvexHull.toString())
+            .setOperatorType(ServiceOperatorType.ConvexHull)
             .build();
 
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
@@ -179,7 +179,7 @@ public class GeometryOperatorsServerTest {
             .build();
 
     ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder()
-            .setGeometryEncodingType("wkb")
+            .setGeometryEncodingType(GeometryEncodingType.wkb)
             .setSpatialReference(inputSpatialReference)
             .setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null)))
             .build();
@@ -192,7 +192,7 @@ public class GeometryOperatorsServerTest {
     OperatorRequest serviceProjectOp = OperatorRequest
             .newBuilder()
             .setLeftGeometry(serviceGeometry)
-            .setOperatorType(Operator.Type.Project.toString())
+            .setOperatorType(ServiceOperatorType.Project)
             .setOperationSpatialReference(outputSpatialReference)
             .build();
 
@@ -230,17 +230,17 @@ public class GeometryOperatorsServerTest {
 //    polyline.lineTo(225, 64);
     OperatorExportToWkb op = OperatorExportToWkb.local();
     //TODO why does esri shape fail
-    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
     OperatorRequest serviceConvexOp = OperatorRequest
             .newBuilder()
             .setLeftGeometry(serviceGeometry)
-            .setOperatorType(Operator.Type.ConvexHull.toString())
+            .setOperatorType(ServiceOperatorType.ConvexHull)
             .build();
 
     OperatorRequest serviceOp = OperatorRequest.newBuilder()
             .setLeftCursor(serviceConvexOp)
             .addBufferDistances(1)
-            .setOperatorType(Operator.Type.Buffer.toString())
+            .setOperatorType(ServiceOperatorType.Buffer)
             .build();
 
 
