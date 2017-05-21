@@ -28,7 +28,12 @@ dependencies {
   compile "io.grpc:grpc-netty:${grpcVersion}"
   compile "io.grpc:grpc-protobuf:${grpcVersion}"
   compile "io.grpc:grpc-stub:${grpcVersion}"
-  compile project(':geometry-api-java')
+//  compile project(':esri-geometry-api')
+  compile files('../geometry-api-java/build/libs/jproj.jar')
+  compile files('../geometry-api-java/build/libs/jackson-core-asl-1.9.12.jar')
+  compile files('../geometry-api-java/build/libs/esri-geometry-api-1.2.1.jar')
+  compile files('../geometry-api-java/build/libs/json-20090211.jar')
+//  compile 'com.esri.geometry:esri-geometry-api:1.2.1'
 
   testCompile "junit:junit:4.11"
   testCompile "org.mockito:mockito-core:1.9.5"
@@ -91,6 +96,8 @@ applicationDistribution.into('bin') {
   from(geometryOperatorsClient)
   fileMode = 0755
 }
+
+//applicationDefaultJvmArgs = ["-Dgreeting.language=en"]
 
 tasks.withType(Test) {
   systemProperty "java.library.path", "/usr/local/lib/"
