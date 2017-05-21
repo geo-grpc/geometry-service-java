@@ -12,13 +12,6 @@ RUN apk update && \
     apk add build-base && \
     apk add make
 
-#RUN apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 16126D3A3E5C1192    \
-#    && apt-get update \
-#    && apt-get install -y --fix-missing --no-install-recommends \
-#            software-properties-common build-essential ca-certificates \
-#            git wget unzip libtool \
-#    && apt-get remove --purge -y $BUILD_PACKAGES  && rm -rf /var/lib/apt/lists/*
-
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 
 # TODO vertical datum support
