@@ -34,7 +34,8 @@ dependencies {
   compile files('../geometry-api-java/build/libs/jackson-core-asl-1.9.12.jar')
   compile files('../geometry-api-java/build/libs/esri-geometry-api-1.2.1.jar')
   compile files('../geometry-api-java/build/libs/json-20090211.jar')
-  compile files('/Users/davidraleigh/code/google/grpc-java/grpclb/build/libs/grpc-grpclb-1.2.0.jar')
+//  compile files('/Users/davidraleigh/code/google/grpc-java/grpclb/build/grpc-grpclb-1.5.0-SNAPSHOT.jar')
+//  compile files('/Users/davidraleigh/code/google/grpc-java/grpclb/build/libs/grpc-grpclb-1.2.0.jar')
 //  compile 'com.esri.geometry:esri-geometry-api:1.2.1'
 
   testCompile "junit:junit:4.11"
