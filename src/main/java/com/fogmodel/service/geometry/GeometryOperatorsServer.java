@@ -13,6 +13,7 @@ import com.fogmodel.service.geometry.GeometryOperatorsUtil;
 import com.esri.core.geometry.Geometry;
 import com.esri.core.geometry.OperatorImportFromGeoJson;
 import com.esri.core.geometry.*;
+import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import com.fogmodel.service.geometry.*;
@@ -36,7 +37,11 @@ public class GeometryOperatorsServer {
     private static final Logger logger = Logger.getLogger(GeometryOperatorsServer.class.getName());
 
     private final int port;
+
+    // io.grpc.Server
     private final Server server;
+
+    private final LinkedList<ManagedChannel> fakeOobChannels = new LinkedList<ManagedChannel>();
 
     public GeometryOperatorsServer(int port) throws IOException {
         this(port, GeometryOperatorsUtil.getDefaultFeaturesFile());
