@@ -32,39 +32,114 @@
 package com.fogmodel.service.geometry;
 
 
+import com.esri.core.geometry.*;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import com.fogmodel.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
 import com.fogmodel.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
+import io.grpc.*;
+//import io.grpc.grpclb.*;
+import io.grpc.internal.SerializingExecutor;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
+import java.net.SocketAddress;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+
 /**
  * Sample client code that makes gRPC calls to the server.
  */
 public class GeometryOperatorsClient {
-    private static final Logger logger = Logger.getLogger(GeometryOperatorsClient.class.getName());
-
+    // TODO replace
     private final ManagedChannel channel;
     private final GeometryOperatorsBlockingStub blockingStub;
     private final GeometryOperatorsStub asyncStub;
+    // TODO replace
+
+
+    private static final Logger logger = Logger.getLogger(GeometryOperatorsClient.class.getName());
+
+    private final SerializingExecutor channelExecutor = new SerializingExecutor(MoreExecutors.directExecutor());
+    private final LinkedList<ManagedChannel> subChannels = new LinkedList<ManagedChannel>();
+
+//    private GrpclbLoadBalancerFactory loadBalancerFactory;
+    private LoadBalancer loadBalancer;
+    private io.grpc.LoadBalancer.Helper loadBalancerHelper;
+    private List<ResolvedServerInfoGroup> grpclbResolutionList;
 
     private Random random = new Random();
     private TestHelper testHelper;
 
+    private static class WorkerSocketAddress extends SocketAddress {
+        final String name;
+        final String port;
+
+        WorkerSocketAddress(String host, String port) {
+            this.name = host;
+            this.port = port;
+        }
+
+        @Override
+        public String toString() {
+            return this.name + ":" + port;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (other instanceof WorkerSocketAddress) {
+                WorkerSocketAddress otherAddr = (WorkerSocketAddress) other;
+                return name.equals(otherAddr.name);
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return name.hashCode();
+        }
+    }
+
     /** Construct client for accessing GeometryOperators server at {@code host:port}. */
     public GeometryOperatorsClient(String host, int port) {
+        // using loadbalancer host and port make a request to get list of hosts and ports
+
+//        WorkerSocketAddress workerSocketAddress = new WorkerSocketAddress(host, Integer.toString(port));
+//        grpclbResolutionList = new ArrayList<ResolvedServerInfoGroup>();
+//        ResolvedServerInfoGroup serverInfoGroup = ResolvedServerInfoGroup
+//                .builder(Attributes
+//                        .newBuilder()
+//                        .set(GrpclbConstants.ATTR_LB_ADDR_AUTHORITY, host)
+//                        .build())
+//                .add(new ResolvedServerInfo(workerSocketAddress))
+//                .build();
+//
+//
+//        grpclbResolutionList.add(serverInfoGroup);
+//
+//        EquivalentAddressGroup equivalentAddressGroup = grpclbResolutionList.get(0).toEquivalentAddressGroup();
+//        Attributes grpclbResolutionAttrs = Attributes.newBuilder().set(GrpclbConstants.ATTR_LB_POLICY, GrpclbConstants.LbPolicy.GRPCLB).build();
+//        LoadBalancer.Subchannel subchannel = loadBalancerHelper.createSubchannel(equivalentAddressGroup, grpclbResolutionAttrs);
+////        channelExecutor = new SerializingExecutor(MoreExecutors.directExecutor());
+//        loadBalancer = loadBalancerFactory.newLoadBalancer(loadBalancerHelper);
+//        channelExecutor.execute(new Runnable() {
+//            @Override
+//            public void run() {
+//                loadBalancer.handleResolvedAddresses(grpclbResolutionList, grpclbResolutionAttrs);
+//            }
+//        });
+//
+////    private final ManagedChannel channel;
+////    private final GeometryOperatorsBlockingStub blockingStub;
+////    private final GeometryOperatorsStub asyncStub;
+//        channel = subChannels.poll();
+//        blockingStub = GeometryOperatorsGrpc.newBlockingStub(channel);
+//        asyncStub = GeometryOperatorsGrpc.newStub(channel);
         this(ManagedChannelBuilder.forAddress(host, port).usePlaintext(true));
     }
 
@@ -77,6 +152,43 @@ public class GeometryOperatorsClient {
 
     public void shutdown() throws InterruptedException {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+    }
+
+    public void getBuffered() {
+        Polyline polyline = new Polyline();
+        polyline.startPath(0,0);
+        polyline.lineTo(2, 3);
+        polyline.lineTo(3, 3);
+        // TODO inspect bug where it crosses dateline
+//    polyline.startPath(-200, -90);
+//    polyline.lineTo(-180, -85);
+//    polyline.lineTo(-90, -70);
+//    polyline.lineTo(0, 0);
+//    polyline.lineTo(100, 25);
+//    polyline.lineTo(170, 45);
+//    polyline.lineTo(225, 64);
+        OperatorExportToWkb op = OperatorExportToWkb.local();
+        //TODO why does esri shape fail
+        ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+        OperatorRequest serviceConvexOp = OperatorRequest
+                .newBuilder()
+                .setLeftGeometry(serviceGeometry)
+                .setOperatorType(ServiceOperatorType.ConvexHull)
+                .build();
+
+        OperatorRequest serviceOp = OperatorRequest.newBuilder()
+                .setLeftCursor(serviceConvexOp)
+                .addBufferDistances(1)
+                .setOperatorType(ServiceOperatorType.Buffer)
+                .build();
+
+
+        OperatorResult operatorResult = blockingStub.executeOperation(serviceOp);
+
+        OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
+        Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(), null);
+
+        boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
     }
 
     /**
