@@ -18,4 +18,8 @@ RUN chmod +x /opt/src/geometry-service-java/build/install/geometry-service/bin/g
 
 EXPOSE 8980
 
+#TODO, I should be able to make a test image and copy from that, right?
+WORKDIR /opt/src/geometry-service-java/build/test-results
+COPY --from=builder /opt/src/geometry-service-java/build/test-results .
+
 CMD ["/opt/src/geometry-service-java/build/install/geometry-service/bin/geometry-operators-server"]
