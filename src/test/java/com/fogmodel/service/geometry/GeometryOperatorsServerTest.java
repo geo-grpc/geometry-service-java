@@ -41,9 +41,6 @@ import java.io.FileReader;
  * Unit tests for {@link GeometryOperatorsServer}.
  * For demonstrating how to write gRPC unit test only.
  * Not intended to provide a high code coverage or to test every major usecase.
- *
- * <p>For basic unit test examples see {@link io.grpc.examples.helloworld.HelloWorldClientTest} and
- * {@link io.grpc.examples.helloworld.HelloWorldServerTest}.
  */
 @RunWith(JUnit4.class)
 public class GeometryOperatorsServerTest {
