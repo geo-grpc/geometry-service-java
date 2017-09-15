@@ -22,4 +22,6 @@ EXPOSE 8980
 WORKDIR /opt/src/geometry-service-java/build/test-results
 COPY --from=builder /opt/src/geometry-service-java/build/test-results .
 
-CMD ["/opt/src/geometry-service-java/build/install/geometry-service/bin/geometry-operators-server"]
+CMD GEOMETRY_OPERATORS_SERVER_OPTS="-Djava.library.path=/usr/local/lib/" /opt/src/geometry-service-java/build/install/geometry-service/bin/geometry-operators-server
+# TODO should have to set the options here, but whatever. gradle is being a pain.
+#CMD /opt/src/geometry-service-java/build/install/geometry-service/bin/geometry-operators-server

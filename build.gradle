@@ -1,5 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'com.google.protobuf'
+// Provide convenience executables for trying out the examples.
+apply plugin: 'application'
 
 buildscript {
   repositories {
@@ -73,8 +75,7 @@ idea {
   }
 }
 
-// Provide convenience executables for trying out the examples.
-apply plugin: 'application'
+
 
 startScripts.enabled = false
 
@@ -100,7 +101,8 @@ applicationDistribution.into('bin') {
 }
 
 //applicationDefaultJvmArgs = ["-Dgreeting.language=en"]
-applicationDefaultJvmArgs = ["-Djava.library.path=/usr/local/lib/"]
+// TODO this should set the stupid path, but it doesn't seem to write to the DEFAULT_JVM_OPTS
+//applicationDefaultJvmArgs = ["-Djava.library.path=/usr/local/lib/"]
 
 tasks.withType(Test) {
   systemProperty "java.library.path", "/usr/local/lib/"
