@@ -84,6 +84,7 @@ task geometryOperatorsServer(type: CreateStartScripts) {
   applicationName = 'geometry-operators-server'
   outputDir = new File(project.buildDir, 'tmp')
   classpath = jar.outputs.files + project.configurations.runtime
+  defaultJvmOpts = ['-Djava.library.path=/usr/local/lib/']
 }
 
 task geometryOperatorsClient(type: CreateStartScripts) {
@@ -99,10 +100,6 @@ applicationDistribution.into('bin') {
   from(geometryOperatorsClient)
   fileMode = 0755
 }
-
-//applicationDefaultJvmArgs = ["-Dgreeting.language=en"]
-// TODO this should set the stupid path, but it doesn't seem to write to the DEFAULT_JVM_OPTS
-//applicationDefaultJvmArgs = ["-Djava.library.path=/usr/local/lib/"]
 
 tasks.withType(Test) {
   systemProperty "java.library.path", "/usr/local/lib/"
