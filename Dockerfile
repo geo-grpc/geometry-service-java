@@ -1,5 +1,7 @@
 FROM us.gcr.io/echoparklabs/geometry-api-java:latest as builder
 
+MAINTAINER David Raleigh <david@echoparklabs.io>
+
 COPY ./ /opt/src/geometry-service-java
 
 WORKDIR /opt/src/geometry-service-java
