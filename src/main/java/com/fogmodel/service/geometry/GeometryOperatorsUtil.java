@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -301,28 +302,19 @@ public class GeometryOperatorsUtil {
                 case Relate:
                     break;
                 case Equals:
-                    operatorResultBuilder.setSpatialRelationship(OperatorEquals.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
-                    break;
                 case Disjoint:
-                    operatorResultBuilder.setSpatialRelationship(OperatorDisjoint.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
-                    break;
                 case Intersects:
-                    operatorResultBuilder.setSpatialRelationship(OperatorIntersects.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
-                    break;
                 case Within:
-                    operatorResultBuilder.setSpatialRelationship(OperatorWithin.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
-                    break;
                 case Contains:
-                    operatorResultBuilder.setSpatialRelationship(OperatorContains.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
-                    break;
                 case Crosses:
-                    operatorResultBuilder.setSpatialRelationship(OperatorCrosses.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
-                    break;
                 case Touches:
-                    operatorResultBuilder.setSpatialRelationship(OperatorTouches.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
-                    break;
                 case Overlaps:
-                    operatorResultBuilder.setSpatialRelationship(OperatorOverlaps.local().execute(leftCursor.next(), rightCursor.next(), operatorSpatialReference, null));
+                    HashMap<Integer, Boolean> result_map = ((OperatorSimpleRelation)OperatorFactoryLocal.getInstance().getOperator(operatorType)).execute(leftCursor.next(), rightCursor, operatorSpatialReference, null);
+                    if (result_map.size() == 1) {
+                            operatorResultBuilder.setSpatialRelationship(result_map.get(0));
+                    } else {
+                            operatorResultBuilder.putAllRelateMap(result_map);
+                    }
                     break;
                 case Buffer:
                     // TODO clean this up

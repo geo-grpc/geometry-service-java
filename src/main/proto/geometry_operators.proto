@@ -158,15 +158,15 @@ message ServiceSpatialReference {
     int32 wkid = 6;
 }
 
-
 message OperatorResult {
     ServiceGeometry geometry = 1;
 
     bool spatial_relationship = 2;
 
     double distance = 3;
-}
 
+    map<int32, bool> relate_map = 4;
+}
 
 message OperatorRequest {
     ServiceGeometry left_geometry = 1;

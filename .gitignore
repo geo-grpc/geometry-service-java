@@ -4,3 +4,6 @@ build/
 .gradle/
 *.iml
 *.orig
+out/
+.idea/libraries/*.xml
+

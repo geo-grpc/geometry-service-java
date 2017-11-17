@@ -2,6 +2,8 @@ apply plugin: 'java'
 apply plugin: 'com.google.protobuf'
 // Provide convenience executables for trying out the examples.
 apply plugin: 'application'
+// Inform IntelliJ projects about the generated code.
+apply plugin: 'idea'
 
 buildscript {
   repositories {
@@ -10,7 +12,7 @@ buildscript {
   dependencies {
     // ASSUMES GRADLE 2.12 OR HIGHER. Use plugin version 0.7.5 with earlier
     // gradle versions
-    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.0'
+    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.1'
   }
 }
 
@@ -24,7 +26,7 @@ repositories {
 
 // Feel free to delete the comment at the next line. It is just for safely
 // updating the version in our release process.
-def grpcVersion = '1.2.0' // CURRENT_GRPC_VERSION
+def grpcVersion = '1.7.0' // CURRENT_GRPC_VERSION
 
 dependencies {
   compile "io.grpc:grpc-core:${grpcVersion}"
@@ -44,27 +46,23 @@ dependencies {
 }
 
 protobuf {
-  protoc {
-    artifact = 'com.google.protobuf:protoc:3.2.0'
-  }
-  plugins {
-    grpc {
-      artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.4.0"
     }
-  }
-  generateProtoTasks {
-    all()*.plugins {
-      grpc {
-        // To generate deprecated interfaces and static bindService method,
-        // turn the enable_deprecated option to true below:
-        option 'enable_deprecated=false'
-      }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
     }
-  }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
 }
 
-// Inform IntelliJ projects about the generated code.
-apply plugin: 'idea'
+
+
 
 idea {
   module {
