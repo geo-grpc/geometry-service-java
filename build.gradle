@@ -80,7 +80,7 @@ startScripts.enabled = false
 // help with defaultJvmOpts
 //https://docs.gradle.org/current/dsl/org.gradle.jvm.application.tasks.CreateStartScripts.html
 task geometryOperatorsServer(type: CreateStartScripts) {
-  mainClassName = 'com.fogmodel.service.geometry.GeometryOperatorsServer'
+  mainClassName = 'com.epl.service.geometry.GeometryOperatorsServer'
   applicationName = 'geometry-operators-server'
   outputDir = new File(project.buildDir, 'tmp')
   classpath = jar.outputs.files + project.configurations.runtime
@@ -88,7 +88,7 @@ task geometryOperatorsServer(type: CreateStartScripts) {
 }
 
 task geometryOperatorsClient(type: CreateStartScripts) {
-  mainClassName = 'com.fogmodel.service.geometry.GeometryOperatorsClient'
+  mainClassName = 'com.epl.service.geometry.GeometryOperatorsClient'
   applicationName = 'geometry-operators-client'
   outputDir = new File(project.buildDir, 'tmp')
   classpath = jar.outputs.files + project.configurations.runtime
