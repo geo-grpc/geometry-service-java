@@ -38,6 +38,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import com.fogmodel.service.geometry.*;
 
+import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.json.JSONException;
 
@@ -69,14 +70,18 @@ public class GeometryOperatorsServer {
 
     /** Create a GeometryOperators server listening on {@code port} using {@code featureFile} database. */
     public GeometryOperatorsServer(int port, URL featureFile) throws IOException {
-        this(ServerBuilder.forPort(port), port, GeometryOperatorsUtil.parseFeatures(featureFile));
+        // changed max message size to match tensorflow
+        // https://github.com/tensorflow/serving/issues/288
+        // https://github.com/tensorflow/tensorflow/blob/d0d975f8c3330b5402263b2356b038bc8af919a2/tensorflow/core/platform/types.h#L52
+        // TODO add a test to check data size can handle 2 gigs
+        this(NettyServerBuilder.forPort(port).maxMessageSize(2147483647), port, GeometryOperatorsUtil.parseFeatures(featureFile));
     }
 
     /** Create a GeometryOperators server using serverBuilder as a base and features as data. */
     public GeometryOperatorsServer(ServerBuilder<?> serverBuilder, int port, Collection<Feature> features) {
         this.port = port;
-        server = serverBuilder.addService(new GeometryOperatorsService(features))
-                .build();
+        server = serverBuilder.addService(new GeometryOperatorsService(features)).build();
+
     }
 
     /** Start serving requests. */
