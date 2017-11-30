@@ -113,7 +113,7 @@ public class GeometryOperatorsServerTest {
     polyline.lineTo(3, 3);
     OperatorExportToWkt op = OperatorExportToWkt.local();
     String geom = op.execute(0, polyline, null);
-    ServiceGeometry serviceGeom = ServiceGeometry.newBuilder().setGeometryString(geom).setGeometryEncodingType(GeometryEncodingType.wkt).build();
+    ServiceGeometry serviceGeom = ServiceGeometry.newBuilder().addGeometryString(geom).setGeometryEncodingType(GeometryEncodingType.wkt).build();
     OperatorRequest requestOp = OperatorRequest.newBuilder()
             .setLeftGeometry(serviceGeom)
             .setOperatorType(ServiceOperatorType.ExportToWkt)
@@ -122,7 +122,7 @@ public class GeometryOperatorsServerTest {
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
     OperatorResult operatorResult = stub.executeOperation(requestOp);
 
-    assertEquals(operatorResult.getGeometry().getGeometryString(), serviceGeom.getGeometryString());
+    assertEquals(operatorResult.getGeometry().getGeometryString(0), serviceGeom.getGeometryString(0));
   }
 
   @Test
@@ -133,7 +133,8 @@ public class GeometryOperatorsServerTest {
     polyline.lineTo(3, 3);
     OperatorExportToWkb op = OperatorExportToWkb.local();
 
-    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
     OperatorRequest requestOp = OperatorRequest.newBuilder()
             .setLeftGeometry(serviceGeometry )
             .setOperatorType(ServiceOperatorType.ExportToWkt)
@@ -144,7 +145,7 @@ public class GeometryOperatorsServerTest {
 
     OperatorExportToWkt op2 = OperatorExportToWkt.local();
     String geom = op2.execute(0, polyline, null);
-    assertEquals(operatorResult.getGeometry().getGeometryString(), geom);
+    assertEquals(operatorResult.getGeometry().getGeometryString(0), geom);
   }
 
   @Test
@@ -161,7 +162,7 @@ public class GeometryOperatorsServerTest {
     //TODO why does esri shape fail
 //    OperatorExportToESRIShape op = OperatorExportToESRIShape.local();
 //    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("esrishape").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline))).build();
-    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
     OperatorRequest serviceOp = OperatorRequest
             .newBuilder()
             .setLeftGeometry(serviceGeometry)
@@ -172,7 +173,7 @@ public class GeometryOperatorsServerTest {
     OperatorResult operatorResult = stub.executeOperation(serviceOp);
 
     OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(), null);
+    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(0), null);
 
     boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 
@@ -194,7 +195,7 @@ public class GeometryOperatorsServerTest {
     ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder()
             .setGeometryEncodingType(GeometryEncodingType.wkb)
             .setSpatialReference(inputSpatialReference)
-            .setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null)))
+            .addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null)))
             .build();
 
       ServiceSpatialReference outputSpatialReference = ServiceSpatialReference.newBuilder()
@@ -213,7 +214,7 @@ public class GeometryOperatorsServerTest {
     OperatorResult operatorResult = stub.executeOperation(serviceProjectOp);
 
     OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-    Polyline result = (Polyline)op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(), null);
+    Polyline result = (Polyline)op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(0), null);
     TestCase.assertNotNull(result);
 
     TestCase.assertFalse(polyline.equals(result));
@@ -243,7 +244,7 @@ public class GeometryOperatorsServerTest {
 //    polyline.lineTo(225, 64);
     OperatorExportToWkb op = OperatorExportToWkb.local();
     //TODO why does esri shape fail
-    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
     OperatorRequest serviceConvexOp = OperatorRequest
             .newBuilder()
             .setLeftGeometry(serviceGeometry)
@@ -261,7 +262,7 @@ public class GeometryOperatorsServerTest {
     OperatorResult operatorResult = stub.executeOperation(serviceOp);
 
     OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(), null);
+    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(0), null);
 
     boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 

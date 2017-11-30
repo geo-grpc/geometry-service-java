@@ -34,6 +34,7 @@ import io.grpc.internal.SerializingExecutor;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -158,7 +159,7 @@ public class GeometryOperatorsClient {
 //    polyline.lineTo(225, 64);
         OperatorExportToWkb op = OperatorExportToWkb.local();
         //TODO why does esri shape fail
-        ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+        ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
         OperatorRequest serviceConvexOp = OperatorRequest
                 .newBuilder()
                 .setLeftGeometry(serviceGeometry)
@@ -175,7 +176,7 @@ public class GeometryOperatorsClient {
         OperatorResult operatorResult = blockingStub.executeOperation(serviceOp);
 
         OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-        Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(), null);
+        Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(0), null);
 
         boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
     }

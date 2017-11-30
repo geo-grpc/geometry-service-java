@@ -106,17 +106,17 @@ public class GeometryOperatorsUtil {
 
         switch (encodingType) {
             case "wkb":
-                serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometryCursor.next(), null)));
+                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometryCursor.next(), null)));
                 break;
             case "wkt":
-                serviceGeometryBuilder.setGeometryString(OperatorExportToWkt.local().execute(0, geometryCursor.next(), null));
+                serviceGeometryBuilder.addGeometryString(OperatorExportToWkt.local().execute(0, geometryCursor.next(), null));
                 break;
             case "esrishape":
-                serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0, geometryCursor.next())));
+                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0, geometryCursor.next())));
                 break;
             case "geojson":
                 //TODO I'm just blindly setting the spatial reference here instead of projecting the result into the spatial reference
-                serviceGeometryBuilder.setGeometryString(OperatorExportToGeoJson.local().execute(null, geometryCursor.next()));
+                serviceGeometryBuilder.addGeometryString(OperatorExportToGeoJson.local().execute(null, geometryCursor.next()));
                 break;
         }
 
@@ -455,16 +455,16 @@ public class GeometryOperatorsUtil {
         ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder().setGeometryEncodingType(encoding_type);
         switch (encoding_type) {
             case wkt:
-                serviceGeometryBuilder.setGeometryString(OperatorExportToWkt.local().execute(0, geometry, null));
+                serviceGeometryBuilder.addGeometryString(OperatorExportToWkt.local().execute(0, geometry, null));
                 break;
             case wkb:
-                serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometry, null)));
+                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometry, null)));
                 break;
             case geojson:
-                serviceGeometryBuilder.setGeometryString(OperatorExportToGeoJson.local().execute(spatialReference, geometry));
+                serviceGeometryBuilder.addGeometryString(OperatorExportToGeoJson.local().execute(spatialReference, geometry));
                 break;
             case esri:
-                serviceGeometryBuilder.setGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0,geometry)));
+                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0,geometry)));
                 break;
             case UNRECOGNIZED:
                 break;
@@ -504,17 +504,17 @@ public class GeometryOperatorsUtil {
         ByteBuffer byteBuffer = null;
         switch (serviceGeometry.getGeometryEncodingType()) {
             case wkt:
-                geometry = OperatorImportFromWkt.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(), null);
+                geometry = OperatorImportFromWkt.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(0), null);
                 break;
             case wkb:
-                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary().toByteArray());
+                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary(0).toByteArray());
                 geometry = OperatorImportFromWkb.local().execute(0, Geometry.Type.Unknown, byteBuffer, null);
                 break;
             case geojson:
-                mapGeometry = OperatorImportFromGeoJson.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(), null);
+                mapGeometry = OperatorImportFromGeoJson.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(0), null);
                 break;
             case esri:
-                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary().toByteArray());
+                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary(0).toByteArray());
                 geometry = OperatorImportFromESRIShape.local().execute(0, Geometry.Type.Unknown, byteBuffer);
                 break;
             case UNRECOGNIZED:
