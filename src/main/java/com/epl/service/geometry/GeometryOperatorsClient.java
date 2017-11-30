@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.fogmodel.service.geometry;
+package com.epl.service.geometry;
 
 
 import com.esri.core.geometry.*;
@@ -26,15 +26,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
-import com.fogmodel.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
-import com.fogmodel.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
+import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
+import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
 import io.grpc.*;
 //import io.grpc.grpclb.*;
 import io.grpc.internal.SerializingExecutor;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;

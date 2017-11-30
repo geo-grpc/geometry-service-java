@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.fogmodel.service.geometry;
+package com.epl.service.geometry;
 
 import static java.lang.Math.atan2;
 import static java.lang.Math.cos;
@@ -29,22 +29,15 @@ import static java.lang.Math.sqrt;
 import static java.lang.Math.toRadians;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-import com.fogmodel.service.geometry.GeometryOperatorsUtil;
-import com.esri.core.geometry.Geometry;
-import com.esri.core.geometry.OperatorImportFromGeoJson;
-import com.esri.core.geometry.*;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import com.fogmodel.service.geometry.*;
 
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
-import org.json.JSONException;
 
 import java.io.IOException;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

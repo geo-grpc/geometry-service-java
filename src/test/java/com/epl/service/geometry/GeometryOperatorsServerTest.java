@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.fogmodel.service.geometry;
+package com.epl.service.geometry;
 
 import static junit.framework.TestCase.assertNull;
 import static junit.framework.TestCase.fail;
@@ -44,10 +44,7 @@ import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 import org.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
@@ -62,12 +59,12 @@ import java.io.FileReader;
 public class GeometryOperatorsServerTest {
   private GeometryOperatorsServer server;
   private ManagedChannel inProcessChannel;
-  private Collection<com.fogmodel.service.geometry.Feature> features;
+  private Collection<Feature> features;
 
   @Before
   public void setUp() throws Exception {
     String uniqueServerName = "in-process server for " + getClass();
-    features = new ArrayList<com.fogmodel.service.geometry.Feature>();
+    features = new ArrayList<Feature>();
     // use directExecutor for both InProcessServerBuilder and InProcessChannelBuilder can reduce the
     // usage timeouts and latches in test. But we still add timeout and latches where they would be
     // needed if no directExecutor were used, just for demo purpose.
@@ -85,18 +82,18 @@ public class GeometryOperatorsServerTest {
 
   @Test
   public void getFeature() {
-    com.fogmodel.service.geometry.ReplacePoint point = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(1).setLatitude(1).build();
-    com.fogmodel.service.geometry.Feature unnamedFeature = com.fogmodel.service.geometry.Feature.newBuilder()
+    ReplacePoint point = ReplacePoint.newBuilder().setLongitude(1).setLatitude(1).build();
+    Feature unnamedFeature = Feature.newBuilder()
         .setName("").setLocation(point).build();
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
 
     // feature not found in the server
-    com.fogmodel.service.geometry.Feature feature = stub.getFeature(point);
+    Feature feature = stub.getFeature(point);
 
     assertEquals(unnamedFeature, feature);
 
     // feature found in the server
-    com.fogmodel.service.geometry.Feature namedFeature = com.fogmodel.service.geometry.Feature.newBuilder()
+    Feature namedFeature = Feature.newBuilder()
         .setName("name").setLocation(point).build();
     features.add(namedFeature);
 
@@ -172,8 +169,8 @@ public class GeometryOperatorsServerTest {
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
     OperatorResult operatorResult = stub.executeOperation(serviceOp);
 
-    OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(0), null);
+    OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
+    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinary(0).asReadOnlyByteBuffer(), null);
 
     boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 
@@ -213,8 +210,8 @@ public class GeometryOperatorsServerTest {
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
     OperatorResult operatorResult = stub.executeOperation(serviceProjectOp);
 
-    OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-    Polyline result = (Polyline)op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(0), null);
+    OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
+    Polyline result = (Polyline)op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinary(0).asReadOnlyByteBuffer(), null);
     TestCase.assertNotNull(result);
 
     TestCase.assertFalse(polyline.equals(result));
@@ -261,8 +258,8 @@ public class GeometryOperatorsServerTest {
     GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
     OperatorResult operatorResult = stub.executeOperation(serviceOp);
 
-    OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(0), null);
+    OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
+    Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinary(0).asReadOnlyByteBuffer(), null);
 
     boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 
@@ -308,35 +305,35 @@ public class GeometryOperatorsServerTest {
   @Test
   public void listFeatures() throws Exception {
     // setup
-    com.fogmodel.service.geometry.Rectangle rect = com.fogmodel.service.geometry.Rectangle.newBuilder()
-        .setLo(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(0).setLatitude(0).build())
-        .setHi(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(10).setLatitude(10).build())
+    Rectangle rect = Rectangle.newBuilder()
+        .setLo(ReplacePoint.newBuilder().setLongitude(0).setLatitude(0).build())
+        .setHi(ReplacePoint.newBuilder().setLongitude(10).setLatitude(10).build())
         .build();
-    com.fogmodel.service.geometry.Feature f1 = com.fogmodel.service.geometry.Feature.newBuilder()
-        .setLocation(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(-1).setLatitude(-1).build())
+    Feature f1 = Feature.newBuilder()
+        .setLocation(ReplacePoint.newBuilder().setLongitude(-1).setLatitude(-1).build())
         .setName("f1")
         .build(); // not inside rect
-    com.fogmodel.service.geometry.Feature f2 = com.fogmodel.service.geometry.Feature.newBuilder()
-        .setLocation(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(2).setLatitude(2).build())
+    Feature f2 = Feature.newBuilder()
+        .setLocation(ReplacePoint.newBuilder().setLongitude(2).setLatitude(2).build())
         .setName("f2")
         .build();
-    com.fogmodel.service.geometry.Feature f3 = com.fogmodel.service.geometry.Feature.newBuilder()
-        .setLocation(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(3).setLatitude(3).build())
+    Feature f3 = Feature.newBuilder()
+        .setLocation(ReplacePoint.newBuilder().setLongitude(3).setLatitude(3).build())
         .setName("f3")
         .build();
-    com.fogmodel.service.geometry.Feature f4 = com.fogmodel.service.geometry.Feature.newBuilder()
-        .setLocation(com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(4).setLatitude(4).build())
+    Feature f4 = Feature.newBuilder()
+        .setLocation(ReplacePoint.newBuilder().setLongitude(4).setLatitude(4).build())
         .build(); // unamed
     features.add(f1);
     features.add(f2);
     features.add(f3);
     features.add(f4);
-    final Collection<com.fogmodel.service.geometry.Feature> result = new HashSet<com.fogmodel.service.geometry.Feature>();
+    final Collection<Feature> result = new HashSet<Feature>();
     final CountDownLatch latch = new CountDownLatch(1);
-    StreamObserver<com.fogmodel.service.geometry.Feature> responseObserver =
-        new StreamObserver<com.fogmodel.service.geometry.Feature>() {
+    StreamObserver<Feature> responseObserver =
+        new StreamObserver<Feature>() {
           @Override
-          public void onNext(com.fogmodel.service.geometry.Feature value) {
+          public void onNext(Feature value) {
             result.add(value);
           }
 
@@ -357,38 +354,38 @@ public class GeometryOperatorsServerTest {
     assertTrue(latch.await(1, TimeUnit.SECONDS));
 
     // verify
-    assertEquals(new HashSet<com.fogmodel.service.geometry.Feature>(Arrays.asList(f2, f3)), result);
+    assertEquals(new HashSet<Feature>(Arrays.asList(f2, f3)), result);
   }
 
   @Test
   public void recordRoute() {
-    com.fogmodel.service.geometry.ReplacePoint p1 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(1000).setLatitude(1000).build();
-    com.fogmodel.service.geometry.ReplacePoint p2 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(2000).setLatitude(2000).build();
-    com.fogmodel.service.geometry.ReplacePoint p3 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(3000).setLatitude(3000).build();
-    com.fogmodel.service.geometry.ReplacePoint p4 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(4000).setLatitude(4000).build();
-    com.fogmodel.service.geometry.Feature f1 = com.fogmodel.service.geometry.Feature.newBuilder().setLocation(p1).build(); // unamed
-    com.fogmodel.service.geometry.Feature f2 = com.fogmodel.service.geometry.Feature.newBuilder().setLocation(p2).setName("f2").build();
-    com.fogmodel.service.geometry.Feature f3 = com.fogmodel.service.geometry.Feature.newBuilder().setLocation(p3).setName("f3").build();
-    com.fogmodel.service.geometry.Feature f4 = Feature.newBuilder().setLocation(p4).build(); // unamed
+    ReplacePoint p1 = ReplacePoint.newBuilder().setLongitude(1000).setLatitude(1000).build();
+    ReplacePoint p2 = ReplacePoint.newBuilder().setLongitude(2000).setLatitude(2000).build();
+    ReplacePoint p3 = ReplacePoint.newBuilder().setLongitude(3000).setLatitude(3000).build();
+    ReplacePoint p4 = ReplacePoint.newBuilder().setLongitude(4000).setLatitude(4000).build();
+    Feature f1 = Feature.newBuilder().setLocation(p1).build(); // unamed
+    Feature f2 = Feature.newBuilder().setLocation(p2).setName("f2").build();
+    Feature f3 = Feature.newBuilder().setLocation(p3).setName("f3").build();
+    Feature f4 = Feature.newBuilder().setLocation(p4).build(); // unamed
     features.add(f1);
     features.add(f2);
     features.add(f3);
     features.add(f4);
 
     @SuppressWarnings("unchecked")
-    StreamObserver<com.fogmodel.service.geometry.RouteSummary> responseObserver =
-        (StreamObserver<com.fogmodel.service.geometry.RouteSummary>) mock(StreamObserver.class);
+    StreamObserver<RouteSummary> responseObserver =
+        (StreamObserver<RouteSummary>) mock(StreamObserver.class);
     GeometryOperatorsGrpc.GeometryOperatorsStub stub = GeometryOperatorsGrpc.newStub(inProcessChannel);
-    ArgumentCaptor<com.fogmodel.service.geometry.RouteSummary> routeSummaryCaptor = ArgumentCaptor.forClass(com.fogmodel.service.geometry.RouteSummary.class);
+    ArgumentCaptor<RouteSummary> routeSummaryCaptor = ArgumentCaptor.forClass(RouteSummary.class);
 
-    StreamObserver<com.fogmodel.service.geometry.ReplacePoint> requestObserver = stub.recordRoute(responseObserver);
+    StreamObserver<ReplacePoint> requestObserver = stub.recordRoute(responseObserver);
 
     requestObserver.onNext(p1);
     requestObserver.onNext(p2);
     requestObserver.onNext(p3);
     requestObserver.onNext(p4);
 
-    verify(responseObserver, never()).onNext(any(com.fogmodel.service.geometry.RouteSummary.class));
+    verify(responseObserver, never()).onNext(any(RouteSummary.class));
 
     requestObserver.onCompleted();
 
@@ -403,53 +400,53 @@ public class GeometryOperatorsServerTest {
 
   @Test
   public void routeChat() {
-    com.fogmodel.service.geometry.ReplacePoint p1 = com.fogmodel.service.geometry.ReplacePoint.newBuilder().setLongitude(1).setLatitude(1).build();
-    com.fogmodel.service.geometry.ReplacePoint p2 = ReplacePoint.newBuilder().setLongitude(2).setLatitude(2).build();
-    com.fogmodel.service.geometry.RouteNote n1 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p1).setMessage("m1").build();
-    com.fogmodel.service.geometry.RouteNote n2 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p2).setMessage("m2").build();
-    com.fogmodel.service.geometry.RouteNote n3 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p1).setMessage("m3").build();
-    com.fogmodel.service.geometry.RouteNote n4 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p2).setMessage("m4").build();
-    com.fogmodel.service.geometry.RouteNote n5 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p1).setMessage("m5").build();
-    com.fogmodel.service.geometry.RouteNote n6 = com.fogmodel.service.geometry.RouteNote.newBuilder().setLocation(p1).setMessage("m6").build();
+    ReplacePoint p1 = ReplacePoint.newBuilder().setLongitude(1).setLatitude(1).build();
+    ReplacePoint p2 = ReplacePoint.newBuilder().setLongitude(2).setLatitude(2).build();
+    RouteNote n1 = RouteNote.newBuilder().setLocation(p1).setMessage("m1").build();
+    RouteNote n2 = RouteNote.newBuilder().setLocation(p2).setMessage("m2").build();
+    RouteNote n3 = RouteNote.newBuilder().setLocation(p1).setMessage("m3").build();
+    RouteNote n4 = RouteNote.newBuilder().setLocation(p2).setMessage("m4").build();
+    RouteNote n5 = RouteNote.newBuilder().setLocation(p1).setMessage("m5").build();
+    RouteNote n6 = RouteNote.newBuilder().setLocation(p1).setMessage("m6").build();
     int timesOnNext = 0;
 
     @SuppressWarnings("unchecked")
-    StreamObserver<com.fogmodel.service.geometry.RouteNote> responseObserver =
-        (StreamObserver<com.fogmodel.service.geometry.RouteNote>) mock(StreamObserver.class);
+    StreamObserver<RouteNote> responseObserver =
+        (StreamObserver<RouteNote>) mock(StreamObserver.class);
     GeometryOperatorsGrpc.GeometryOperatorsStub stub = GeometryOperatorsGrpc.newStub(inProcessChannel);
 
-    StreamObserver<com.fogmodel.service.geometry.RouteNote> requestObserver = stub.routeChat(responseObserver);
-    verify(responseObserver, never()).onNext(any(com.fogmodel.service.geometry.RouteNote.class));
+    StreamObserver<RouteNote> requestObserver = stub.routeChat(responseObserver);
+    verify(responseObserver, never()).onNext(any(RouteNote.class));
 
     requestObserver.onNext(n1);
-    verify(responseObserver, never()).onNext(any(com.fogmodel.service.geometry.RouteNote.class));
+    verify(responseObserver, never()).onNext(any(RouteNote.class));
 
     requestObserver.onNext(n2);
-    verify(responseObserver, never()).onNext(any(com.fogmodel.service.geometry.RouteNote.class));
+    verify(responseObserver, never()).onNext(any(RouteNote.class));
 
     requestObserver.onNext(n3);
-    ArgumentCaptor<com.fogmodel.service.geometry.RouteNote> routeNoteCaptor = ArgumentCaptor.forClass(com.fogmodel.service.geometry.RouteNote.class);
+    ArgumentCaptor<RouteNote> routeNoteCaptor = ArgumentCaptor.forClass(RouteNote.class);
     verify(responseObserver, timeout(100).times(++timesOnNext)).onNext(routeNoteCaptor.capture());
-    com.fogmodel.service.geometry.RouteNote result = routeNoteCaptor.getValue();
-    assertEquals(p1, result.getLocation());
+    RouteNote result = routeNoteCaptor.getValue();
+    Assert.assertEquals(p1, result.getLocation());
     assertEquals("m1", result.getMessage());
 
     requestObserver.onNext(n4);
-    routeNoteCaptor = ArgumentCaptor.forClass(com.fogmodel.service.geometry.RouteNote.class);
+    routeNoteCaptor = ArgumentCaptor.forClass(RouteNote.class);
     verify(responseObserver, timeout(100).times(++timesOnNext)).onNext(routeNoteCaptor.capture());
     result = routeNoteCaptor.getAllValues().get(timesOnNext - 1);
-    assertEquals(p2, result.getLocation());
+    Assert.assertEquals(p2, result.getLocation());
     assertEquals("m2", result.getMessage());
 
     requestObserver.onNext(n5);
-    routeNoteCaptor = ArgumentCaptor.forClass(com.fogmodel.service.geometry.RouteNote.class);
+    routeNoteCaptor = ArgumentCaptor.forClass(RouteNote.class);
     timesOnNext += 2;
     verify(responseObserver, timeout(100).times(timesOnNext)).onNext(routeNoteCaptor.capture());
     result = routeNoteCaptor.getAllValues().get(timesOnNext - 2);
-    assertEquals(p1, result.getLocation());
+    Assert.assertEquals(p1, result.getLocation());
     assertEquals("m1", result.getMessage());
     result = routeNoteCaptor.getAllValues().get(timesOnNext - 1);
-    assertEquals(p1, result.getLocation());
+    Assert.assertEquals(p1, result.getLocation());
     assertEquals("m3", result.getMessage());
 
     requestObserver.onNext(n6);
@@ -457,13 +454,13 @@ public class GeometryOperatorsServerTest {
     timesOnNext += 3;
     verify(responseObserver, timeout(100).times(timesOnNext)).onNext(routeNoteCaptor.capture());
     result = routeNoteCaptor.getAllValues().get(timesOnNext - 3);
-    assertEquals(p1, result.getLocation());
+    Assert.assertEquals(p1, result.getLocation());
     assertEquals("m1", result.getMessage());
     result = routeNoteCaptor.getAllValues().get(timesOnNext - 2);
-    assertEquals(p1, result.getLocation());
+    Assert.assertEquals(p1, result.getLocation());
     assertEquals("m3", result.getMessage());
     result = routeNoteCaptor.getAllValues().get(timesOnNext - 1);
-    assertEquals(p1, result.getLocation());
+    Assert.assertEquals(p1, result.getLocation());
     assertEquals("m5", result.getMessage());
 
     requestObserver.onCompleted();

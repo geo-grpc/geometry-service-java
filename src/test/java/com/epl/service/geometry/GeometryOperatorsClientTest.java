@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.fogmodel.service.geometry;
+package com.epl.service.geometry;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -31,8 +31,8 @@ import com.google.protobuf.Message;
 import io.grpc.Server;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import com.fogmodel.service.geometry.GeometryOperatorsClient.TestHelper;
-import com.fogmodel.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsImplBase;
+import com.epl.service.geometry.GeometryOperatorsClient.TestHelper;
+import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsImplBase;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -44,10 +44,8 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
@@ -186,7 +184,7 @@ public class GeometryOperatorsClientTest {
 
     client.listFeatures(1, 2, 3, 4);
 
-    assertEquals(Rectangle.newBuilder()
+    Assert.assertEquals(Rectangle.newBuilder()
                      .setLo(ReplacePoint.newBuilder().setLatitude(1).setLongitude(2).build())
                      .setHi(ReplacePoint.newBuilder().setLatitude(3).setLongitude(4).build())
                      .build(),
@@ -224,7 +222,7 @@ public class GeometryOperatorsClientTest {
 
     client.listFeatures(1, 2, 3, 4);
 
-    assertEquals(Rectangle.newBuilder()
+    Assert.assertEquals(Rectangle.newBuilder()
                      .setLo(ReplacePoint.newBuilder().setLatitude(1).setLongitude(2).build())
                      .setHi(ReplacePoint.newBuilder().setLatitude(3).setLongitude(4).build())
                      .build(),

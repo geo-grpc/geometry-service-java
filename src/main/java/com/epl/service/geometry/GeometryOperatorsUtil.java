@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.fogmodel.service.geometry;
+package com.epl.service.geometry;
 
 import com.esri.core.geometry.*;
 
@@ -100,7 +100,7 @@ public class GeometryOperatorsUtil {
             encodingType = operatorRequest.getResultsEncodingType();
         } else if (encodingType == null || encodingType.isEmpty()) {
             // Sets default export to wkt
-            encodingType = "wkt";
+            encodingType = "wkb";
         }
 
 
