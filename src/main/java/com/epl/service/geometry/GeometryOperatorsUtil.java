@@ -23,7 +23,11 @@ package com.epl.service.geometry;
 import com.esri.core.geometry.*;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ProtocolStringList;
 import com.google.protobuf.util.JsonFormat;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParser;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -32,8 +36,10 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Common utilities for the GeometryOperators demo.
@@ -88,6 +94,25 @@ public class GeometryOperatorsUtil {
         return feature != null && !feature.getName().isEmpty();
     }
 
+    public static List<com.google.protobuf.ByteString> __exportByteBufferCursor(ByteBufferCursor byteBufferCursor) {
+        ByteBuffer byteBuffer = null;
+        // TODO add count on ByteBufferCursor?
+        List<com.google.protobuf.ByteString> byteStringList = new ArrayList<>();
+
+        while ((byteBuffer = byteBufferCursor.next()) != null) {
+            byteStringList.add(com.google.protobuf.ByteString.copyFrom(byteBuffer));
+        }
+
+        return byteStringList;
+    }
+
+    public static List<String> __exportStringBufferCursor(StringCursor stringCursor) {
+        String geomString = null;
+        List<String> stringList = new ArrayList<>();
+        while ((geomString = stringCursor.next()) != null)
+            stringList.add(geomString);
+        return stringList;
+    }
 
     public static ServiceGeometry __encodeGeometry(GeometryCursor geometryCursor, OperatorRequest operatorRequest, String encodingType) {
         ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder();
@@ -103,20 +128,20 @@ public class GeometryOperatorsUtil {
             encodingType = "wkb";
         }
 
-
         switch (encodingType) {
             case "wkb":
-                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometryCursor.next(), null)));
+                serviceGeometryBuilder.addAllGeometryBinary(__exportByteBufferCursor(new OperatorExportToWkbCursor(0, geometryCursor)));
                 break;
             case "wkt":
-                serviceGeometryBuilder.addGeometryString(OperatorExportToWkt.local().execute(0, geometryCursor.next(), null));
+                serviceGeometryBuilder.addAllGeometryString(__exportStringBufferCursor(new OperatorExportToWktCursor(0, geometryCursor, null)));
                 break;
             case "esrishape":
-                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0, geometryCursor.next())));
+                serviceGeometryBuilder.addAllGeometryBinary(__exportByteBufferCursor(new OperatorExportToESRIShapeCursor(0, geometryCursor)));
                 break;
             case "geojson":
                 //TODO I'm just blindly setting the spatial reference here instead of projecting the result into the spatial reference
-                serviceGeometryBuilder.addGeometryString(OperatorExportToGeoJson.local().execute(null, geometryCursor.next()));
+                // TODO add Spatial reference
+                serviceGeometryBuilder.addAllGeometryString(__exportStringBufferCursor(new OperatorExportToJsonCursor(null, geometryCursor)));
                 break;
         }
 
@@ -233,7 +258,7 @@ public class GeometryOperatorsUtil {
 
 
     // TODO this is ignoring the differences between the geometry spatial references, the result spatial references and the operator spatial references
-    public static OperatorResult executeOperator(OperatorRequest operatorRequest) {
+    public static OperatorResult executeOperator(OperatorRequest operatorRequest) throws IOException {
         GeometryCursor resultCursor = null;
         OperatorResult.Builder operatorResultBuilder = OperatorResult.newBuilder();
 
@@ -444,10 +469,10 @@ public class GeometryOperatorsUtil {
     }
 
 
-    private static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws JSONException {
-        MapGeometry mapGeometry = __extractGeometry(serviceGeometry);
-        GeometryCursor geometryCursor = new SimpleGeometryCursor(mapGeometry.getGeometry());
-        return geometryCursor;
+    private static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws JSONException, IOException {
+//        MapGeometry mapGeometry = __extractGeometry(serviceGeometry);
+//        GeometryCursor geometryCursor = new SimpleGeometryCursor(mapGeometry.getGeometry());
+        return __extractGeometryCursor(serviceGeometry);
     }
 
 
@@ -491,11 +516,45 @@ public class GeometryOperatorsUtil {
     }
 
 
-
     private static Envelope2D __extractEnvelope2D(ServiceEnvelope2D env) {
         return Envelope2D.construct(env.getXmin(), env.getYmin(), env.getXmax(), env.getYmax());
     }
 
+
+    private static GeometryCursor __extractGeometryCursor(ServiceGeometry serviceGeometry) throws JSONException, IOException {
+        JsonFactory factory = new JsonFactory();
+        GeometryCursor geometryCursor = null;
+        List<ByteBuffer> byteBufferList = null;
+        SimpleByteBufferCursor simpleByteBufferCursor = null;
+        SimpleStringCursor simpleStringCursor = null;
+        ProtocolStringList protocolStringList = null;
+        switch (serviceGeometry.getGeometryEncodingType()) {
+            case wkb:
+                byteBufferList = serviceGeometry.getGeometryBinaryList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
+                simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferList);
+                geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
+                break;
+            case esri:
+                byteBufferList = serviceGeometry.getGeometryBinaryList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
+                simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferList);
+                geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
+                break;
+            case wkt:
+                protocolStringList = serviceGeometry.getGeometryStringList();
+                simpleStringCursor = new SimpleStringCursor(protocolStringList.subList(0, protocolStringList.size()));
+                geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
+                break;
+            case geojson:
+//                protocolStringList = serviceGeometry.getGeometryStringList();
+                String jsonString = serviceGeometry.getGeometryString(0);
+//                simpleStringCursor = new SimpleStringCursor(protocolStringList.subList(0, protocolStringList.size() - 1));
+                JsonParser jsonParser = factory.createJsonParser(jsonString);
+                SimpleJsonParserCursor simpleJsonParserCursor = new SimpleJsonParserCursor(jsonParser);
+                MapGeometryCursor mapGeometryCursor = new OperatorImportFromJsonCursor(0, simpleJsonParserCursor);
+                geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
+        }
+        return geometryCursor;
+    }
 
     private static MapGeometry __extractGeometry(ServiceGeometry serviceGeometry) throws JSONException {
         MapGeometry mapGeometry = null;

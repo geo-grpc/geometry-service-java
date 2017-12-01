@@ -23,6 +23,7 @@ package com.epl.service.geometry;
 import static junit.framework.TestCase.assertNull;
 import static junit.framework.TestCase.fail;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -38,6 +39,7 @@ import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +51,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import java.io.FileReader;
+import java.util.stream.Collectors;
+
 
 /**
  * Unit tests for {@link GeometryOperatorsServer}.
@@ -228,7 +232,7 @@ public class GeometryOperatorsServerTest {
   @Test
   public void testChainingBufferConvexHull() {
     Polyline polyline = new Polyline();
-    polyline.startPath(0,0);
+    polyline.startPath(0, 0);
     polyline.lineTo(2, 3);
     polyline.lineTo(3, 3);
     // TODO inspect bug where it crosses dateline
@@ -264,6 +268,65 @@ public class GeometryOperatorsServerTest {
     boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 
     assertTrue(bContains);
+  }
+
+  static double randomWithRange(double min, double max)
+  {
+    double range = Math.abs(max - min);
+    return (Math.random() * range) + (min <= max ? min : max);
+  }
+
+  @Test
+  public void testUnion() {
+    int size = 1000;
+    List<String> points = new ArrayList<>(size);
+    List<Point> pointList = new ArrayList<>(size);
+    for (int i = 0; i < size; i++){
+      points.add(String.format("Point(%f %f)", randomWithRange(-20, 20), randomWithRange(-20, 20)));
+      pointList.add(new Point(randomWithRange(-20, 20), randomWithRange(-20, 20)));
+    }
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().addAllGeometryString(points).setGeometryEncodingType(GeometryEncodingType.wkt).build();
+    OperatorRequest serviceBufferOp = OperatorRequest.newBuilder().setLeftGeometry(serviceGeometry).setOperatorType(ServiceOperatorType.Buffer).addBufferDistances(2.5).setBufferUnionResult(true).build();
+    GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+    OperatorResult operatorResult = stub.executeOperation(serviceBufferOp);
+
+    List<ByteBuffer> byteBufferList = operatorResult.getGeometry().getGeometryBinaryList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
+    SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferList);
+    OperatorImportFromWkbCursor operatorImportFromWkbCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
+    Geometry result = OperatorImportFromWkb.local().execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinary(0).asReadOnlyByteBuffer(), null);
+    assertTrue(result.calculateArea2D() > (Math.PI * 2.5 * 2.5 * 2));
+
+//    assertEquals(result.calculateArea2D(), Math.PI * 2.5 * 2.5, 0.1);
+//    shape_start = datetime.datetime.now()
+//    spots = [p.buffer(2.5) for p in points]
+//    patches = cascaded_union(spots)
+//    shape_end = datetime.datetime.now()
+//    shape_delta = shape_end - shape_start
+//    shape_microseconds = int(shape_delta.total_seconds() * 1000)
+//
+//    stub = geometry_grpc.GeometryOperatorsStub(self.channel)
+//    serviceGeom = ServiceGeometry()
+//
+//    epl_start = datetime.datetime.now()
+//    serviceGeom.geometry_binary.extend([s.wkb for s in spots])
+//    serviceGeom.geometry_encoding_type = GeometryEncodingType.Value('wkb')
+//
+//        # opRequestBuffer = OperatorRequest(left_geometry=serviceGeom,
+//            #                                   operator_type=ServiceOperatorType.Value('Buffer'),
+//            #                                   buffer_distances=[2.5])
+//
+//    opRequestUnion = OperatorRequest(left_geometry=serviceGeom,
+//            operator_type=ServiceOperatorType.Value('Union'))
+//
+//    response = stub.ExecuteOperation(opRequestUnion)
+//    unioned_result = wkbloads(response.geometry.geometry_binary[0])
+//    epl_end = datetime.datetime.now()
+//    epl_delta = epl_end - epl_start
+//    epl_microseconds = int(epl_delta.total_seconds() * 1000)
+//    self.assertGreater(shape_microseconds, epl_microseconds)
+//    self.assertGreater(shape_microseconds / 8, epl_microseconds)
+//
+//    self.assertAlmostEqual(patches.area, unioned_result.area, 4)
   }
 
 

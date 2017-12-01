@@ -146,8 +146,12 @@ public class GeometryOperatorsServer {
 
         @Override
         public void executeOperation(OperatorRequest request, StreamObserver<OperatorResult> responseObserver) {
-            responseObserver.onNext(__executeOperator(request));
-            responseObserver.onCompleted();
+            try {
+                responseObserver.onNext(__executeOperator(request));
+                responseObserver.onCompleted();
+            } catch (IOException exception) {
+                // TODO return errors
+            }
         }
 
         /**
@@ -269,7 +273,7 @@ public class GeometryOperatorsServer {
         }
 
 
-        private OperatorResult __executeOperator(OperatorRequest serviceOperator) {
+        private OperatorResult __executeOperator(OperatorRequest serviceOperator) throws IOException {
             return GeometryOperatorsUtil.executeOperator(serviceOperator);
         }
 
