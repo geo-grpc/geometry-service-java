@@ -25,7 +25,6 @@ import com.esri.core.geometry.*;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ProtocolStringList;
 import com.google.protobuf.util.JsonFormat;
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.json.JSONException;
