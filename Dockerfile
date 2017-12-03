@@ -16,7 +16,7 @@ WORKDIR /opt/src/geometry-service-java/build/install
 
 COPY --from=builder /opt/src/geometry-service-java/build/install .
 
-RUN chmod +x /opt/src/geometry-service-java/build/install/geometry-service/bin/geometry-operators-server
+RUN chmod +x /opt/src/geometry-service-java/build/install/epl-geometry-service/bin/geometry-operators-server
 
 EXPOSE 8980
 
@@ -24,4 +24,4 @@ EXPOSE 8980
 WORKDIR /opt/src/geometry-service-java/build/test-results
 COPY --from=builder /opt/src/geometry-service-java/build/test-results .
 
-CMD /opt/src/geometry-service-java/build/install/geometry-service/bin/geometry-operators-server
+CMD /opt/src/geometry-service-java/build/install/epl-geometry-service/bin/geometry-operators-server
