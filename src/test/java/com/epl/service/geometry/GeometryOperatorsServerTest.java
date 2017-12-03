@@ -282,8 +282,10 @@ public class GeometryOperatorsServerTest {
     List<String> points = new ArrayList<>(size);
     List<Point> pointList = new ArrayList<>(size);
     for (int i = 0; i < size; i++){
-      points.add(String.format("Point(%f %f)", randomWithRange(-20, 20), randomWithRange(-20, 20)));
-      pointList.add(new Point(randomWithRange(-20, 20), randomWithRange(-20, 20)));
+      double x = randomWithRange(-20, 20);
+      double y = randomWithRange(-20, 20);
+      points.add(String.format("Point(%f %f)", x, y));
+      pointList.add(new Point(x, y));
     }
     ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().addAllGeometryString(points).setGeometryEncodingType(GeometryEncodingType.wkt).build();
     OperatorRequest serviceBufferOp = OperatorRequest.newBuilder().setLeftGeometry(serviceGeometry).setOperatorType(ServiceOperatorType.Buffer).addBufferDistances(2.5).setBufferUnionResult(true).build();

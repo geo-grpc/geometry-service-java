@@ -25,9 +25,8 @@ import com.esri.core.geometry.*;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ProtocolStringList;
 import com.google.protobuf.util.JsonFormat;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonParser;
-import org.json.JSONException;
+
+import com.fasterxml.jackson.core.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -329,8 +328,8 @@ public class GeometryOperatorsUtil {
                     break;
                 case ImportFromJson:
                     break;
-                case ImportMapGeometryFromJson:
-                    break;
+//                case ImportMapGeometryFromJson:
+//                    break;
                 case ExportToESRIShape:
                     break;
                 case ImportFromESRIShape:
@@ -462,13 +461,13 @@ public class GeometryOperatorsUtil {
 
             return operatorResultBuilder.build();
 
-        } catch (JSONException j) {
+        } catch (Exception j) {
             return null;
         }
     }
 
 
-    private static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws JSONException, IOException {
+    private static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws IOException {
 //        MapGeometry mapGeometry = __extractGeometry(serviceGeometry);
 //        GeometryCursor geometryCursor = new SimpleGeometryCursor(mapGeometry.getGeometry());
         return __extractGeometryCursor(serviceGeometry);
@@ -520,7 +519,7 @@ public class GeometryOperatorsUtil {
     }
 
 
-    private static GeometryCursor __extractGeometryCursor(ServiceGeometry serviceGeometry) throws JSONException, IOException {
+    private static GeometryCursor __extractGeometryCursor(ServiceGeometry serviceGeometry) throws IOException {
         JsonFactory factory = new JsonFactory();
         GeometryCursor geometryCursor = null;
         List<ByteBuffer> byteBufferList = null;
@@ -547,15 +546,17 @@ public class GeometryOperatorsUtil {
 //                protocolStringList = serviceGeometry.getGeometryStringList();
                 String jsonString = serviceGeometry.getGeometryString(0);
 //                simpleStringCursor = new SimpleStringCursor(protocolStringList.subList(0, protocolStringList.size() - 1));
+                // TODO no idea whats going on here
                 JsonParser jsonParser = factory.createJsonParser(jsonString);
-                SimpleJsonParserCursor simpleJsonParserCursor = new SimpleJsonParserCursor(jsonParser);
+                JsonParserReader jsonParserReader = new JsonParserReader(jsonParser);
+                SimpleJsonReaderCursor simpleJsonParserCursor = new SimpleJsonReaderCursor(jsonParserReader);
                 MapGeometryCursor mapGeometryCursor = new OperatorImportFromJsonCursor(0, simpleJsonParserCursor);
                 geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
         }
         return geometryCursor;
     }
 
-    private static MapGeometry __extractGeometry(ServiceGeometry serviceGeometry) throws JSONException {
+    private static MapGeometry __extractGeometry(ServiceGeometry serviceGeometry) {
         MapGeometry mapGeometry = null;
         Geometry geometry = null;
         SpatialReference spatialReference = null;
