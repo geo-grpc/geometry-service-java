@@ -59,9 +59,8 @@ public class GeometryOperatorsClient {
 
     /** Construct client for accessing GeometryOperators server at {@code host:port}. */
     public GeometryOperatorsClient(String host, int port) {
-        this(ManagedChannelBuilder
-                .forAddress(host, port)
-                .nameResolverFactory(new DnsNameResolverProvider())  // this is on by default
+        this(ManagedChannelBuilder.forTarget(System.getenv("GEOMETRY_SERVICE_TARGET"))
+                .nameResolverFactory(new KubernetesNameResolverProvider())  // this is on by default
                 .loadBalancerFactory(RoundRobinLoadBalancerFactory.getInstance())
                 .usePlaintext(true));
     }

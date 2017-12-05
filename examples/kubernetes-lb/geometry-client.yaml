@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: geometry-client
+  name: geometry-client
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: geometry-client
+  template:
+    metadata:
+      labels:
+        run: geometry-client
+    spec:
+      containers:
+      - name: geometry-client
+        image: us.gcr.io/echoparklabs/geometry-client-java:latest
+        env:
+        - name: GEOMETRY_SERVICE_TARGET
+          value: kubernetes:///default/geometry-server/8980

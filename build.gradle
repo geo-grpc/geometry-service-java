@@ -33,6 +33,7 @@ dependencies {
   compile "io.grpc:grpc-netty:${grpcVersion}"
   compile "io.grpc:grpc-protobuf:${grpcVersion}"
   compile "io.grpc:grpc-stub:${grpcVersion}"
+    compile "io.fabric8:kubernetes-client:2.0.5"
 //  compile project(':esri-geometry-api')
   compile files('../geometry-api-java/build/libs/jproj.jar')
   compile files('../geometry-api-java/build/libs/jackson-core-2.6.2.jar')

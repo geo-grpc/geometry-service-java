@@ -1,0 +1,35 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: geometry-server
+  name: geometry-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: geometry-server
+  template:
+    metadata:
+      labels:
+        run: geometry-server
+    spec:
+      containers:
+      - name: geometry-server
+        image: us.gcr.io/echoparklabs/geometry-service-java:latest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: geometry-server
+  name: geometry-server
+spec:
+  clusterIP: None
+  ports:
+  - port: 8980
+    protocol: TCP
+    targetPort: 8980
+  selector:
+    run: geometry-server
+  type: ClusterIP
