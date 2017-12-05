@@ -72,8 +72,7 @@ public class GeometryOperatorsServerTest {
     // use directExecutor for both InProcessServerBuilder and InProcessChannelBuilder can reduce the
     // usage timeouts and latches in test. But we still add timeout and latches where they would be
     // needed if no directExecutor were used, just for demo purpose.
-    server = new GeometryOperatorsServer(
-        InProcessServerBuilder.forName(uniqueServerName).directExecutor(), 0, features);
+    server = new GeometryOperatorsServer(InProcessServerBuilder.forName(uniqueServerName).directExecutor(), 0, features);
     server.start();
     inProcessChannel = InProcessChannelBuilder.forName(uniqueServerName).directExecutor().build();
   }

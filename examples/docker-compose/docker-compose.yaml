@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+
+  geometry-service-java:
+    image: us.gcr.io/echoparklabs/geometry-service-java:latest
+    ports:
+      - "8980"
+
+  geometry-client-1:
+    image: us.gcr.io/echoparklabs/geometry-client:latest
+
+  geometry-client-2:
+    image: us.gcr.io/echoparklabs/geometry-client:latest

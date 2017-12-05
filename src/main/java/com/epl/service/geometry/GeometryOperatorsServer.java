@@ -147,8 +147,10 @@ public class GeometryOperatorsServer {
         @Override
         public void executeOperation(OperatorRequest request, StreamObserver<OperatorResult> responseObserver) {
             try {
+                System.out.println("Start process");
                 responseObserver.onNext(__executeOperator(request));
                 responseObserver.onCompleted();
+                System.out.println("End process");
             } catch (IOException exception) {
                 // TODO return errors
             }

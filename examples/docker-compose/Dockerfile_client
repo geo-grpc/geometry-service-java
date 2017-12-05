@@ -1,0 +1,7 @@
+FROM us.gcr.io/echoparklabs/geometry-service-java:latest
+
+RUN chmod +x /opt/src/geometry-service-java/build/install/epl-geometry-service/bin/geometry-operators-client
+
+CMD ["/opt/src/geometry-service-java/build/install/epl-geometry-service/bin/geometry-operators-client","geometry-service-java"]
+
+

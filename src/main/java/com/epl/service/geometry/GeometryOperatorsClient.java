@@ -23,17 +23,16 @@ package com.epl.service.geometry;
 
 import com.esri.core.geometry.*;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
 import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
 import io.grpc.*;
-//import io.grpc.grpclb.*;
-import io.grpc.internal.SerializingExecutor;
+import io.grpc.internal.DnsNameResolverProvider;
 import io.grpc.stub.StreamObserver;
+import io.grpc.util.RoundRobinLoadBalancerFactory;
+
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -60,7 +59,11 @@ public class GeometryOperatorsClient {
 
     /** Construct client for accessing GeometryOperators server at {@code host:port}. */
     public GeometryOperatorsClient(String host, int port) {
-        this(ManagedChannelBuilder.forAddress(host, port).usePlaintext(true));
+        this(ManagedChannelBuilder
+                .forAddress(host, port)
+                .nameResolverFactory(new DnsNameResolverProvider())  // this is on by default
+                .loadBalancerFactory(RoundRobinLoadBalancerFactory.getInstance())
+                .usePlaintext(true));
     }
 
     /** Construct client for accessing GeometryOperators server using the existing channel. */
@@ -74,41 +77,43 @@ public class GeometryOperatorsClient {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
-    public void getBuffered() {
+    public void getProjected() {
         Polyline polyline = new Polyline();
-        polyline.startPath(0,0);
-        polyline.lineTo(2, 3);
-        polyline.lineTo(3, 3);
-        // TODO inspect bug where it crosses dateline
-//    polyline.startPath(-200, -90);
-//    polyline.lineTo(-180, -85);
-//    polyline.lineTo(-90, -70);
-//    polyline.lineTo(0, 0);
-//    polyline.lineTo(100, 25);
-//    polyline.lineTo(170, 45);
-//    polyline.lineTo(225, 64);
+        polyline.startPath( 500000,       0);
+        polyline.lineTo(400000,  100000);
+        polyline.lineTo(600000, -100000);
         OperatorExportToWkb op = OperatorExportToWkb.local();
-        //TODO why does esri shape fail
-        ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
-        OperatorRequest serviceConvexOp = OperatorRequest
+
+        ServiceSpatialReference inputSpatialReference = ServiceSpatialReference.newBuilder()
+                .setWkid(32632)
+                .build();
+
+        ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder()
+                .setGeometryEncodingType(GeometryEncodingType.wkb)
+                .setSpatialReference(inputSpatialReference)
+                .addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null)))
+                .build();
+
+        ServiceSpatialReference outputSpatialReference = ServiceSpatialReference.newBuilder()
+                .setWkid(4326)
+                .build();
+
+
+        OperatorRequest serviceProjectOp = OperatorRequest
                 .newBuilder()
                 .setLeftGeometry(serviceGeometry)
-                .setOperatorType(ServiceOperatorType.ConvexHull)
+                .setOperatorType(ServiceOperatorType.Project)
+                .setOperationSpatialReference(outputSpatialReference)
                 .build();
 
-        OperatorRequest serviceOp = OperatorRequest.newBuilder()
-                .setLeftCursor(serviceConvexOp)
-                .addBufferDistances(1)
-                .setOperatorType(ServiceOperatorType.Buffer)
-                .build();
+        System.out.println("executing request");
+        OperatorResult operatorResult = blockingStub.executeOperation(serviceProjectOp);
+        System.out.println("finished request");
 
+        OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
 
-        OperatorResult operatorResult = blockingStub.executeOperation(serviceOp);
-
-        OperatorImportFromWkt op2 = OperatorImportFromWkt.local();
-        Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryString(0), null);
-
-        boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
+        Polyline result = (Polyline)op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinary(0).asReadOnlyByteBuffer(), null);
+        System.out.println(GeometryEngine.geometryToWkt(result, 0));
     }
 
     /**
@@ -305,9 +310,12 @@ public class GeometryOperatorsClient {
             ex.printStackTrace();
             return;
         }
-
-        GeometryOperatorsClient client = new GeometryOperatorsClient("localhost", 8980);
+        System.out.println("Starting main");
+        GeometryOperatorsClient client = new GeometryOperatorsClient(args[0], 8980);
         try {
+            client.getProjected();
+            client.getProjected();
+            client.getProjected();
             // Looking for a valid feature
             client.getFeature(409146138, -746188906);
 
