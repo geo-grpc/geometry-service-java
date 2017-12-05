@@ -54,81 +54,12 @@ public class GeometryOperatorsClient {
 
     private static final Logger logger = Logger.getLogger(GeometryOperatorsClient.class.getName());
 
-    private final SerializingExecutor channelExecutor = new SerializingExecutor(MoreExecutors.directExecutor());
-    private final LinkedList<ManagedChannel> subChannels = new LinkedList<ManagedChannel>();
-
-//    private GrpclbLoadBalancerFactory loadBalancerFactory;
-    private LoadBalancer loadBalancer;
-    private io.grpc.LoadBalancer.Helper loadBalancerHelper;
-    private List<ResolvedServerInfoGroup> grpclbResolutionList;
-
     private Random random = new Random();
     private TestHelper testHelper;
 
-    private static class WorkerSocketAddress extends SocketAddress {
-        final String name;
-        final String port;
-
-        WorkerSocketAddress(String host, String port) {
-            this.name = host;
-            this.port = port;
-        }
-
-        @Override
-        public String toString() {
-            return this.name + ":" + port;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            if (other instanceof WorkerSocketAddress) {
-                WorkerSocketAddress otherAddr = (WorkerSocketAddress) other;
-                return name.equals(otherAddr.name);
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return name.hashCode();
-        }
-    }
 
     /** Construct client for accessing GeometryOperators server at {@code host:port}. */
     public GeometryOperatorsClient(String host, int port) {
-        // using loadbalancer host and port make a request to get list of hosts and ports
-
-//        WorkerSocketAddress workerSocketAddress = new WorkerSocketAddress(host, Integer.toString(port));
-//        grpclbResolutionList = new ArrayList<ResolvedServerInfoGroup>();
-//        ResolvedServerInfoGroup serverInfoGroup = ResolvedServerInfoGroup
-//                .builder(Attributes
-//                        .newBuilder()
-//                        .set(GrpclbConstants.ATTR_LB_ADDR_AUTHORITY, host)
-//                        .build())
-//                .add(new ResolvedServerInfo(workerSocketAddress))
-//                .build();
-//
-//
-//        grpclbResolutionList.add(serverInfoGroup);
-//
-//        EquivalentAddressGroup equivalentAddressGroup = grpclbResolutionList.get(0).toEquivalentAddressGroup();
-//        Attributes grpclbResolutionAttrs = Attributes.newBuilder().set(GrpclbConstants.ATTR_LB_POLICY, GrpclbConstants.LbPolicy.GRPCLB).build();
-//        LoadBalancer.Subchannel subchannel = loadBalancerHelper.createSubchannel(equivalentAddressGroup, grpclbResolutionAttrs);
-////        channelExecutor = new SerializingExecutor(MoreExecutors.directExecutor());
-//        loadBalancer = loadBalancerFactory.newLoadBalancer(loadBalancerHelper);
-//        channelExecutor.execute(new Runnable() {
-//            @Override
-//            public void run() {
-//                loadBalancer.handleResolvedAddresses(grpclbResolutionList, grpclbResolutionAttrs);
-//            }
-//        });
-//
-////    private final ManagedChannel channel;
-////    private final GeometryOperatorsBlockingStub blockingStub;
-////    private final GeometryOperatorsStub asyncStub;
-//        channel = subChannels.poll();
-//        blockingStub = GeometryOperatorsGrpc.newBlockingStub(channel);
-//        asyncStub = GeometryOperatorsGrpc.newStub(channel);
         this(ManagedChannelBuilder.forAddress(host, port).usePlaintext(true));
     }
 
