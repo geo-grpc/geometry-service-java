@@ -41,6 +41,7 @@ service GeometryOperators {
     // TODO should be a stream
     rpc ExecuteOperation(OperatorRequest) returns (OperatorResult) {}
 
+
     // A server-to-client streaming RPC.
     //
     // Obtains the Features available within the given Rectangle.  Results are
