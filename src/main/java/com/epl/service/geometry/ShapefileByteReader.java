@@ -52,10 +52,6 @@ public class ShapefileByteReader {
             byte[] bytes = new byte[recordSizeBytes];
             int read = inputStream.read(bytes);
 
-
-//            Geometry polyline = importFromESRIShape.execute(0, geomType, ByteBuffer.wrap(bytes));
-//            position += recordSizeBytes;
-
             return bytes;
 
         } catch (IOException e) {

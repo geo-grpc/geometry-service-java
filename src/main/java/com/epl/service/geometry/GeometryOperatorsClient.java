@@ -109,13 +109,13 @@ public class GeometryOperatorsClient {
         ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder()
                 .addGeometryBinary(ByteString.copyFromUtf8(""))
                 .addGeometryId(0)
-                .setGeometryEncodingType(GeometryEncodingType.esri)
+                .setGeometryEncodingType(GeometryEncodingType.esrishape)
                 .setSpatialReference(serviceSpatialReference);
 
         OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .addBufferDistances(2.5)
-                .setResultsEncodingType("wkt")
+                .setResultsEncodingType(GeometryEncodingType.wkt)
                 .setResultSpatialReference(wgs84SpatiralReference);
 
         GeometryOperatorsStub geometryOperatorsStub = asyncStub
@@ -146,24 +146,21 @@ public class GeometryOperatorsClient {
                         // StreamObserver'sonNext(), onError(), and onComplete() handlers. Blocking the onReadyHandler will prevent
                         // additional messages from being processed by the incoming StreamObserver. The onReadyHandler must return
                         // in a timely manor or else message processing throughput will suffer.
-                        requestStream.setOnReadyHandler(new Runnable() {
-                            @Override
-                            public void run() {
-                                while(requestStream.isReady()) {
-                                    if (shapefileByteReader.hasNext()) {
-                                        byte[] data = shapefileByteReader.next();
-                                        int id = shapefileByteReader.getGeometryID();
-                                        ByteString byteString = ByteString.copyFrom(data);
-                                        logger.info("bytes length -->" + data.length);
+                        requestStream.setOnReadyHandler(() -> {
+                            while(requestStream.isReady()) {
+                                if (shapefileByteReader.hasNext()) {
+                                    byte[] data = shapefileByteReader.next();
+                                    int id = shapefileByteReader.getGeometryID();
+                                    ByteString byteString = ByteString.copyFrom(data);
+                                    logger.info("bytes length -->" + data.length);
 
-                                        ServiceGeometry serviceGeometry= serviceGeometryBuilder
-                                                .setGeometryBinary(0, byteString)
-                                                .setGeometryId(0, id)
-                                                .build();
-                                        OperatorRequest operatorRequest = operatorRequestBuilder
-                                                .setLeftGeometry(serviceGeometry).build();
-                                        requestStream.onNext(operatorRequest);
-                                    }
+                                    ServiceGeometry serviceGeometry= serviceGeometryBuilder
+                                            .setGeometryBinary(0, byteString)
+                                            .setGeometryId(0, id)
+                                            .build();
+                                    OperatorRequest operatorRequest = operatorRequestBuilder
+                                            .setLeftGeometry(serviceGeometry).build();
+                                    requestStream.onNext(operatorRequest);
                                 }
                             }
                         });
@@ -233,7 +230,14 @@ public class GeometryOperatorsClient {
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
 
-        Polyline result = (Polyline)op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinary(0).asReadOnlyByteBuffer(), null);
+        Polyline result = (Polyline)op2.execute(
+                0,
+                Geometry.Type.Unknown,
+                operatorResult
+                        .getGeometry()
+                        .getGeometryBinary(0)
+                        .asReadOnlyByteBuffer(),
+                null);
         System.out.println(GeometryEngine.geometryToWkt(result, 0));
     }
 

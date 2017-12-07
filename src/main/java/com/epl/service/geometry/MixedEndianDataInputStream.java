@@ -1,5 +1,3 @@
-package com.epl.service.geometry;
-
 /*
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,6 +12,8 @@ package com.epl.service.geometry;
    limitations under the License.
  */
 
+
+package com.epl.service.geometry;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;

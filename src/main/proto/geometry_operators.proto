@@ -39,11 +39,11 @@ service GeometryOperators {
   Type of input geometry
 */
 enum GeometryEncodingType {
-    wkt = 0;
-    wkb = 1;
+    wkb = 0;
+    wkt = 1;
     geojson = 2;
     // TODO change to esrishape
-    esri = 3;
+    esrishape = 3;
 }
 
 enum ServiceOperatorType {
@@ -143,11 +143,9 @@ message OperatorRequest {
     OperatorRequest left_cursor = 3;
     OperatorRequest right_cursor = 4;
 
-    // TODO replace with Enum
     ServiceOperatorType operator_type = 5;
 
-    // TODO change to GeometryEncodingType
-    string results_encoding_type = 6;
+    GeometryEncodingType results_encoding_type = 6;
 
     ServiceSpatialReference operation_spatial_reference = 7;
 

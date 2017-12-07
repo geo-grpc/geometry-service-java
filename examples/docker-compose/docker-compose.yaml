@@ -8,7 +8,7 @@ services:
       - "8980"
 
   geometry-client-1:
-    image: us.gcr.io/echoparklabs/geometry-client:latest
+    image: us.gcr.io/echoparklabs/geometry-client-java:latest
 
-  geometry-client-2:
-    image: us.gcr.io/echoparklabs/geometry-client:latest
+#  geometry-client-2:
+#    image: us.gcr.io/echoparklabs/geometry-client-java:latest
