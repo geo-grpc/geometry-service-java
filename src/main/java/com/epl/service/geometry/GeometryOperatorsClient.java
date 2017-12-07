@@ -319,8 +319,8 @@ public class GeometryOperatorsClient {
 
         System.out.println("Starting main");
         try {
-            // File file = new File("/data/Parcels/PARCELS.shp");
-            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
+            File file = new File("/data/Parcels/PARCELS.shp");
+//            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
 
             long startTime = System.nanoTime();
             geometryOperatorsClient.shapefileThrottled(file);
