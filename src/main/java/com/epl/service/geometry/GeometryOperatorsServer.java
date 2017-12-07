@@ -20,18 +20,13 @@ email: info@echoparklabs.io
 
 package com.epl.service.geometry;
 
-import static java.lang.Math.atan2;
-import static java.lang.Math.cos;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.lang.Math.sin;
-import static java.lang.Math.sqrt;
-import static java.lang.Math.toRadians;
+import static java.lang.Math.*;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import io.grpc.*;
 
 import io.grpc.netty.NettyServerBuilder;
+import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 import java.io.IOException;
@@ -39,6 +34,8 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -55,24 +52,20 @@ public class GeometryOperatorsServer {
 
     private final LinkedList<ManagedChannel> fakeOobChannels = new LinkedList<ManagedChannel>();
 
-    public GeometryOperatorsServer(int port) throws IOException {
-        this(port, GeometryOperatorsUtil.getDefaultFeaturesFile());
-    }
-
     /** Create a GeometryOperators server listening on {@code port} using {@code featureFile} database. */
-    public GeometryOperatorsServer(int port, URL featureFile) throws IOException {
+    public GeometryOperatorsServer(int port) throws IOException {
         // changed max message size to match tensorflow
         // https://github.com/tensorflow/serving/issues/288
         // https://github.com/tensorflow/tensorflow/blob/d0d975f8c3330b5402263b2356b038bc8af919a2/tensorflow/core/platform/types.h#L52
         // TODO add a test to check data size can handle 2 gigs
         // maxInboundMessageSize
-        this(NettyServerBuilder.forPort(port).maxMessageSize(2147483647), port, GeometryOperatorsUtil.parseFeatures(featureFile));
+        this(NettyServerBuilder.forPort(port).maxMessageSize(2147483647), port);
     }
 
     /** Create a GeometryOperators server using serverBuilder as a base and features as data. */
-    public GeometryOperatorsServer(ServerBuilder<?> serverBuilder, int port, Collection<Feature> features) {
+    public GeometryOperatorsServer(ServerBuilder<?> serverBuilder, int port) {
         this.port = port;
-        server = serverBuilder.addService(new GeometryOperatorsService(features)).build();
+        server = serverBuilder.addService(new GeometryOperatorsService()).build();
     }
 
     /** Start serving requests. */
@@ -123,50 +116,71 @@ public class GeometryOperatorsServer {
      * <p>See route_guide.proto for details of the methods.
      */
     private static class GeometryOperatorsService extends GeometryOperatorsGrpc.GeometryOperatorsImplBase {
-        private final Collection<Feature> features;
-        private final ConcurrentMap<ReplacePoint, List<RouteNote>> routeNotes =
-                new ConcurrentHashMap<ReplacePoint, List<RouteNote>>();
-
-        GeometryOperatorsService(Collection<Feature> features) {
-            this.features = features;
-        }
-
-        /**
-         * Gets the {@link Feature} at the requested {@link ReplacePoint}. If no feature at that location
-         * exists, an unnamed feature is returned at the provided location.
-         *
-         * @param request the requested location for the feature.
-         * @param responseObserver the observer that will receive the feature at the requested point.
-         */
-        @Override
-        public void getFeature(ReplacePoint request, StreamObserver<Feature> responseObserver) {
-            logger.info("server name" + System.getenv("MY_NODE_NAME"));
-            logger.info("server name" + System.getenv("MY_POD_NAME"));
-            logger.info("getfeature");
-            responseObserver.onNext(checkFeature(request));
-            responseObserver.onCompleted();
-        }
 
         @Override
         public StreamObserver<OperatorRequest> streamOperations(StreamObserver<OperatorResult> responseObserver) {
+            // Set up manual flow control for the request stream. It feels backwards to configure the request
+            // stream's flow control using the response stream's observer, but this is the way it is.
+            final ServerCallStreamObserver<OperatorResult> serverCallStreamObserver =
+                    (ServerCallStreamObserver<OperatorResult>) responseObserver;
+            serverCallStreamObserver.disableAutoInboundFlowControl();
+
+            // Guard against spurious onReady() calls caused by a race between onNext() and onReady(). If the transport
+            // toggles isReady() from false to true while onNext() is executing, but before onNext() checks isReady(),
+            // request(1) would be called twice - once by onNext() and once by the onReady() scheduled during onNext()'s
+            // execution.
+            final AtomicBoolean wasReady = new AtomicBoolean(false);
+
+            serverCallStreamObserver.setOnReadyHandler(() -> {
+                if (serverCallStreamObserver.isReady() && wasReady.compareAndSet(false, true)) {
+                    logger.info("READY");
+                    // Signal the request sender to send one message. This happens when isReady() turns true, signaling that
+                    // the receive buffer has enough free space to receive more messages. Calling request() serves to prime
+                    // the message pump.
+                    serverCallStreamObserver.request(1);
+                }
+            });
+
             return new StreamObserver<OperatorRequest>() {
                 @Override
                 public void onNext(OperatorRequest value) {
+                    // Process the request and send a response or an error.
                     try {
+                        // Accept and enqueue the request.
                         responseObserver.onNext(__executeOperator(value));
-                    } catch (java.io.IOException exception) {
-                        logger.log(Level.WARNING, "streamOperations error", exception);
-                        responseObserver.onError(new StatusRuntimeException(Status.NOT_FOUND.withCause(exception)));
+
+                        // Check the provided ServerCallStreamObserver to see if it is still ready to accept more messages.
+                        if (serverCallStreamObserver.isReady()) {
+                            // Signal the sender to send another request. As long as isReady() stays true, the server will keep
+                            // cycling through the loop of onNext() -> request()...onNext() -> request()... until either the client
+                            // runs out of messages and ends the loop or the server runs out of receive buffer space.
+                            //
+                            // If the server runs out of buffer space, isReady() will turn false. When the receive buffer has
+                            // sufficiently drained, isReady() will turn true, and the serverCallStreamObserver's onReadyHandler
+                            // will be called to restart the message pump.
+                            serverCallStreamObserver.request(1);
+                        } else {
+                            // If not, note that back-pressure has begun.
+                            wasReady.set(false);
+                        }
+                    } catch (Throwable throwable) {
+                        throwable.printStackTrace();
+                        responseObserver.onError(
+                                Status.UNKNOWN.withDescription("Error handling request").withCause(throwable).asException());
                     }
                 }
 
                 @Override
                 public void onError(Throwable t) {
-                    logger.log(Level.WARNING, "streamOperations error", t);
+                    // End the response stream if the client presents an error.
+                    t.printStackTrace();
+                    responseObserver.onCompleted();
                 }
 
                 @Override
                 public void onCompleted() {
+                    // Signal the end of work when the client ends the request stream.
+                    logger.info("COMPLETED");
                     responseObserver.onCompleted();
                 }
             };
@@ -186,190 +200,10 @@ public class GeometryOperatorsServer {
             }
         }
 
-        /**
-         * Gets all features contained within the given bounding {@link Rectangle}.
-         *
-         * @param request the bounding rectangle for the requested features.
-         * @param responseObserver the observer that will receive the features.
-         */
-        @Override
-        public void listFeatures(Rectangle request, StreamObserver<Feature> responseObserver) {
-            logger.info("server name" + System.getenv("MY_NODE_NAME"));
-            logger.info("server name" + System.getenv("MY_POD_NAME"));
-            logger.info("listFeatures");
-            int left = min(request.getLo().getLongitude(), request.getHi().getLongitude());
-            int right = max(request.getLo().getLongitude(), request.getHi().getLongitude());
-            int top = max(request.getLo().getLatitude(), request.getHi().getLatitude());
-            int bottom = min(request.getLo().getLatitude(), request.getHi().getLatitude());
-
-            for (Feature feature : features) {
-                if (!GeometryOperatorsUtil.exists(feature)) {
-                    continue;
-                }
-
-                int lat = feature.getLocation().getLatitude();
-                int lon = feature.getLocation().getLongitude();
-                if (lon >= left && lon <= right && lat >= bottom && lat <= top) {
-                    responseObserver.onNext(feature);
-                }
-            }
-            responseObserver.onCompleted();
-        }
-
-
-        /**
-         * Gets a stream of points, and responds with statistics about the "trip": number of points,
-         * number of known features visited, total distance traveled, and total time spent.
-         *
-         * @param responseObserver an observer to receive the response summary.
-         * @return an observer to receive the requested route points.
-         */
-        @Override
-        public StreamObserver<ReplacePoint> recordRoute(final StreamObserver<RouteSummary> responseObserver) {
-            return new StreamObserver<ReplacePoint>() {
-                int pointCount;
-                int featureCount;
-                int distance;
-                ReplacePoint previous;
-                final long startTime = System.nanoTime();
-
-                @Override
-                public void onNext(ReplacePoint point) {
-                    logger.info("server name" + System.getenv("MY_NODE_NAME"));
-                    logger.info("server name" + System.getenv("MY_POD_NAME"));
-                    logger.info("recordRoute.onNext");
-                    pointCount++;
-                    if (GeometryOperatorsUtil.exists(checkFeature(point))) {
-                        featureCount++;
-                    }
-                    // For each point after the first, add the incremental distance from the previous point to
-                    // the total distance value.
-                    if (previous != null) {
-                        distance += calcDistance(previous, point);
-                    }
-                    previous = point;
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    logger.log(Level.WARNING, "recordRoute cancelled");
-                }
-
-                @Override
-                public void onCompleted() {
-                    long seconds = NANOSECONDS.toSeconds(System.nanoTime() - startTime);
-                    responseObserver.onNext(RouteSummary.newBuilder().setPointCount(pointCount)
-                            .setFeatureCount(featureCount).setDistance(distance)
-                            .setElapsedTime((int) seconds).build());
-                    responseObserver.onCompleted();
-                }
-            };
-        }
-
-        /**
-         * Receives a stream of message/location pairs, and responds with a stream of all previous
-         * messages at each of those locations.
-         *
-         * @param responseObserver an observer to receive the stream of previous messages.
-         * @return an observer to handle requested message/location pairs.
-         */
-        @Override
-        public StreamObserver<RouteNote> routeChat(final StreamObserver<RouteNote> responseObserver) {
-            return new StreamObserver<RouteNote>() {
-                @Override
-                public void onNext(RouteNote note) {
-                    logger.info("server name" + System.getenv("MY_NODE_NAME"));
-                    logger.info("server name" + System.getenv("MY_POD_NAME"));
-                    logger.info("routeChat.onNext");
-                    List<RouteNote> notes = getOrCreateNotes(note.getLocation());
-
-                    // Respond with all previous notes at this location.
-                    for (RouteNote prevNote : notes.toArray(new RouteNote[0])) {
-                        responseObserver.onNext(prevNote);
-                    }
-
-                    // Now add the new note to the list
-                    notes.add(note);
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    logger.log(Level.WARNING, "routeChat cancelled");
-                }
-
-                @Override
-                public void onCompleted() {
-                    responseObserver.onCompleted();
-                }
-            };
-        }
-
-
-
-        /**
-         * Get the notes list for the given location. If missing, create it.
-         */
-        private List<RouteNote> getOrCreateNotes(ReplacePoint location) {
-            List<RouteNote> notes = Collections.synchronizedList(new ArrayList<RouteNote>());
-            List<RouteNote> prevNotes = routeNotes.putIfAbsent(location, notes);
-            return prevNotes != null ? prevNotes : notes;
-        }
-
-
         private OperatorResult __executeOperator(OperatorRequest serviceOperator) throws IOException {
             return GeometryOperatorsUtil.executeOperator(serviceOperator);
         }
-
-
-
-        /**
-         * Gets the feature at the given point.
-         *
-         * @param location the location to check.
-         * @return The feature object at the point. Note that an empty name indicates no feature.
-         */
-        private Feature checkFeature(ReplacePoint location) {
-            for (Feature feature : features) {
-                if (feature.getLocation().getLatitude() == location.getLatitude()
-                        && feature.getLocation().getLongitude() == location.getLongitude()) {
-                    return feature;
-                }
-            }
-
-            // No feature was found, return an unnamed feature.
-            return Feature.newBuilder().setName("").setLocation(location).build();
-        }
-
-        /**
-         * Calculate the distance between two points using the "haversine" formula.
-         * This code was taken from http://www.movable-type.co.uk/scripts/latlong.html.
-         *
-         * @param start The starting point
-         * @param end The end point
-         * @return The distance between the points in meters
-         */
-        private static int calcDistance(ReplacePoint start, ReplacePoint end) {
-            double lat1 = GeometryOperatorsUtil.getLatitude(start);
-            double lat2 = GeometryOperatorsUtil.getLatitude(end);
-            double lon1 = GeometryOperatorsUtil.getLongitude(start);
-            double lon2 = GeometryOperatorsUtil.getLongitude(end);
-
-
-
-            int r = 6371000; // meters
-            double phi1 = toRadians(lat1);
-            double phi2 = toRadians(lat2);
-            double deltaPhi = toRadians(lat2 - lat1);
-            double deltaLambda = toRadians(lon2 - lon1);
-
-            double a = sin(deltaPhi / 2) * sin(deltaPhi / 2)
-                    + cos(phi1) * cos(phi2) * sin(deltaLambda / 2) * sin(deltaLambda / 2);
-            double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-            return (int) (r * c);
-        }
     }
-
 }
 
 

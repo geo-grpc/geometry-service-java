@@ -63,16 +63,14 @@ import java.util.stream.Collectors;
 public class GeometryOperatorsServerTest {
   private GeometryOperatorsServer server;
   private ManagedChannel inProcessChannel;
-  private Collection<Feature> features;
 
   @Before
   public void setUp() throws Exception {
     String uniqueServerName = "in-process server for " + getClass();
-    features = new ArrayList<Feature>();
     // use directExecutor for both InProcessServerBuilder and InProcessChannelBuilder can reduce the
     // usage timeouts and latches in test. But we still add timeout and latches where they would be
     // needed if no directExecutor were used, just for demo purpose.
-    server = new GeometryOperatorsServer(InProcessServerBuilder.forName(uniqueServerName).directExecutor(), 0, features);
+    server = new GeometryOperatorsServer(InProcessServerBuilder.forName(uniqueServerName).directExecutor(), 0);
     server.start();
     inProcessChannel = InProcessChannelBuilder.forName(uniqueServerName).directExecutor().build();
   }
@@ -83,27 +81,6 @@ public class GeometryOperatorsServerTest {
     server.stop();
   }
 
-  @Test
-  public void getFeature() {
-    ReplacePoint point = ReplacePoint.newBuilder().setLongitude(1).setLatitude(1).build();
-    Feature unnamedFeature = Feature.newBuilder()
-        .setName("").setLocation(point).build();
-    GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-
-    // feature not found in the server
-    Feature feature = stub.getFeature(point);
-
-    assertEquals(unnamedFeature, feature);
-
-    // feature found in the server
-    Feature namedFeature = Feature.newBuilder()
-        .setName("name").setLocation(point).build();
-    features.add(namedFeature);
-
-    feature = stub.getFeature(point);
-
-    assertEquals(namedFeature, feature);
-  }
 
   @Test
   public void getWKTGeometry() {
@@ -367,171 +344,5 @@ public class GeometryOperatorsServerTest {
       } catch (Exception e) {
         assertNull(e);
       }
-  }
-
-  @Test
-  public void listFeatures() throws Exception {
-    // setup
-    Rectangle rect = Rectangle.newBuilder()
-        .setLo(ReplacePoint.newBuilder().setLongitude(0).setLatitude(0).build())
-        .setHi(ReplacePoint.newBuilder().setLongitude(10).setLatitude(10).build())
-        .build();
-    Feature f1 = Feature.newBuilder()
-        .setLocation(ReplacePoint.newBuilder().setLongitude(-1).setLatitude(-1).build())
-        .setName("f1")
-        .build(); // not inside rect
-    Feature f2 = Feature.newBuilder()
-        .setLocation(ReplacePoint.newBuilder().setLongitude(2).setLatitude(2).build())
-        .setName("f2")
-        .build();
-    Feature f3 = Feature.newBuilder()
-        .setLocation(ReplacePoint.newBuilder().setLongitude(3).setLatitude(3).build())
-        .setName("f3")
-        .build();
-    Feature f4 = Feature.newBuilder()
-        .setLocation(ReplacePoint.newBuilder().setLongitude(4).setLatitude(4).build())
-        .build(); // unamed
-    features.add(f1);
-    features.add(f2);
-    features.add(f3);
-    features.add(f4);
-    final Collection<Feature> result = new HashSet<Feature>();
-    final CountDownLatch latch = new CountDownLatch(1);
-    StreamObserver<Feature> responseObserver =
-        new StreamObserver<Feature>() {
-          @Override
-          public void onNext(Feature value) {
-            result.add(value);
-          }
-
-          @Override
-          public void onError(Throwable t) {
-            fail();
-          }
-
-          @Override
-          public void onCompleted() {
-            latch.countDown();
-          }
-        };
-    GeometryOperatorsGrpc.GeometryOperatorsStub stub = GeometryOperatorsGrpc.newStub(inProcessChannel);
-
-    // run
-    stub.listFeatures(rect, responseObserver);
-    assertTrue(latch.await(1, TimeUnit.SECONDS));
-
-    // verify
-    assertEquals(new HashSet<Feature>(Arrays.asList(f2, f3)), result);
-  }
-
-  @Test
-  public void recordRoute() {
-    ReplacePoint p1 = ReplacePoint.newBuilder().setLongitude(1000).setLatitude(1000).build();
-    ReplacePoint p2 = ReplacePoint.newBuilder().setLongitude(2000).setLatitude(2000).build();
-    ReplacePoint p3 = ReplacePoint.newBuilder().setLongitude(3000).setLatitude(3000).build();
-    ReplacePoint p4 = ReplacePoint.newBuilder().setLongitude(4000).setLatitude(4000).build();
-    Feature f1 = Feature.newBuilder().setLocation(p1).build(); // unamed
-    Feature f2 = Feature.newBuilder().setLocation(p2).setName("f2").build();
-    Feature f3 = Feature.newBuilder().setLocation(p3).setName("f3").build();
-    Feature f4 = Feature.newBuilder().setLocation(p4).build(); // unamed
-    features.add(f1);
-    features.add(f2);
-    features.add(f3);
-    features.add(f4);
-
-    @SuppressWarnings("unchecked")
-    StreamObserver<RouteSummary> responseObserver =
-        (StreamObserver<RouteSummary>) mock(StreamObserver.class);
-    GeometryOperatorsGrpc.GeometryOperatorsStub stub = GeometryOperatorsGrpc.newStub(inProcessChannel);
-    ArgumentCaptor<RouteSummary> routeSummaryCaptor = ArgumentCaptor.forClass(RouteSummary.class);
-
-    StreamObserver<ReplacePoint> requestObserver = stub.recordRoute(responseObserver);
-
-    requestObserver.onNext(p1);
-    requestObserver.onNext(p2);
-    requestObserver.onNext(p3);
-    requestObserver.onNext(p4);
-
-    verify(responseObserver, never()).onNext(any(RouteSummary.class));
-
-    requestObserver.onCompleted();
-
-    // allow some ms to let client receive the response. Similar usage later on.
-    verify(responseObserver, timeout(100)).onNext(routeSummaryCaptor.capture());
-    RouteSummary summary = routeSummaryCaptor.getValue();
-    assertEquals(45, summary.getDistance()); // 45 is the hard coded distance from p1 to p4.
-    assertEquals(2, summary.getFeatureCount());
-    verify(responseObserver, timeout(100)).onCompleted();
-    verify(responseObserver, never()).onError(any(Throwable.class));
-  }
-
-  @Test
-  public void routeChat() {
-    ReplacePoint p1 = ReplacePoint.newBuilder().setLongitude(1).setLatitude(1).build();
-    ReplacePoint p2 = ReplacePoint.newBuilder().setLongitude(2).setLatitude(2).build();
-    RouteNote n1 = RouteNote.newBuilder().setLocation(p1).setMessage("m1").build();
-    RouteNote n2 = RouteNote.newBuilder().setLocation(p2).setMessage("m2").build();
-    RouteNote n3 = RouteNote.newBuilder().setLocation(p1).setMessage("m3").build();
-    RouteNote n4 = RouteNote.newBuilder().setLocation(p2).setMessage("m4").build();
-    RouteNote n5 = RouteNote.newBuilder().setLocation(p1).setMessage("m5").build();
-    RouteNote n6 = RouteNote.newBuilder().setLocation(p1).setMessage("m6").build();
-    int timesOnNext = 0;
-
-    @SuppressWarnings("unchecked")
-    StreamObserver<RouteNote> responseObserver =
-        (StreamObserver<RouteNote>) mock(StreamObserver.class);
-    GeometryOperatorsGrpc.GeometryOperatorsStub stub = GeometryOperatorsGrpc.newStub(inProcessChannel);
-
-    StreamObserver<RouteNote> requestObserver = stub.routeChat(responseObserver);
-    verify(responseObserver, never()).onNext(any(RouteNote.class));
-
-    requestObserver.onNext(n1);
-    verify(responseObserver, never()).onNext(any(RouteNote.class));
-
-    requestObserver.onNext(n2);
-    verify(responseObserver, never()).onNext(any(RouteNote.class));
-
-    requestObserver.onNext(n3);
-    ArgumentCaptor<RouteNote> routeNoteCaptor = ArgumentCaptor.forClass(RouteNote.class);
-    verify(responseObserver, timeout(100).times(++timesOnNext)).onNext(routeNoteCaptor.capture());
-    RouteNote result = routeNoteCaptor.getValue();
-    Assert.assertEquals(p1, result.getLocation());
-    assertEquals("m1", result.getMessage());
-
-    requestObserver.onNext(n4);
-    routeNoteCaptor = ArgumentCaptor.forClass(RouteNote.class);
-    verify(responseObserver, timeout(100).times(++timesOnNext)).onNext(routeNoteCaptor.capture());
-    result = routeNoteCaptor.getAllValues().get(timesOnNext - 1);
-    Assert.assertEquals(p2, result.getLocation());
-    assertEquals("m2", result.getMessage());
-
-    requestObserver.onNext(n5);
-    routeNoteCaptor = ArgumentCaptor.forClass(RouteNote.class);
-    timesOnNext += 2;
-    verify(responseObserver, timeout(100).times(timesOnNext)).onNext(routeNoteCaptor.capture());
-    result = routeNoteCaptor.getAllValues().get(timesOnNext - 2);
-    Assert.assertEquals(p1, result.getLocation());
-    assertEquals("m1", result.getMessage());
-    result = routeNoteCaptor.getAllValues().get(timesOnNext - 1);
-    Assert.assertEquals(p1, result.getLocation());
-    assertEquals("m3", result.getMessage());
-
-    requestObserver.onNext(n6);
-    routeNoteCaptor = ArgumentCaptor.forClass(RouteNote.class);
-    timesOnNext += 3;
-    verify(responseObserver, timeout(100).times(timesOnNext)).onNext(routeNoteCaptor.capture());
-    result = routeNoteCaptor.getAllValues().get(timesOnNext - 3);
-    Assert.assertEquals(p1, result.getLocation());
-    assertEquals("m1", result.getMessage());
-    result = routeNoteCaptor.getAllValues().get(timesOnNext - 2);
-    Assert.assertEquals(p1, result.getLocation());
-    assertEquals("m3", result.getMessage());
-    result = routeNoteCaptor.getAllValues().get(timesOnNext - 1);
-    Assert.assertEquals(p1, result.getLocation());
-    assertEquals("m5", result.getMessage());
-
-    requestObserver.onCompleted();
-    verify(responseObserver, timeout(100)).onCompleted();
-    verify(responseObserver, never()).onError(any(Throwable.class));
   }
 }

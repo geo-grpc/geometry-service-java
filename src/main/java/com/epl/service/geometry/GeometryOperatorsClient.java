@@ -28,6 +28,8 @@ import com.google.protobuf.Message;
 import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
 import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
 import io.grpc.*;
+import io.grpc.stub.ClientCallStreamObserver;
+import io.grpc.stub.ClientResponseObserver;
 import io.grpc.stub.StreamObserver;
 import io.grpc.util.RoundRobinLoadBalancerFactory;
 
@@ -45,14 +47,14 @@ import java.util.logging.Logger;
  * Sample client code that makes gRPC calls to the server.
  */
 public class GeometryOperatorsClient {
-    // TODO replace
+    private static final Logger logger = Logger.getLogger(GeometryOperatorsClient.class.getName());
+
+
     private final ManagedChannel channel;
     private final GeometryOperatorsBlockingStub blockingStub;
     private final GeometryOperatorsStub asyncStub;
-    // TODO replace
 
 
-    private static final Logger logger = Logger.getLogger(GeometryOperatorsClient.class.getName());
 
     private Random random = new Random();
     private TestHelper testHelper;
@@ -84,8 +86,140 @@ public class GeometryOperatorsClient {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
-    public void shapefile(File inFile) throws IOException {
+    public void shapefileThrottled(File inFile) throws IOException, InterruptedException {
+        CountDownLatch done = new CountDownLatch(1);
+        String prfFile = inFile.getAbsolutePath().substring(0, inFile.getAbsolutePath().lastIndexOf('.')) + ".prj";
+        String projectionWKT = new String(Files.readAllBytes(Paths.get(prfFile)));
+        ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
+
+        ServiceSpatialReference serviceSpatialReference = ServiceSpatialReference.newBuilder()
+                .setEsriWkt(projectionWKT).build();
+
+        ServiceSpatialReference wgs84SpatiralReference = ServiceSpatialReference.newBuilder()
+                .setWkid(4326).build();
+
+        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder()
+                .addGeometryBinary(ByteString.copyFromUtf8(""))
+                .addGeometryId(0)
+                .setGeometryEncodingType(GeometryEncodingType.esri)
+                .setSpatialReference(serviceSpatialReference);
+
+        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
+                .setOperatorType(ServiceOperatorType.Buffer)
+                .addBufferDistances(2.5)
+                .setResultsEncodingType("wkt")
+                .setResultSpatialReference(wgs84SpatiralReference);
+
+        GeometryOperatorsStub geometryOperatorsStub = asyncStub
+                .withMaxInboundMessageSize(2147483647)
+                .withMaxOutboundMessageSize(2147483647);
+
+        // When using manual flow-control and back-pressure on the client, the ClientResponseObserver handles both
+        // request and response streams.
+        ClientResponseObserver<OperatorRequest, OperatorResult> clientResponseObserver =
+                new ClientResponseObserver<OperatorRequest, OperatorResult>() {
+                    ClientCallStreamObserver<OperatorRequest> requestStream;
+
+                    @Override
+                    public void beforeStart(ClientCallStreamObserver<OperatorRequest> requestStream) {
+                        this.requestStream = requestStream;
+                        // Set up manual flow control for the response stream. It feels backwards to configure the response
+                        // stream's flow control using the request stream's observer, but this is the way it is.
+                        requestStream.disableAutoInboundFlowControl();
+
+                        // Set up a back-pressure-aware producer for the request stream. The onReadyHandler will be invoked
+                        // when the consuming side has enough buffer space to receive more messages.
+                        //
+                        // Messages are serialized into a transport-specific transmit buffer. Depending on the size of this buffer,
+                        // MANY messages may be buffered, however, they haven't yet been sent to the server. The server must call
+                        // request() to pull a buffered message from the client.
+                        //
+                        // Note: the onReadyHandler's invocation is serialized on the same thread pool as the incoming
+                        // StreamObserver'sonNext(), onError(), and onComplete() handlers. Blocking the onReadyHandler will prevent
+                        // additional messages from being processed by the incoming StreamObserver. The onReadyHandler must return
+                        // in a timely manor or else message processing throughput will suffer.
+                        requestStream.setOnReadyHandler(new Runnable() {
+                            @Override
+                            public void run() {
+                                while(requestStream.isReady()) {
+                                    if (shapefileByteReader.hasNext()) {
+                                        byte[] data = shapefileByteReader.next();
+                                        int id = shapefileByteReader.getGeometryID();
+                                        ByteString byteString = ByteString.copyFrom(data);
+                                        logger.info("bytes length -->" + data.length);
+
+                                        ServiceGeometry serviceGeometry= serviceGeometryBuilder
+                                                .setGeometryBinary(0, byteString)
+                                                .setGeometryId(0, id)
+                                                .build();
+                                        OperatorRequest operatorRequest = operatorRequestBuilder
+                                                .setLeftGeometry(serviceGeometry).build();
+                                        requestStream.onNext(operatorRequest);
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onNext(OperatorResult operatorResult) {
+                        String results = operatorResult.getGeometry().getGeometryString(0);
+                        logger.info("<-- " + results );
+                        // Signal the sender to send one message.
+                        requestStream.request(1);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        t.printStackTrace();
+                        done.countDown();
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        logger.info("All Done");
+                        done.countDown();
+                    }
+                };
+        // Note: clientResponseObserver is handling both request and response stream processing.
+        asyncStub.streamOperations(clientResponseObserver);
+
+        done.await();
+
+        channel.shutdown();
+        channel.awaitTermination(1, TimeUnit.SECONDS);
+    }
+
+    public CountDownLatch shapefile(File inFile) throws IOException {
         ///Users/davidraleigh/Downloads/landsat_8_c1/landsat_8_c1.shp
+        //StreamOperations
+        info("*** RouteChat");
+        final CountDownLatch finishLatch = new CountDownLatch(1);
+        // https://github.com/grpc/grpc-java/issues/2563
+        // https://github.com/grpc/grpc-java/blob/c90f27f454f59f15fcd1030be5af8c69b0aad42c/stub/src/main/java/io/grpc/stub/AbstractStub.java#L212
+        // https://github.com/grpc/grpc-java/blob/c90f27f454f59f15fcd1030be5af8c69b0aad42c/stub/src/main/java/io/grpc/stub/AbstractStub.java#L222
+        StreamObserver<OperatorRequest> requestStreamObserver = asyncStub
+                .withMaxInboundMessageSize(2147483647)
+                .withMaxOutboundMessageSize(2147483647)
+                .streamOperations(new StreamObserver<OperatorResult>() {
+            @Override
+            public void onNext(OperatorResult operatorResult) {
+                String resultString = operatorResult.getGeometry().getGeometryString(0);
+                info("Got geometry \"{0}\"", resultString);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                warning("Geometry Operator Failed: {0}", Status.fromThrowable(t));
+                finishLatch.countDown();
+            }
+
+            @Override
+            public void onCompleted() {
+                info("Finished RouteChat");
+                finishLatch.countDown();
+            }
+        });
 
         // Get projection
         String prfFile = inFile.getAbsolutePath().substring(0, inFile.getAbsolutePath().lastIndexOf('.')) + ".prj";
@@ -109,21 +243,29 @@ public class GeometryOperatorsClient {
 
 
         ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
-        while (shapefileByteReader.hasNext()) {
-            byte[] data = shapefileByteReader.next();
-            ByteString byteString = ByteString.copyFrom(data);
-            serviceGeometryBuilder.addGeometryBinary(byteString);
-            OperatorRequest operatorRequest = operatorRequestBuilder
-                    .setLeftGeometry(serviceGeometryBuilder
-                            .setGeometryBinary(0, byteString)
-                            .build()).build();
-            OperatorResult operatorResult = this.blockingStub
-                    .withMaxInboundMessageSize(2147483647)
-                    .withMaxOutboundMessageSize(2147483647)
-                    .executeOperation(operatorRequest);
-            String resultString = operatorResult.getGeometry().getGeometryString(0);
+        try {
+            while (shapefileByteReader.hasNext()) {
+                byte[] data = shapefileByteReader.next();
+                ByteString byteString = ByteString.copyFrom(data);
+                serviceGeometryBuilder.addGeometryBinary(byteString);
+                OperatorRequest operatorRequest = operatorRequestBuilder
+                        .setLeftGeometry(serviceGeometryBuilder
+                                .setGeometryBinary(0, byteString)
+                                .build()).build();
+
+                requestStreamObserver.onNext(operatorRequest);
+            }
+        } catch (RuntimeException e) {
+            // Cancel RPC
+            requestStreamObserver.onError(e);
+            throw e;
         }
 
+        // Mark the end of requests
+        requestStreamObserver.onCompleted();
+
+        // return the latch while receiving happens asynchronously
+        return finishLatch;
     }
 
     public void getProjected() {
@@ -165,201 +307,9 @@ public class GeometryOperatorsClient {
         System.out.println(GeometryEngine.geometryToWkt(result, 0));
     }
 
-    /**
-     * Blocking unary call example.  Calls getFeature and prints the response.
-     */
-    public void getFeature(int lat, int lon) {
-        info("*** GetFeature: lat={0} lon={1}", lat, lon);
-
-        ReplacePoint request = ReplacePoint.newBuilder().setLatitude(lat).setLongitude(lon).build();
-
-        Feature feature;
-        try {
-            feature = blockingStub.getFeature(request);
-            if (testHelper != null) {
-                testHelper.onMessage(feature);
-            }
-        } catch (StatusRuntimeException e) {
-            warning("RPC failed: {0}", e.getStatus());
-            if (testHelper != null) {
-                testHelper.onRpcError(e);
-            }
-            return;
-        }
-        if (GeometryOperatorsUtil.exists(feature)) {
-            info("Found feature called \"{0}\" at {1}, {2}",
-                    feature.getName(),
-                    GeometryOperatorsUtil.getLatitude(feature.getLocation()),
-                    GeometryOperatorsUtil.getLongitude(feature.getLocation()));
-        } else {
-            info("Found no feature at {0}, {1}",
-                    GeometryOperatorsUtil.getLatitude(feature.getLocation()),
-                    GeometryOperatorsUtil.getLongitude(feature.getLocation()));
-        }
-    }
-
-    /**
-     * Blocking server-streaming example. Calls listFeatures with a rectangle of interest. Prints each
-     * response feature as it arrives.
-     */
-    public void listFeatures(int lowLat, int lowLon, int hiLat, int hiLon) {
-        info("*** ListFeatures: lowLat={0} lowLon={1} hiLat={2} hiLon={3}", lowLat, lowLon, hiLat,
-                hiLon);
-
-        Rectangle request =
-                Rectangle.newBuilder()
-                        .setLo(ReplacePoint.newBuilder().setLatitude(lowLat).setLongitude(lowLon).build())
-                        .setHi(ReplacePoint.newBuilder().setLatitude(hiLat).setLongitude(hiLon).build()).build();
-        Iterator<Feature> features;
-        try {
-            features = blockingStub.listFeatures(request);
-            for (int i = 1; features.hasNext(); i++) {
-                Feature feature = features.next();
-                info("Result #" + i + ": {0}", feature);
-                if (testHelper != null) {
-                    testHelper.onMessage(feature);
-                }
-            }
-        } catch (StatusRuntimeException e) {
-            warning("RPC failed: {0}", e.getStatus());
-            if (testHelper != null) {
-                testHelper.onRpcError(e);
-            }
-        }
-    }
-
-    /**
-     * Async client-streaming example. Sends {@code numPoints} randomly chosen points from {@code
-     * features} with a variable delay in between. Prints the statistics when they are sent from the
-     * server.
-     */
-    public void recordRoute(List<Feature> features, int numPoints) throws InterruptedException {
-        info("*** RecordRoute");
-        final CountDownLatch finishLatch = new CountDownLatch(1);
-        StreamObserver<RouteSummary> responseObserver = new StreamObserver<RouteSummary>() {
-            @Override
-            public void onNext(RouteSummary summary) {
-                info("Finished trip with {0} points. Passed {1} features. "
-                                + "Travelled {2} meters. It took {3} seconds.", summary.getPointCount(),
-                        summary.getFeatureCount(), summary.getDistance(), summary.getElapsedTime());
-                if (testHelper != null) {
-                    testHelper.onMessage(summary);
-                }
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                warning("RecordRoute Failed: {0}", Status.fromThrowable(t));
-                if (testHelper != null) {
-                    testHelper.onRpcError(t);
-                }
-                finishLatch.countDown();
-            }
-
-            @Override
-            public void onCompleted() {
-                info("Finished RecordRoute");
-                finishLatch.countDown();
-            }
-        };
-
-        StreamObserver<ReplacePoint> requestObserver = asyncStub.recordRoute(responseObserver);
-        try {
-            // Send numPoints points randomly selected from the features list.
-            for (int i = 0; i < numPoints; ++i) {
-                int index = random.nextInt(features.size());
-                ReplacePoint point = features.get(index).getLocation();
-                info("Visiting point {0}, {1}", GeometryOperatorsUtil.getLatitude(point),
-                        GeometryOperatorsUtil.getLongitude(point));
-                requestObserver.onNext(point);
-                // Sleep for a bit before sending the next one.
-                Thread.sleep(random.nextInt(1000) + 500);
-                if (finishLatch.getCount() == 0) {
-                    // RPC completed or errored before we finished sending.
-                    // Sending further requests won't error, but they will just be thrown away.
-                    return;
-                }
-            }
-        } catch (RuntimeException e) {
-            // Cancel RPC
-            requestObserver.onError(e);
-            throw e;
-        }
-        // Mark the end of requests
-        requestObserver.onCompleted();
-
-        // Receiving happens asynchronously
-        if (!finishLatch.await(1, TimeUnit.MINUTES)) {
-            warning("recordRoute can not finish within 1 minutes");
-        }
-    }
-
-    /**
-     * Bi-directional example, which can only be asynchronous. Send some chat messages, and print any
-     * chat messages that are sent from the server.
-     */
-    public CountDownLatch routeChat() {
-        info("*** RouteChat");
-        final CountDownLatch finishLatch = new CountDownLatch(1);
-        StreamObserver<RouteNote> requestObserver =
-                asyncStub.routeChat(new StreamObserver<RouteNote>() {
-                    @Override
-                    public void onNext(RouteNote note) {
-                        info("Got message \"{0}\" at {1}, {2}", note.getMessage(), note.getLocation()
-                                .getLatitude(), note.getLocation().getLongitude());
-                        if (testHelper != null) {
-                            testHelper.onMessage(note);
-                        }
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                        warning("RouteChat Failed: {0}", Status.fromThrowable(t));
-                        if (testHelper != null) {
-                            testHelper.onRpcError(t);
-                        }
-                        finishLatch.countDown();
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        info("Finished RouteChat");
-                        finishLatch.countDown();
-                    }
-                });
-
-        try {
-            RouteNote[] requests =
-                    {newNote("First message", 0, 0), newNote("Second message", 0, 1),
-                            newNote("Third message", 1, 0), newNote("Fourth message", 1, 1)};
-
-            for (RouteNote request : requests) {
-                info("Sending message \"{0}\" at {1}, {2}", request.getMessage(), request.getLocation()
-                        .getLatitude(), request.getLocation().getLongitude());
-                requestObserver.onNext(request);
-            }
-        } catch (RuntimeException e) {
-            // Cancel RPC
-            requestObserver.onError(e);
-            throw e;
-        }
-        // Mark the end of requests
-        requestObserver.onCompleted();
-
-        // return the latch while receiving happens asynchronously
-        return finishLatch;
-    }
 
     /** Issues several different requests and then exits. */
     public static void main(String[] args) throws InterruptedException {
-        List<Feature> features;
-        try {
-            features = GeometryOperatorsUtil.parseFeatures(GeometryOperatorsUtil.getDefaultFeaturesFile());
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            return;
-        }
-
         GeometryOperatorsClient geometryOperatorsClient = null;
         String target = System.getenv("GEOMETRY_SERVICE_TARGET");
         if (target != null)
@@ -369,10 +319,15 @@ public class GeometryOperatorsClient {
 
         System.out.println("Starting main");
         try {
-            File file = new File("/data/Parcels/PARCELS.shp");
+            // File file = new File("/data/Parcels/PARCELS.shp");
+            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
 
             long startTime = System.nanoTime();
-            geometryOperatorsClient.shapefile(file);
+            geometryOperatorsClient.shapefileThrottled(file);
+//            CountDownLatch countDownLatch = geometryOperatorsClient.shapefile(file);
+//            if (!countDownLatch.await(20, TimeUnit.MINUTES)) {
+//                geometryOperatorsClient.warning("routeChat can not finish within 20 minutes");
+//            }
             long endTime = System.nanoTime();
             long duration = (endTime - startTime) / 1000000;
             System.out.println("Test duration");
@@ -381,24 +336,6 @@ public class GeometryOperatorsClient {
 //            geometryOperatorsClient.getProjected();
 //            geometryOperatorsClient.getProjected();
 //            geometryOperatorsClient.getProjected();
-//            // Looking for a valid feature
-//            geometryOperatorsClient.getFeature(409146138, -746188906);
-//
-//            // Feature missing.
-//            geometryOperatorsClient.getFeature(0, 0);
-//
-//            // Looking for features between 40, -75 and 42, -73.
-//            geometryOperatorsClient.listFeatures(400000000, -750000000, 420000000, -730000000);
-//
-//            // Record a few randomly selected points from the features file.
-//            geometryOperatorsClient.recordRoute(features, 10);
-//
-//            // Send and receive some notes.
-//            CountDownLatch finishLatch = geometryOperatorsClient.routeChat();
-//
-//            if (!finishLatch.await(1, TimeUnit.MINUTES)) {
-//                geometryOperatorsClient.warning("routeChat can not finish within 1 minutes");
-//            }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -414,10 +351,6 @@ public class GeometryOperatorsClient {
         logger.log(Level.WARNING, msg, params);
     }
 
-    private RouteNote newNote(String message, int lat, int lon) {
-        return RouteNote.newBuilder().setMessage(message)
-                .setLocation(ReplacePoint.newBuilder().setLatitude(lat).setLongitude(lon).build()).build();
-    }
 
     /**
      * Only used for unit test, as we do not want to introduce randomness in unit test.

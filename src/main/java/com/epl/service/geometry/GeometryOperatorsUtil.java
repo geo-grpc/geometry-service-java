@@ -43,55 +43,6 @@ import java.util.stream.Collectors;
  * Common utilities for the GeometryOperators demo.
  */
 public class GeometryOperatorsUtil {
-    private static final double COORD_FACTOR = 1e7;
-
-    /**
-     * Gets the latitude for the given point.
-     */
-    public static double getLatitude(ReplacePoint location) {
-        return location.getLatitude() / COORD_FACTOR;
-    }
-
-    /**
-     * Gets the longitude for the given point.
-     */
-    public static double getLongitude(ReplacePoint location) {
-        return location.getLongitude() / COORD_FACTOR;
-    }
-
-    /**
-     * Gets the default features file from classpath.
-     */
-    public static URL getDefaultFeaturesFile() {
-        return GeometryOperatorsServer.class.getResource("route_guide_db.json");
-    }
-
-    /**
-     * Parses the JSON input file containing the list of features.
-     */
-    public static List<Feature> parseFeatures(URL file) throws IOException {
-        InputStream input = file.openStream();
-        try {
-            Reader reader = new InputStreamReader(input);
-            try {
-                FeatureDatabase.Builder database = FeatureDatabase.newBuilder();
-                JsonFormat.parser().merge(reader, database);
-                return database.getFeatureList();
-            } finally {
-                reader.close();
-            }
-        } finally {
-            input.close();
-        }
-    }
-
-    /**
-     * Indicates whether the given feature exists (i.e. has a valid name).
-     */
-    public static boolean exists(Feature feature) {
-        return feature != null && !feature.getName().isEmpty();
-    }
-
     public static List<com.google.protobuf.ByteString> __exportByteBufferCursor(ByteBufferCursor byteBufferCursor) {
         ByteBuffer byteBuffer = null;
         // TODO add count on ByteBufferCursor?
@@ -468,8 +419,6 @@ public class GeometryOperatorsUtil {
 
 
     private static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws IOException {
-//        MapGeometry mapGeometry = __extractGeometry(serviceGeometry);
-//        GeometryCursor geometryCursor = new SimpleGeometryCursor(mapGeometry.getGeometry());
         return __extractGeometryCursor(serviceGeometry);
     }
 
