@@ -7,3 +7,4 @@ build/
 out/
 .idea/libraries/*.xml
 *.log
+examples/*.json

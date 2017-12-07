@@ -1,6 +1,27 @@
 FROM us.gcr.io/echoparklabs/geometry-service-java:latest
 
+RUN apt-get update
+RUN apt-get install -y curl
+RUN apt-get install gnupg2 -y
+
 RUN chmod +x /opt/src/geometry-service-java/build/install/epl-geometry-service/bin/geometry-operators-client
+WORKDIR /opt/src/geometry-service-java/build/install
+COPY ./ ./
+
+ENV CLOUD_SDK_REPO=cloud-sdk-stretch
+RUN echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+RUN cat /etc/apt/sources.list.d/google-cloud-sdk.list
+RUN apt-get update && apt-get install -y google-cloud-sdk
+RUN apt-get install unzip
+
+# WRS Shapefile Reader
+RUN gcloud auth activate-service-account gcp-imagery-reader@echoparklabs.iam.gserviceaccount.com --key-file /opt/src/geometry-service-java/build/install/echoparklabs-e163261155ee.json
+# originally from https://landsat.usgs.gov/pathrow-shapefiles
+WORKDIR /data
+RUN gsutil cp gs://epl-test-data/san-diego-counties/*.zip .
+RUN unzip '*.zip'
+# WRS Shapefile Reader
 
 CMD ["/opt/src/geometry-service-java/build/install/epl-geometry-service/bin/geometry-operators-client","geometry-service-java"]
 
