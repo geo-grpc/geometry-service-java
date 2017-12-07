@@ -28,7 +28,6 @@ import com.google.protobuf.Message;
 import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
 import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
 import io.grpc.*;
-import io.grpc.internal.DnsNameResolverProvider;
 import io.grpc.stub.StreamObserver;
 import io.grpc.util.RoundRobinLoadBalancerFactory;
 
@@ -118,7 +117,10 @@ public class GeometryOperatorsClient {
                     .setLeftGeometry(serviceGeometryBuilder
                             .setGeometryBinary(0, byteString)
                             .build()).build();
-            OperatorResult operatorResult = this.blockingStub.executeOperation(operatorRequest);
+            OperatorResult operatorResult = this.blockingStub
+                    .withMaxInboundMessageSize(2147483647)
+                    .withMaxOutboundMessageSize(2147483647)
+                    .executeOperation(operatorRequest);
             String resultString = operatorResult.getGeometry().getGeometryString(0);
         }
 

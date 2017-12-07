@@ -65,6 +65,7 @@ public class GeometryOperatorsServer {
         // https://github.com/tensorflow/serving/issues/288
         // https://github.com/tensorflow/tensorflow/blob/d0d975f8c3330b5402263b2356b038bc8af919a2/tensorflow/core/platform/types.h#L52
         // TODO add a test to check data size can handle 2 gigs
+        // maxInboundMessageSize
         this(NettyServerBuilder.forPort(port).maxMessageSize(2147483647), port, GeometryOperatorsUtil.parseFeatures(featureFile));
     }
 

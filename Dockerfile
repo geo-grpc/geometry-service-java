@@ -2,6 +2,8 @@ FROM us.gcr.io/echoparklabs/geometry-api-java:latest as builder
 
 MAINTAINER David Raleigh <david@echoparklabs.io>
 
+RUN apt-get update
+
 COPY ./ /opt/src/geometry-service-java
 
 WORKDIR /opt/src/geometry-service-java
@@ -11,6 +13,8 @@ RUN ./gradlew build install
 
 
 FROM us.gcr.io/echoparklabs/geometry-api-java:latest
+
+RUN apt-get update
 
 WORKDIR /opt/src/geometry-service-java/build/install
 
