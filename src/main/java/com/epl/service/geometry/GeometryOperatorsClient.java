@@ -93,7 +93,7 @@ public class GeometryOperatorsClient {
      * @throws InterruptedException
      */
     public void shapefileThrottled(File inFile) throws IOException, InterruptedException {
-        CountDownLatch done = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(4);
         String prfFile = inFile.getAbsolutePath().substring(0, inFile.getAbsolutePath().lastIndexOf('.')) + ".prj";
         String projectionWKT = new String(Files.readAllBytes(Paths.get(prfFile)));
         ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
@@ -246,8 +246,8 @@ public class GeometryOperatorsClient {
 
         System.out.println("Starting main");
         try {
-            File file = new File("/data/Parcels/PARCELS.shp");
-//            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
+//            File file = new File("/data/Parcels/PARCELS.shp");
+            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
 
             long startTime = System.nanoTime();
             geometryOperatorsClient.shapefileThrottled(file);
