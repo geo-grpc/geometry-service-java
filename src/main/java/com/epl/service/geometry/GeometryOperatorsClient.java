@@ -86,6 +86,12 @@ public class GeometryOperatorsClient {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
+    /**
+     * https://github.com/ReactiveX/RxJava/wiki/Backpressure
+     * @param inFile
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public void shapefileThrottled(File inFile) throws IOException, InterruptedException {
         CountDownLatch done = new CountDownLatch(1);
         String prfFile = inFile.getAbsolutePath().substring(0, inFile.getAbsolutePath().lastIndexOf('.')) + ".prj";
@@ -182,90 +188,12 @@ public class GeometryOperatorsClient {
                     }
                 };
         // Note: clientResponseObserver is handling both request and response stream processing.
-        asyncStub.streamOperations(clientResponseObserver);
+        geometryOperatorsStub.streamOperations(clientResponseObserver);
 
         done.await();
 
         channel.shutdown();
         channel.awaitTermination(1, TimeUnit.SECONDS);
-    }
-
-    public CountDownLatch shapefile(File inFile) throws IOException {
-        ///Users/davidraleigh/Downloads/landsat_8_c1/landsat_8_c1.shp
-        //StreamOperations
-        info("*** RouteChat");
-        final CountDownLatch finishLatch = new CountDownLatch(1);
-        // https://github.com/grpc/grpc-java/issues/2563
-        // https://github.com/grpc/grpc-java/blob/c90f27f454f59f15fcd1030be5af8c69b0aad42c/stub/src/main/java/io/grpc/stub/AbstractStub.java#L212
-        // https://github.com/grpc/grpc-java/blob/c90f27f454f59f15fcd1030be5af8c69b0aad42c/stub/src/main/java/io/grpc/stub/AbstractStub.java#L222
-        StreamObserver<OperatorRequest> requestStreamObserver = asyncStub
-                .withMaxInboundMessageSize(2147483647)
-                .withMaxOutboundMessageSize(2147483647)
-                .streamOperations(new StreamObserver<OperatorResult>() {
-            @Override
-            public void onNext(OperatorResult operatorResult) {
-                String resultString = operatorResult.getGeometry().getGeometryString(0);
-                info("Got geometry \"{0}\"", resultString);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                warning("Geometry Operator Failed: {0}", Status.fromThrowable(t));
-                finishLatch.countDown();
-            }
-
-            @Override
-            public void onCompleted() {
-                info("Finished RouteChat");
-                finishLatch.countDown();
-            }
-        });
-
-        // Get projection
-        String prfFile = inFile.getAbsolutePath().substring(0, inFile.getAbsolutePath().lastIndexOf('.')) + ".prj";
-        String projectionWKT = new String(Files.readAllBytes(Paths.get(prfFile)));
-
-        ServiceSpatialReference serviceSpatialReference = ServiceSpatialReference.newBuilder()
-                .setEsriWkt(projectionWKT).build();
-
-        ServiceSpatialReference wgs84SpatiralReference = ServiceSpatialReference.newBuilder()
-                .setWkid(4326).build();
-
-        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder()
-                .setGeometryEncodingType(GeometryEncodingType.esri)
-                .setSpatialReference(serviceSpatialReference);
-
-        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
-                .setOperatorType(ServiceOperatorType.Buffer)
-                .addBufferDistances(2.5)
-                .setResultsEncodingType("wkt")
-                .setResultSpatialReference(wgs84SpatiralReference);
-
-
-        ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
-        try {
-            while (shapefileByteReader.hasNext()) {
-                byte[] data = shapefileByteReader.next();
-                ByteString byteString = ByteString.copyFrom(data);
-                serviceGeometryBuilder.addGeometryBinary(byteString);
-                OperatorRequest operatorRequest = operatorRequestBuilder
-                        .setLeftGeometry(serviceGeometryBuilder
-                                .setGeometryBinary(0, byteString)
-                                .build()).build();
-
-                requestStreamObserver.onNext(operatorRequest);
-            }
-        } catch (RuntimeException e) {
-            // Cancel RPC
-            requestStreamObserver.onError(e);
-            throw e;
-        }
-
-        // Mark the end of requests
-        requestStreamObserver.onCompleted();
-
-        // return the latch while receiving happens asynchronously
-        return finishLatch;
     }
 
     public void getProjected() {
@@ -307,7 +235,6 @@ public class GeometryOperatorsClient {
         System.out.println(GeometryEngine.geometryToWkt(result, 0));
     }
 
-
     /** Issues several different requests and then exits. */
     public static void main(String[] args) throws InterruptedException {
         GeometryOperatorsClient geometryOperatorsClient = null;
@@ -324,18 +251,10 @@ public class GeometryOperatorsClient {
 
             long startTime = System.nanoTime();
             geometryOperatorsClient.shapefileThrottled(file);
-//            CountDownLatch countDownLatch = geometryOperatorsClient.shapefile(file);
-//            if (!countDownLatch.await(20, TimeUnit.MINUTES)) {
-//                geometryOperatorsClient.warning("routeChat can not finish within 20 minutes");
-//            }
             long endTime = System.nanoTime();
             long duration = (endTime - startTime) / 1000000;
             System.out.println("Test duration");
             System.out.println(duration);
-
-//            geometryOperatorsClient.getProjected();
-//            geometryOperatorsClient.getProjected();
-//            geometryOperatorsClient.getProjected();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
