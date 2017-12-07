@@ -157,7 +157,7 @@ public class GeometryOperatorsClient {
                                     byte[] data = shapefileByteReader.next();
                                     int id = shapefileByteReader.getGeometryID();
                                     ByteString byteString = ByteString.copyFrom(data);
-                                    logger.info("bytes length -->" + data.length);
+//                                    logger.info("bytes length -->" + data.length);
 
                                     ServiceGeometry serviceGeometry = serviceGeometryBuilder
                                             .setGeometryBinary(0, byteString)
@@ -173,8 +173,11 @@ public class GeometryOperatorsClient {
 
                     @Override
                     public void onNext(OperatorResult operatorResult) {
-                        String results = operatorResult.getGeometry().getGeometryString(0);
-                        logger.info("<-- " + results);
+                        long id = operatorResult.getGeometry().getGeometryId(0);
+                        if (id % 1000 == 0) {
+                            logger.info("Geometry number " + id);
+                            logger.info(operatorResult.getGeometry().getGeometryString(0));
+                        }
                         // Signal the sender to send one message.
                         requestStream.request(1);
                     }
@@ -259,8 +262,8 @@ public class GeometryOperatorsClient {
 
         System.out.println("Starting main");
         try {
-            File file = new File("/data/Parcels/PARCELS.shp");
-//            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
+//            File file = new File("/data/Parcels/PARCELS.shp");
+            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
 
             long startTime = System.nanoTime();
             geometryOperatorsClient.shapefileThrottled(file);

@@ -27,7 +27,9 @@ option objc_class_prefix = "RTG";
 
 package routeguide;
 
-// Interface exported by the server.
+/*
+ gRPC Interfaces for working with geometry operators
+*/
 service GeometryOperators {
     // Execute a single geometry operation
     rpc ExecuteOperation(OperatorRequest) returns (OperatorResult) {}

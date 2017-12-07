@@ -133,7 +133,7 @@ public class GeometryOperatorsServer {
 
             serverCallStreamObserver.setOnReadyHandler(() -> {
                 if (serverCallStreamObserver.isReady() && wasReady.compareAndSet(false, true)) {
-                    logger.info("READY");
+//                    logger.info("READY");
                     // Signal the request sender to send one message. This happens when isReady() turns true, signaling that
                     // the receive buffer has enough free space to receive more messages. Calling request() serves to prime
                     // the message pump.
@@ -189,11 +189,11 @@ public class GeometryOperatorsServer {
         @Override
         public void executeOperation(OperatorRequest request, StreamObserver<OperatorResult> responseObserver) {
             try {
-                logger.info("server name" + System.getenv("MY_NODE_NAME"));
-                System.out.println("Start process");
+//                logger.info("server name" + System.getenv("MY_NODE_NAME"));
+//                System.out.println("Start process");
                 responseObserver.onNext(__executeOperator(request));
                 responseObserver.onCompleted();
-                System.out.println("End process");
+//                System.out.println("End process");
             } catch (IOException exception) {
                 logger.log(Level.WARNING, "executeOperation error", exception);
                 responseObserver.onError(new StatusRuntimeException(Status.NOT_FOUND.withCause(exception)));
