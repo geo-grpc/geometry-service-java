@@ -21,22 +21,23 @@ email: info@echoparklabs.io
 package com.epl.service.geometry;
 
 
+import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
+import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
 import com.esri.core.geometry.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
-import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
-import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
-import io.grpc.*;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.ClientCallStreamObserver;
 import io.grpc.stub.ClientResponseObserver;
-import io.grpc.stub.StreamObserver;
 import io.grpc.util.RoundRobinLoadBalancerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -56,12 +57,13 @@ public class GeometryOperatorsClient {
     private final GeometryOperatorsStub asyncStub;
 
 
-
     private Random random = new Random();
     private TestHelper testHelper;
 
 
-    /** Construct client for accessing GeometryOperators server at {@code host:port}. */
+    /**
+     * Construct client for accessing GeometryOperators server at {@code host:port}.
+     */
     public GeometryOperatorsClient(String host, int port) {
         this(ManagedChannelBuilder
                 .forAddress(host, port)
@@ -77,7 +79,9 @@ public class GeometryOperatorsClient {
                 .usePlaintext(true));
     }
 
-    /** Construct client for accessing GeometryOperators server using the existing channel. */
+    /**
+     * Construct client for accessing GeometryOperators server using the existing channel.
+     */
     public GeometryOperatorsClient(ManagedChannelBuilder<?> channelBuilder) {
         channel = channelBuilder.build();
         blockingStub = GeometryOperatorsGrpc.newBlockingStub(channel);
@@ -90,6 +94,7 @@ public class GeometryOperatorsClient {
 
     /**
      * https://github.com/ReactiveX/RxJava/wiki/Backpressure
+     *
      * @param inFile
      * @throws IOException
      * @throws InterruptedException
@@ -147,14 +152,14 @@ public class GeometryOperatorsClient {
                         // additional messages from being processed by the incoming StreamObserver. The onReadyHandler must return
                         // in a timely manor or else message processing throughput will suffer.
                         requestStream.setOnReadyHandler(() -> {
-                            while(requestStream.isReady()) {
+                            while (requestStream.isReady()) {
                                 if (shapefileByteReader.hasNext()) {
                                     byte[] data = shapefileByteReader.next();
                                     int id = shapefileByteReader.getGeometryID();
                                     ByteString byteString = ByteString.copyFrom(data);
                                     logger.info("bytes length -->" + data.length);
 
-                                    ServiceGeometry serviceGeometry= serviceGeometryBuilder
+                                    ServiceGeometry serviceGeometry = serviceGeometryBuilder
                                             .setGeometryBinary(0, byteString)
                                             .setGeometryId(0, id)
                                             .build();
@@ -169,7 +174,7 @@ public class GeometryOperatorsClient {
                     @Override
                     public void onNext(OperatorResult operatorResult) {
                         String results = operatorResult.getGeometry().getGeometryString(0);
-                        logger.info("<-- " + results );
+                        logger.info("<-- " + results);
                         // Signal the sender to send one message.
                         requestStream.request(1);
                     }
@@ -197,8 +202,8 @@ public class GeometryOperatorsClient {
 
     public void getProjected() {
         Polyline polyline = new Polyline();
-        polyline.startPath( 500000,       0);
-        polyline.lineTo(400000,  100000);
+        polyline.startPath(500000, 0);
+        polyline.lineTo(400000, 100000);
         polyline.lineTo(600000, -100000);
         OperatorExportToWkb op = OperatorExportToWkb.local();
 
@@ -230,7 +235,7 @@ public class GeometryOperatorsClient {
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
 
-        Polyline result = (Polyline)op2.execute(
+        Polyline result = (Polyline) op2.execute(
                 0,
                 Geometry.Type.Unknown,
                 operatorResult
@@ -241,7 +246,9 @@ public class GeometryOperatorsClient {
         System.out.println(GeometryEngine.geometryToWkt(result, 0));
     }
 
-    /** Issues several different requests and then exits. */
+    /**
+     * Issues several different requests and then exits.
+     */
     public static void main(String[] args) throws InterruptedException {
         GeometryOperatorsClient geometryOperatorsClient = null;
         String target = System.getenv("GEOMETRY_SERVICE_TARGET");

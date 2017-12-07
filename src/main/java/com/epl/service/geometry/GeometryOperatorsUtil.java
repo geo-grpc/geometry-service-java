@@ -21,11 +21,10 @@ email: info@echoparklabs.io
 package com.epl.service.geometry;
 
 import com.esri.core.geometry.*;
-
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ProtocolStringList;
-
-import com.fasterxml.jackson.core.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -145,7 +144,7 @@ public class GeometryOperatorsUtil {
                 break;
             case Buffer:
                 // TODO clean this up
-                double [] d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
+                double[] d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
                 resultCursor = OperatorBuffer.local().execute(leftCursor, null, d, operatorRequest.getBufferUnionResult(), null);
                 break;
             case Intersection:
@@ -161,7 +160,7 @@ public class GeometryOperatorsUtil {
                 resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, null, null);
                 break;
             case Cut:
-                resultCursor = OperatorCut.local().execute(operatorRequest.getCutConsiderTouch(), leftCursor.next(), (Polyline)rightCursor.next(), null, null);
+                resultCursor = OperatorCut.local().execute(operatorRequest.getCutConsiderTouch(), leftCursor.next(), (Polyline) rightCursor.next(), null, null);
                 break;
             case DensifyByLength:
                 resultCursor = OperatorDensifyByLength.local().execute(leftCursor, operatorRequest.getDensifyMaxLength(), null);
@@ -195,7 +194,7 @@ public class GeometryOperatorsUtil {
                 break;
         }
 
-        return  resultCursor;
+        return resultCursor;
     }
 
 
@@ -262,7 +261,7 @@ public class GeometryOperatorsUtil {
         }
 
         // TODO this could throw an exception if unknown operator type provided
-        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString() );
+        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
         GeometryEncodingType encodingType = null;
         switch (operatorType) {
             case Project:
@@ -291,16 +290,16 @@ public class GeometryOperatorsUtil {
             case Crosses:
             case Touches:
             case Overlaps:
-                HashMap<Integer, Boolean> result_map = ((OperatorSimpleRelation)OperatorFactoryLocal.getInstance().getOperator(operatorType)).execute(leftCursor.next(), rightCursor, operatorSpatialReference, null);
+                HashMap<Integer, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal.getInstance().getOperator(operatorType)).execute(leftCursor.next(), rightCursor, operatorSpatialReference, null);
                 if (result_map.size() == 1) {
-                        operatorResultBuilder.setSpatialRelationship(result_map.get(0));
+                    operatorResultBuilder.setSpatialRelationship(result_map.get(0));
                 } else {
-                        operatorResultBuilder.putAllRelateMap(result_map);
+                    operatorResultBuilder.putAllRelateMap(result_map);
                 }
                 break;
             case Buffer:
                 // TODO clean this up
-                double [] d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
+                double[] d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
                 resultCursor = OperatorBuffer.local().execute(leftCursor, operatorSpatialReference, d, operatorRequest.getBufferUnionResult(), null);
                 break;
             case Distance:
@@ -318,7 +317,7 @@ public class GeometryOperatorsUtil {
                 resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, operatorSpatialReference, null);
                 break;
             case Cut:
-                resultCursor = OperatorCut.local().execute(operatorRequest.getCutConsiderTouch(), leftCursor.next(), (Polyline)rightCursor.next(), operatorSpatialReference, null);
+                resultCursor = OperatorCut.local().execute(operatorRequest.getCutConsiderTouch(), leftCursor.next(), (Polyline) rightCursor.next(), operatorSpatialReference, null);
                 break;
             case DensifyByLength:
                 // TODO document that this isn't smart. getDensifyMaxLength is in whatever unit your data comes in as
@@ -425,7 +424,7 @@ public class GeometryOperatorsUtil {
                 serviceGeometryBuilder.addGeometryString(OperatorExportToGeoJson.local().execute(spatialReference, geometry));
                 break;
             case esrishape:
-                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0,geometry)));
+                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0, geometry)));
                 break;
             case UNRECOGNIZED:
                 break;

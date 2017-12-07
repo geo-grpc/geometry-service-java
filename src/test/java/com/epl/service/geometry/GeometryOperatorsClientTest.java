@@ -20,89 +20,74 @@ email: info@echoparklabs.io
 
 package com.epl.service.geometry;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-
-import com.google.protobuf.Message;
-import io.grpc.Server;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import com.epl.service.geometry.GeometryOperatorsClient.TestHelper;
-import com.epl.service.geometry.GeometryOperatorsGrpc.GeometryOperatorsImplBase;
+import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
-import io.grpc.stub.StreamObserver;
 import io.grpc.util.MutableHandlerRegistry;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.ArgumentCaptor;
+
+import java.util.Random;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for {@link GeometryOperatorsClient}.
  * For demonstrating how to write gRPC unit test only.
  * Not intended to provide a high code coverage or to test every major usecase.
- *
  */
 @RunWith(JUnit4.class)
 public class GeometryOperatorsClientTest {
-  private final MutableHandlerRegistry serviceRegistry = new MutableHandlerRegistry();
-  private final TestHelper testHelper = mock(TestHelper.class);
-  private final Random noRandomness =
-      new Random() {
-        int index;
-        boolean isForSleep;
+    private final MutableHandlerRegistry serviceRegistry = new MutableHandlerRegistry();
+    private final TestHelper testHelper = mock(TestHelper.class);
+    private final Random noRandomness =
+            new Random() {
+                int index;
+                boolean isForSleep;
 
-        /**
-         * Returns a number deterministically. If the random number is for sleep time, then return
-         * -500 so that {@code Thread.sleep(random.nextInt(1000) + 500)} sleeps 0 ms. Otherwise, it
-         * is for list index, then return incrementally (and cyclically).
-         */
-        @Override
-        public int nextInt(int bound) {
-          int retVal = isForSleep ? -500 : (index++ % bound);
-          isForSleep = ! isForSleep;
-          return retVal;
-        }
-      };
-  private Server fakeServer;
-  private GeometryOperatorsClient client;
+                /**
+                 * Returns a number deterministically. If the random number is for sleep time, then return
+                 * -500 so that {@code Thread.sleep(random.nextInt(1000) + 500)} sleeps 0 ms. Otherwise, it
+                 * is for list index, then return incrementally (and cyclically).
+                 */
+                @Override
+                public int nextInt(int bound) {
+                    int retVal = isForSleep ? -500 : (index++ % bound);
+                    isForSleep = !isForSleep;
+                    return retVal;
+                }
+            };
+    private Server fakeServer;
+    private GeometryOperatorsClient client;
 
-  @Before
-  public void setUp() throws Exception {
-    String uniqueServerName = "fake server for " + getClass();
+    @Before
+    public void setUp() throws Exception {
+        String uniqueServerName = "fake server for " + getClass();
 
-    // use a mutable service registry for later registering the service impl for each test case.
-    fakeServer = InProcessServerBuilder.forName(uniqueServerName)
-        .fallbackHandlerRegistry(serviceRegistry).directExecutor().build().start();
-    client =
-        new GeometryOperatorsClient(InProcessChannelBuilder.forName(uniqueServerName).directExecutor());
-    client.setTestHelper(testHelper);
-  }
+        // use a mutable service registry for later registering the service impl for each test case.
+        fakeServer = InProcessServerBuilder.forName(uniqueServerName)
+                .fallbackHandlerRegistry(serviceRegistry).directExecutor().build().start();
+        client =
+                new GeometryOperatorsClient(InProcessChannelBuilder.forName(uniqueServerName).directExecutor());
+        client.setTestHelper(testHelper);
+    }
 
-  @After
-  public void tearDown() throws Exception {
-    client.shutdown();
-    fakeServer.shutdownNow();
-  }
+    @After
+    public void tearDown() throws Exception {
+        client.shutdown();
+        fakeServer.shutdownNow();
+    }
 
-  /**
-   * Example for testing blocking unary call.
-   */
-  @Test
-  public void getFeature() {
+    /**
+     * Example for testing blocking unary call.
+     */
+    @Test
+    public void getFeature() {
 //    ReplacePoint requestPoint =  ReplacePoint.newBuilder().setLatitude(-1).setLongitude(-1).build();
 //    ReplacePoint responsePoint = ReplacePoint.newBuilder().setLatitude(-123).setLongitude(-123).build();
 //    final AtomicReference<ReplacePoint> pointDelivered = new AtomicReference<ReplacePoint>();
@@ -126,13 +111,13 @@ public class GeometryOperatorsClientTest {
 //    assertEquals(requestPoint, pointDelivered.get());
 //    verify(testHelper).onMessage(responseFeature);
 //    verify(testHelper, never()).onRpcError(any(Throwable.class));
-  }
+    }
 
-  /**
-   * Example for testing blocking unary call.
-   */
-  @Test
-  public void getFeature_error() {
+    /**
+     * Example for testing blocking unary call.
+     */
+    @Test
+    public void getFeature_error() {
 //    ReplacePoint requestPoint =  ReplacePoint.newBuilder().setLatitude(-1).setLongitude(-1).build();
 //    final AtomicReference<ReplacePoint> pointDelivered = new AtomicReference<ReplacePoint>();
 //    final StatusRuntimeException fakeError = new StatusRuntimeException(Status.DATA_LOSS);
@@ -154,13 +139,13 @@ public class GeometryOperatorsClientTest {
 //    ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
 //    verify(testHelper).onRpcError(errorCaptor.capture());
 //    assertEquals(fakeError.getStatus(), Status.fromThrowable(errorCaptor.getValue()));
-  }
+    }
 
-  /**
-   * Example for testing blocking server-streaming.
-   */
-  @Test
-  public void listFeatures() {
+    /**
+     * Example for testing blocking server-streaming.
+     */
+    @Test
+    public void listFeatures() {
 //    final Feature responseFeature1 = Feature.newBuilder().setName("feature 1").build();
 //    final Feature responseFeature2 = Feature.newBuilder().setName("feature 2").build();
 //    final AtomicReference<Rectangle> rectangleDelivered = new AtomicReference<Rectangle>();
@@ -192,13 +177,13 @@ public class GeometryOperatorsClientTest {
 //    verify(testHelper).onMessage(responseFeature1);
 //    verify(testHelper).onMessage(responseFeature2);
 //    verify(testHelper, never()).onRpcError(any(Throwable.class));
-  }
+    }
 
-  /**
-   * Example for testing blocking server-streaming.
-   */
-  @Test
-  public void listFeatures_error() {
+    /**
+     * Example for testing blocking server-streaming.
+     */
+    @Test
+    public void listFeatures_error() {
 //    final Feature responseFeature1 =
 //        Feature.newBuilder().setName("feature 1").build();
 //    final AtomicReference<Rectangle> rectangleDelivered = new AtomicReference<Rectangle>();
@@ -231,13 +216,13 @@ public class GeometryOperatorsClientTest {
 //    verify(testHelper).onMessage(responseFeature1);
 //    verify(testHelper).onRpcError(errorCaptor.capture());
 //    assertEquals(fakeError.getStatus(), Status.fromThrowable(errorCaptor.getValue()));
-  }
+    }
 
-  /**
-   * Example for testing async client-streaming.
-   */
-  @Test
-  public void recordRoute() throws Exception {
+    /**
+     * Example for testing async client-streaming.
+     */
+    @Test
+    public void recordRoute() throws Exception {
 //    client.setRandom(noRandomness);
 //    ReplacePoint point1 = ReplacePoint.newBuilder().setLatitude(1).setLongitude(1).build();
 //    ReplacePoint point2 = ReplacePoint.newBuilder().setLatitude(2).setLongitude(2).build();
@@ -299,14 +284,14 @@ public class GeometryOperatorsClientTest {
 //        pointsDelivered);
 //    verify(testHelper).onMessage(fakeResponse);
 //    verify(testHelper, never()).onRpcError(any(Throwable.class));
-  }
+    }
 
-  /**
-   * Example for testing async client-streaming.
-   */
-  @Test
-  @Ignore
-  public void recordRoute_wrongResponse() throws Exception {
+    /**
+     * Example for testing async client-streaming.
+     */
+    @Test
+    @Ignore
+    public void recordRoute_wrongResponse() throws Exception {
 //    client.setRandom(noRandomness);
 //    ReplacePoint point1 = ReplacePoint.newBuilder().setLatitude(1).setLongitude(1).build();
 //    final Feature requestFeature1 =
@@ -346,13 +331,13 @@ public class GeometryOperatorsClientTest {
 //    ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
 //    verify(testHelper).onRpcError(errorCaptor.capture());
 //    assertEquals(Status.Code.CANCELLED, Status.fromThrowable(errorCaptor.getValue()).getCode());
-  }
+    }
 
-  /**
-   * Example for testing async client-streaming.
-   */
-  @Test
-  public void recordRoute_serverError() throws Exception {
+    /**
+     * Example for testing async client-streaming.
+     */
+    @Test
+    public void recordRoute_serverError() throws Exception {
 //    client.setRandom(noRandomness);
 //    ReplacePoint point1 = ReplacePoint.newBuilder().setLatitude(1).setLongitude(1).build();
 //    final Feature requestFeature1 =
@@ -391,13 +376,13 @@ public class GeometryOperatorsClientTest {
 //    ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
 //    verify(testHelper).onRpcError(errorCaptor.capture());
 //    assertEquals(fakeError.getStatus(), Status.fromThrowable(errorCaptor.getValue()));
-  }
+    }
 
-  /**
-   * Example for testing bi-directional call.
-   */
-  @Test
-  public void routeChat_simpleResponse() throws Exception {
+    /**
+     * Example for testing bi-directional call.
+     */
+    @Test
+    public void routeChat_simpleResponse() throws Exception {
 //    RouteNote fakeResponse1 = RouteNote.newBuilder().setMessage("dummy msg1").build();
 //    RouteNote fakeResponse2 = RouteNote.newBuilder().setMessage("dummy msg2").build();
 //    final List<String> messagesDelivered = new ArrayList<String>();
@@ -464,13 +449,13 @@ public class GeometryOperatorsClientTest {
 //
 //    assertTrue(latch.await(1, TimeUnit.SECONDS));
 //    verify(testHelper, never()).onRpcError(any(Throwable.class));
-  }
+    }
 
-  /**
-   * Example for testing bi-directional call.
-   */
-  @Test
-  public void routeChat_echoResponse() throws Exception {
+    /**
+     * Example for testing bi-directional call.
+     */
+    @Test
+    public void routeChat_echoResponse() throws Exception {
 //    final List<RouteNote> notesDelivered = new ArrayList<RouteNote>();
 //
 //    // implement the fake service
@@ -512,13 +497,13 @@ public class GeometryOperatorsClientTest {
 //    }
 //
 //    verify(testHelper, never()).onRpcError(any(Throwable.class));
-  }
+    }
 
-  /**
-   * Example for testing bi-directional call.
-   */
-  @Test
-  public void routeChat_errorResponse() throws Exception {
+    /**
+     * Example for testing bi-directional call.
+     */
+    @Test
+    public void routeChat_errorResponse() throws Exception {
 //    final List<RouteNote> notesDelivered = new ArrayList<RouteNote>();
 //    final StatusRuntimeException fakeError = new StatusRuntimeException(Status.PERMISSION_DENIED);
 //
@@ -557,5 +542,5 @@ public class GeometryOperatorsClientTest {
 //    ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
 //    verify(testHelper).onRpcError(errorCaptor.capture());
 //    assertEquals(fakeError.getStatus(), Status.fromThrowable(errorCaptor.getValue()));
-  }
+    }
 }

@@ -1,6 +1,5 @@
 package com.epl.service.geometry;
 
-import com.epl.service.geometry.KubernetesNameResolver;
 import com.google.common.base.Preconditions;
 import io.grpc.Attributes;
 import io.grpc.NameResolver;

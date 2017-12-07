@@ -14,7 +14,9 @@ package com.epl.service.geometry;
    limitations under the License.
  */
 
-import com.esri.core.geometry.*;
+import com.esri.core.geometry.Envelope2D;
+import com.esri.core.geometry.Geometry;
+import com.esri.core.geometry.OperatorImportFromESRIShape;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- *
  * Reads a shapefile
  * Created by willtemperley@gmail.com on 07-Nov-16.
  */
@@ -39,7 +40,7 @@ public class ShapefileByteReader {
     private final Geometry.Type geomType;
 
     public byte[] next() {
-        if (! hasNext()) {
+        if (!hasNext()) {
             return null;
         }
         try {
@@ -134,22 +135,22 @@ public class ShapefileByteReader {
     }
 
     /**
-     from esri spec:
-     0 Null Shape
-     1 Point
-     3 PolyLine
-     5 Polygon
-     8 MultiPoint
-     11 PointZ
-     13 PolyLineZ
-     15 PolygonZ
-     18 MultiPointZ
-     21 PointM
-     23 PolyLineM
-     25 PolygonM
-     28 MultiPointM
-     31 MultiPatch
-     therefore final digit suffices to determine type (PolyLine, PolyLineM, PolylineZ are 1, 13 and 23 respectively).
+     * from esri spec:
+     * 0 Null Shape
+     * 1 Point
+     * 3 PolyLine
+     * 5 Polygon
+     * 8 MultiPoint
+     * 11 PointZ
+     * 13 PolyLineZ
+     * 15 PolygonZ
+     * 18 MultiPointZ
+     * 21 PointM
+     * 23 PolyLineM
+     * 25 PolygonM
+     * 28 MultiPointM
+     * 31 MultiPatch
+     * therefore final digit suffices to determine type (PolyLine, PolyLineM, PolylineZ are 1, 13 and 23 respectively).
      *
      * @param shpTypeId shape type id from shapfile
      * @return the geom type

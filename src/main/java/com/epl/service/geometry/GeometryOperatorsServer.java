@@ -20,21 +20,13 @@ email: info@echoparklabs.io
 
 package com.epl.service.geometry;
 
-import static java.lang.Math.*;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-
 import io.grpc.*;
-
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 import java.io.IOException;
-import java.net.URL;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
+import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -52,7 +44,9 @@ public class GeometryOperatorsServer {
 
     private final LinkedList<ManagedChannel> fakeOobChannels = new LinkedList<ManagedChannel>();
 
-    /** Create a GeometryOperators server listening on {@code port} using {@code featureFile} database. */
+    /**
+     * Create a GeometryOperators server listening on {@code port} using {@code featureFile} database.
+     */
     public GeometryOperatorsServer(int port) throws IOException {
         // changed max message size to match tensorflow
         // https://github.com/tensorflow/serving/issues/288
@@ -62,13 +56,17 @@ public class GeometryOperatorsServer {
         this(NettyServerBuilder.forPort(port).maxMessageSize(2147483647), port);
     }
 
-    /** Create a GeometryOperators server using serverBuilder as a base and features as data. */
+    /**
+     * Create a GeometryOperators server using serverBuilder as a base and features as data.
+     */
     public GeometryOperatorsServer(ServerBuilder<?> serverBuilder, int port) {
         this.port = port;
         server = serverBuilder.addService(new GeometryOperatorsService()).build();
     }
 
-    /** Start serving requests. */
+    /**
+     * Start serving requests.
+     */
     public void start() throws IOException {
         server.start();
         logger.info("Server started, listening on " + port);
@@ -85,7 +83,9 @@ public class GeometryOperatorsServer {
         });
     }
 
-    /** Stop serving requests and shutdown resources. */
+    /**
+     * Stop serving requests and shutdown resources.
+     */
     public void stop() {
         if (server != null) {
             server.shutdown();
@@ -112,7 +112,7 @@ public class GeometryOperatorsServer {
 
     /**
      * Our implementation of GeometryOperators service.
-     *
+     * <p>
      * <p>See route_guide.proto for details of the methods.
      */
     private static class GeometryOperatorsService extends GeometryOperatorsGrpc.GeometryOperatorsImplBase {
