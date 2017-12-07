@@ -6,4 +6,4 @@ build/
 *.orig
 out/
 .idea/libraries/*.xml
-
+*.log

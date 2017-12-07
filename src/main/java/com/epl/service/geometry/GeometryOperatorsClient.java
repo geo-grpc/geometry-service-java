@@ -32,7 +32,9 @@ import io.grpc.internal.DnsNameResolverProvider;
 import io.grpc.stub.StreamObserver;
 import io.grpc.util.RoundRobinLoadBalancerFactory;
 
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -59,7 +61,14 @@ public class GeometryOperatorsClient {
 
     /** Construct client for accessing GeometryOperators server at {@code host:port}. */
     public GeometryOperatorsClient(String host, int port) {
-        this(ManagedChannelBuilder.forTarget(System.getenv("GEOMETRY_SERVICE_TARGET"))
+        this(ManagedChannelBuilder
+                .forAddress(host, port)
+                .usePlaintext(true));
+    }
+
+    public GeometryOperatorsClient(String serviceTarget) {
+        this(ManagedChannelBuilder
+                .forTarget(serviceTarget)
                 .nameResolverFactory(new KubernetesNameResolverProvider())  // this is on by default
                 .loadBalancerFactory(RoundRobinLoadBalancerFactory.getInstance())
                 .usePlaintext(true));
@@ -74,6 +83,45 @@ public class GeometryOperatorsClient {
 
     public void shutdown() throws InterruptedException {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+    }
+
+    public void shapefile(File inFile) throws IOException {
+        ///Users/davidraleigh/Downloads/landsat_8_c1/landsat_8_c1.shp
+
+        // Get projection
+        String prfFile = inFile.getAbsolutePath().substring(0, inFile.getAbsolutePath().lastIndexOf('.')) + ".prj";
+        String projectionWKT = new String(Files.readAllBytes(Paths.get(prfFile)));
+
+        ServiceSpatialReference serviceSpatialReference = ServiceSpatialReference.newBuilder()
+                .setEsriWkt(projectionWKT).build();
+
+        ServiceSpatialReference wgs84SpatiralReference = ServiceSpatialReference.newBuilder()
+                .setWkid(4326).build();
+
+        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder()
+                .setGeometryEncodingType(GeometryEncodingType.esri)
+                .setSpatialReference(serviceSpatialReference);
+
+        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
+                .setOperatorType(ServiceOperatorType.Buffer)
+                .addBufferDistances(2.5)
+                .setResultsEncodingType("wkt")
+                .setResultSpatialReference(wgs84SpatiralReference);
+
+
+        ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
+        while (shapefileByteReader.hasNext()) {
+            byte[] data = shapefileByteReader.next();
+            ByteString byteString = ByteString.copyFrom(data);
+            serviceGeometryBuilder.addGeometryBinary(byteString);
+            OperatorRequest operatorRequest = operatorRequestBuilder
+                    .setLeftGeometry(serviceGeometryBuilder
+                            .setGeometryBinary(0, byteString)
+                            .build()).build();
+            OperatorResult operatorResult = this.blockingStub.executeOperation(operatorRequest);
+            String resultString = operatorResult.getGeometry().getGeometryString(0);
+        }
+
     }
 
     public void getProjected() {
@@ -309,32 +357,50 @@ public class GeometryOperatorsClient {
             ex.printStackTrace();
             return;
         }
+
+        GeometryOperatorsClient geometryOperatorsClient = null;
+        String target = System.getenv("GEOMETRY_SERVICE_TARGET");
+        if (target != null)
+            geometryOperatorsClient = new GeometryOperatorsClient(target);
+        else
+            geometryOperatorsClient = new GeometryOperatorsClient(args[0], 8980);
+
         System.out.println("Starting main");
-        GeometryOperatorsClient client = new GeometryOperatorsClient(args[0], 8980);
         try {
-            client.getProjected();
-            client.getProjected();
-            client.getProjected();
-            // Looking for a valid feature
-            client.getFeature(409146138, -746188906);
+            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
 
-            // Feature missing.
-            client.getFeature(0, 0);
+            long startTime = System.nanoTime();
+            geometryOperatorsClient.shapefile(file);
+            long endTime = System.nanoTime();
+            long duration = (endTime - startTime) / 1000000;
+            System.out.println("Test duration");
+            System.out.println(duration);
 
-            // Looking for features between 40, -75 and 42, -73.
-            client.listFeatures(400000000, -750000000, 420000000, -730000000);
-
-            // Record a few randomly selected points from the features file.
-            client.recordRoute(features, 10);
-
-            // Send and receive some notes.
-            CountDownLatch finishLatch = client.routeChat();
-
-            if (!finishLatch.await(1, TimeUnit.MINUTES)) {
-                client.warning("routeChat can not finish within 1 minutes");
-            }
+//            geometryOperatorsClient.getProjected();
+//            geometryOperatorsClient.getProjected();
+//            geometryOperatorsClient.getProjected();
+//            // Looking for a valid feature
+//            geometryOperatorsClient.getFeature(409146138, -746188906);
+//
+//            // Feature missing.
+//            geometryOperatorsClient.getFeature(0, 0);
+//
+//            // Looking for features between 40, -75 and 42, -73.
+//            geometryOperatorsClient.listFeatures(400000000, -750000000, 420000000, -730000000);
+//
+//            // Record a few randomly selected points from the features file.
+//            geometryOperatorsClient.recordRoute(features, 10);
+//
+//            // Send and receive some notes.
+//            CountDownLatch finishLatch = geometryOperatorsClient.routeChat();
+//
+//            if (!finishLatch.await(1, TimeUnit.MINUTES)) {
+//                geometryOperatorsClient.warning("routeChat can not finish within 1 minutes");
+//            }
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
-            client.shutdown();
+            geometryOperatorsClient.shutdown();
         }
     }
 

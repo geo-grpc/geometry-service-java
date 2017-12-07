@@ -116,9 +116,7 @@ public class GeometryOperatorsUtil {
         ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder();
 
         // TODO not getting stubbed out due to grpc proto stubbing bug
-//        if (operatorRequest.hasResultsEncodingType()) {
-//
-//        }
+        // if (operatorRequest.hasResultsEncodingType()) {
         if (!operatorRequest.getResultsEncodingType().isEmpty()) {
             encodingType = operatorRequest.getResultsEncodingType();
         } else if (encodingType == null || encodingType.isEmpty()) {
@@ -293,7 +291,9 @@ public class GeometryOperatorsUtil {
 
             // TODO, there are possibilities for error in here. Also possiblities for too many assumptions. ass of you an me.
             // if there is a right and a left geometry but no operator spatial reference, then set operatorSpatialReference
-            if (operatorSpatialReference == null && leftSpatialReference != null && leftSpatialReference.equals(rightSpatialReference)) {
+            if (operatorSpatialReference == null
+                    && leftSpatialReference != null
+                    && (rightSpatialReference == null || leftSpatialReference.equals(rightSpatialReference))) {
                 operatorSpatialReference = leftSpatialReference;
             }
 
@@ -535,7 +535,7 @@ public class GeometryOperatorsUtil {
             case esri:
                 byteBufferList = serviceGeometry.getGeometryBinaryList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
                 simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferList);
-                geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
+                geometryCursor = new OperatorImportFromESRIShapeCursor(0, 0, simpleByteBufferCursor);
                 break;
             case wkt:
                 protocolStringList = serviceGeometry.getGeometryStringList();

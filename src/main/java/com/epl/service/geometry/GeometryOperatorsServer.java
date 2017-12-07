@@ -29,9 +29,7 @@ import static java.lang.Math.sqrt;
 import static java.lang.Math.toRadians;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-import io.grpc.ManagedChannel;
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
+import io.grpc.*;
 
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -74,13 +72,14 @@ public class GeometryOperatorsServer {
     public GeometryOperatorsServer(ServerBuilder<?> serverBuilder, int port, Collection<Feature> features) {
         this.port = port;
         server = serverBuilder.addService(new GeometryOperatorsService(features)).build();
-
     }
 
     /** Start serving requests. */
     public void start() throws IOException {
         server.start();
         logger.info("Server started, listening on " + port);
+        logger.info("server name" + System.getenv("MY_NODE_NAME"));
+        logger.info("server name" + System.getenv("MY_POD_NAME"));
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
@@ -140,19 +139,49 @@ public class GeometryOperatorsServer {
          */
         @Override
         public void getFeature(ReplacePoint request, StreamObserver<Feature> responseObserver) {
+            logger.info("server name" + System.getenv("MY_NODE_NAME"));
+            logger.info("server name" + System.getenv("MY_POD_NAME"));
+            logger.info("getfeature");
             responseObserver.onNext(checkFeature(request));
             responseObserver.onCompleted();
         }
 
         @Override
+        public StreamObserver<OperatorRequest> streamOperations(StreamObserver<OperatorResult> responseObserver) {
+            return new StreamObserver<OperatorRequest>() {
+                @Override
+                public void onNext(OperatorRequest value) {
+                    try {
+                        responseObserver.onNext(__executeOperator(value));
+                    } catch (java.io.IOException exception) {
+                        logger.log(Level.WARNING, "streamOperations error", exception);
+                        responseObserver.onError(new StatusRuntimeException(Status.NOT_FOUND.withCause(exception)));
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    logger.log(Level.WARNING, "streamOperations error", t);
+                }
+
+                @Override
+                public void onCompleted() {
+                    responseObserver.onCompleted();
+                }
+            };
+        }
+
+        @Override
         public void executeOperation(OperatorRequest request, StreamObserver<OperatorResult> responseObserver) {
             try {
+                logger.info("server name" + System.getenv("MY_NODE_NAME"));
                 System.out.println("Start process");
                 responseObserver.onNext(__executeOperator(request));
                 responseObserver.onCompleted();
                 System.out.println("End process");
             } catch (IOException exception) {
-                // TODO return errors
+                logger.log(Level.WARNING, "executeOperation error", exception);
+                responseObserver.onError(new StatusRuntimeException(Status.NOT_FOUND.withCause(exception)));
             }
         }
 
@@ -164,6 +193,9 @@ public class GeometryOperatorsServer {
          */
         @Override
         public void listFeatures(Rectangle request, StreamObserver<Feature> responseObserver) {
+            logger.info("server name" + System.getenv("MY_NODE_NAME"));
+            logger.info("server name" + System.getenv("MY_POD_NAME"));
+            logger.info("listFeatures");
             int left = min(request.getLo().getLongitude(), request.getHi().getLongitude());
             int right = max(request.getLo().getLongitude(), request.getHi().getLongitude());
             int top = max(request.getLo().getLatitude(), request.getHi().getLatitude());
@@ -202,6 +234,9 @@ public class GeometryOperatorsServer {
 
                 @Override
                 public void onNext(ReplacePoint point) {
+                    logger.info("server name" + System.getenv("MY_NODE_NAME"));
+                    logger.info("server name" + System.getenv("MY_POD_NAME"));
+                    logger.info("recordRoute.onNext");
                     pointCount++;
                     if (GeometryOperatorsUtil.exists(checkFeature(point))) {
                         featureCount++;
@@ -242,6 +277,9 @@ public class GeometryOperatorsServer {
             return new StreamObserver<RouteNote>() {
                 @Override
                 public void onNext(RouteNote note) {
+                    logger.info("server name" + System.getenv("MY_NODE_NAME"));
+                    logger.info("server name" + System.getenv("MY_POD_NAME"));
+                    logger.info("routeChat.onNext");
                     List<RouteNote> notes = getOrCreateNotes(note.getLocation());
 
                     // Respond with all previous notes at this location.
@@ -264,6 +302,8 @@ public class GeometryOperatorsServer {
                 }
             };
         }
+
+
 
         /**
          * Get the notes list for the given location. If missing, create it.

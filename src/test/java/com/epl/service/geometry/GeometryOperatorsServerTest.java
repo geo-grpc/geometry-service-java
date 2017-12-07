@@ -162,7 +162,10 @@ public class GeometryOperatorsServerTest {
     //TODO why does esri shape fail
 //    OperatorExportToESRIShape op = OperatorExportToESRIShape.local();
 //    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("esrishape").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline))).build();
-    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType(GeometryEncodingType.wkb).addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
+    ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder()
+            .setGeometryEncodingType(GeometryEncodingType.wkb)
+            .addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null)))
+            .build();
     OperatorRequest serviceOp = OperatorRequest
             .newBuilder()
             .setLeftGeometry(serviceGeometry)

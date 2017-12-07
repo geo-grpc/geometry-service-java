@@ -41,6 +41,7 @@ service GeometryOperators {
     // TODO should be a stream
     rpc ExecuteOperation(OperatorRequest) returns (OperatorResult) {}
 
+    rpc StreamOperations(stream OperatorRequest) returns (OperatorResult) {}
 
     // A server-to-client streaming RPC.
     //
@@ -54,7 +55,7 @@ service GeometryOperators {
     //
     // Accepts a stream of Points on a route being traversed, returning a
     // RouteSummary when traversal is completed.
-    rpc RecordRoute(stream ReplacePoint) returns (RouteSummary) {}
+    rpc RecordRoute(stream ReplacePoint) returns (stream RouteSummary) {}
 
     // A Bidirectional streaming RPC.
     //
