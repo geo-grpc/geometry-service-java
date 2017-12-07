@@ -38,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -70,8 +71,9 @@ public class GeometryOperatorsClient {
     public GeometryOperatorsClient(String serviceTarget) {
         this(ManagedChannelBuilder
                 .forTarget(serviceTarget)
-                .nameResolverFactory(new KubernetesNameResolverProvider())  // this is on by default
+                .nameResolverFactory(new KubernetesNameResolverProvider())
                 .loadBalancerFactory(RoundRobinLoadBalancerFactory.getInstance())
+                .executor(Executors.newFixedThreadPool(4))
                 .usePlaintext(true));
     }
 
