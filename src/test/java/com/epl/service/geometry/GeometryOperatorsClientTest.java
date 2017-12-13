@@ -304,7 +304,7 @@ public class GeometryOperatorsClientTest {
 //          @Override
 //          public StreamObserver<ReplacePoint> recordRoute(StreamObserver<RouteSummary> responseObserver) {
 //            RouteSummary response = RouteSummary.getDefaultInstance();
-//            // sending more than one responses is not right for client-streaming call.
+//            // sending more than one responses is not rightSR for client-streaming call.
 //            responseObserver.onNext(response);
 //            responseObserver.onNext(response);
 //            responseObserver.onCompleted();

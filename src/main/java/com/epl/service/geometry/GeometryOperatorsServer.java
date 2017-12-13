@@ -194,14 +194,14 @@ public class GeometryOperatorsServer {
                 responseObserver.onNext(__executeOperator(request));
                 responseObserver.onCompleted();
 //                System.out.println("End process");
-            } catch (IOException exception) {
-                logger.log(Level.WARNING, "executeOperation error", exception);
-                responseObserver.onError(new StatusRuntimeException(Status.NOT_FOUND.withCause(exception)));
+            } catch (Throwable t) {
+                logger.log(Level.WARNING, "executeOperation error", t.getMessage());
+                responseObserver.onError(new StatusRuntimeException(Status.fromThrowable(t)));
             }
         }
 
         private OperatorResult __executeOperator(OperatorRequest serviceOperator) throws IOException {
-            return GeometryOperatorsUtil.executeOperator(serviceOperator);
+            return GeometryOperatorsUtil.initExecuteOperatorEx(serviceOperator);
         }
     }
 }

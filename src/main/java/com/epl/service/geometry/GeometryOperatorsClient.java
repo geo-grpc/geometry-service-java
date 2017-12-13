@@ -92,18 +92,32 @@ public class GeometryOperatorsClient {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
-    /**
-     * https://github.com/ReactiveX/RxJava/wiki/Backpressure
-     *
-     * @param inFile
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    public void shapefileThrottled(File inFile) throws IOException, InterruptedException {
-        CountDownLatch done = new CountDownLatch(4);
+    public void testWRSShapefile(String pathFile) throws IOException, InterruptedException {
+        File inFile = new File(pathFile);
+        ServiceSpatialReference operatorSpatialReference = ServiceSpatialReference.newBuilder().setWkid(3857).build();
+        ServiceSpatialReference inputSpatialReference = ServiceSpatialReference.newBuilder().setWkid(4326).build();
+        ServiceSpatialReference outputSpatialReference = inputSpatialReference;
+
+        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder()
+                .addGeometryBinary(ByteString.copyFromUtf8(""))
+                .addGeometryId(0)
+                .setGeometryEncodingType(GeometryEncodingType.esrishape)
+                .setSpatialReference(inputSpatialReference);
+
+        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
+                .setOperatorType(ServiceOperatorType.Buffer)
+                .addBufferDistances(2.5)
+                .setResultsEncodingType(GeometryEncodingType.wkt)
+                .setOperationSpatialReference(operatorSpatialReference)
+                .setResultSpatialReference(outputSpatialReference);
+
+        this.shapefileThrottled(inFile, operatorRequestBuilder, serviceGeometryBuilder);
+    }
+
+    public void testParcelsFile(String pathFile) throws IOException, InterruptedException {
+        File inFile = new File(pathFile);
         String prfFile = inFile.getAbsolutePath().substring(0, inFile.getAbsolutePath().lastIndexOf('.')) + ".prj";
         String projectionWKT = new String(Files.readAllBytes(Paths.get(prfFile)));
-        ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
 
         ServiceSpatialReference serviceSpatialReference = ServiceSpatialReference.newBuilder()
                 .setEsriWkt(projectionWKT).build();
@@ -122,6 +136,22 @@ public class GeometryOperatorsClient {
                 .addBufferDistances(2.5)
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .setResultSpatialReference(wgs84SpatiralReference);
+
+        this.shapefileThrottled(inFile, operatorRequestBuilder, serviceGeometryBuilder);
+    }
+
+    /**
+     * https://github.com/ReactiveX/RxJava/wiki/Backpressure
+     *
+     * @param inFile
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    public void shapefileThrottled(File inFile,
+                                   OperatorRequest.Builder operatorRequestBuilder,
+                                   ServiceGeometry.Builder serviceGeometryBuilder) throws IOException, InterruptedException {
+        CountDownLatch done = new CountDownLatch(4);
+        ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
 
         GeometryOperatorsStub geometryOperatorsStub = asyncStub
                 .withMaxInboundMessageSize(2147483647)
@@ -174,6 +204,7 @@ public class GeometryOperatorsClient {
                     @Override
                     public void onNext(OperatorResult operatorResult) {
                         long id = operatorResult.getGeometry().getGeometryId(0);
+                        logger.info(operatorResult.getGeometry().getGeometryString(0));
                         if (id % 1000 == 0) {
                             logger.info("Geometry number " + id);
                             logger.info(operatorResult.getGeometry().getGeometryString(0));
@@ -262,11 +293,16 @@ public class GeometryOperatorsClient {
 
         System.out.println("Starting main");
         try {
-//            File file = new File("/data/Parcels/PARCELS.shp");
-            File file = new File("/Users/davidraleigh/Downloads/Parcels/PARCELS.shp");
+            String filePath = null;
+            if (args.length >= 2) {
+                filePath = args[1];
+            } else {
+                filePath = "/data/Parcels/PARCELS.shp";
+            }
 
             long startTime = System.nanoTime();
-            geometryOperatorsClient.shapefileThrottled(file);
+            geometryOperatorsClient.testWRSShapefile(filePath);
+//            geometryOperatorsClient.shapefileThrottled(filePath);
             long endTime = System.nanoTime();
             long duration = (endTime - startTime) / 1000000;
             System.out.println("Test duration");
