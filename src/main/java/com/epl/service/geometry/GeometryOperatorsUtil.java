@@ -90,11 +90,6 @@ class SpatialReferenceGroup {
 }
 
 public class GeometryOperatorsUtil {
-    enum CursorSide {
-        Left,
-        Right
-    }
-
     public static List<com.google.protobuf.ByteString> __exportByteBufferCursor(ByteBufferCursor byteBufferCursor) {
         ByteBuffer byteBuffer = null;
         // TODO add count on ByteBufferCursor?
@@ -295,8 +290,6 @@ public class GeometryOperatorsUtil {
             case RandomPoints:
                 break;
             case Project:
-/*                    ProjectionTransformation projectionTransformation = new ProjectionTransformation(leftSpatialReference, operatorSpatialReference);
-                resultCursor = OperatorProject.local().execute(leftCursor, projectionTransformation, null);*/
                 resultCursor = leftCursor;
                 break;
             case Union:
@@ -583,30 +576,6 @@ public class GeometryOperatorsUtil {
     }
 
 
-    protected static ServiceGeometry __decodeGeometry(Geometry geometry, SpatialReference spatialReference, GeometryEncodingType encoding_type) {
-        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder().setGeometryEncodingType(encoding_type);
-        switch (encoding_type) {
-            case wkt:
-                serviceGeometryBuilder.addGeometryString(OperatorExportToWkt.local().execute(0, geometry, null));
-                break;
-            case wkb:
-                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToWkb.local().execute(0, geometry, null)));
-                break;
-            case geojson:
-                serviceGeometryBuilder.addGeometryString(OperatorExportToGeoJson.local().execute(spatialReference, geometry));
-                break;
-            case esrishape:
-                serviceGeometryBuilder.addGeometryBinary(ByteString.copyFrom(OperatorExportToESRIShape.local().execute(0, geometry)));
-                break;
-            case UNRECOGNIZED:
-                break;
-        }
-
-        // TODO set spatial reference!!
-        return serviceGeometryBuilder.build();
-    }
-
-
     protected static SpatialReference __extractSpatialReference(ServiceGeometry serviceGeometry) {
         return serviceGeometry.hasSpatialReference() ? __extractSpatialReference(serviceGeometry.getSpatialReference()) : null;
     }
@@ -623,7 +592,6 @@ public class GeometryOperatorsUtil {
             return __extractSpatialReference(operatorRequestCursor.getLeftGeometry().getSpatialReference());
         return null;
     }
-
 
 
     protected static SpatialReference __extractSpatialReference(ServiceSpatialReference serviceSpatialReference) {
@@ -678,37 +646,5 @@ public class GeometryOperatorsUtil {
                 geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
         }
         return geometryCursor;
-    }
-
-    protected static MapGeometry __extractGeometry(ServiceGeometry serviceGeometry) {
-        MapGeometry mapGeometry = null;
-        Geometry geometry = null;
-        SpatialReference spatialReference = null;
-        ByteBuffer byteBuffer = null;
-        switch (serviceGeometry.getGeometryEncodingType()) {
-            case wkt:
-                geometry = OperatorImportFromWkt.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(0), null);
-                break;
-            case wkb:
-                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary(0).toByteArray());
-                geometry = OperatorImportFromWkb.local().execute(0, Geometry.Type.Unknown, byteBuffer, null);
-                break;
-            case geojson:
-                mapGeometry = OperatorImportFromGeoJson.local().execute(0, Geometry.Type.Unknown, serviceGeometry.getGeometryString(0), null);
-                break;
-            case esrishape:
-                byteBuffer = ByteBuffer.wrap(serviceGeometry.getGeometryBinary(0).toByteArray());
-                geometry = OperatorImportFromESRIShape.local().execute(0, Geometry.Type.Unknown, byteBuffer);
-                break;
-            case UNRECOGNIZED:
-                break;
-        }
-        if (mapGeometry == null) {
-            // TODO this could be moved out of the method
-            spatialReference = __extractSpatialReference(serviceGeometry);
-            mapGeometry = new MapGeometry(geometry, spatialReference);
-        }
-
-        return mapGeometry;
     }
 }
