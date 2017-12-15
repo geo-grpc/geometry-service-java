@@ -189,11 +189,11 @@ public class GeometryOperatorsServer {
         @Override
         public void executeOperation(OperatorRequest request, StreamObserver<OperatorResult> responseObserver) {
             try {
-//                logger.info("server name" + System.getenv("MY_NODE_NAME"));
-//                System.out.println("Start process");
+                // logger.info("server name" + System.getenv("MY_NODE_NAME"));
+                // System.out.println("Start process");
                 responseObserver.onNext(__executeOperator(request));
                 responseObserver.onCompleted();
-//                System.out.println("End process");
+                // System.out.println("End process");
             } catch (Throwable t) {
                 logger.log(Level.WARNING, "executeOperation error", t.getMessage());
                 responseObserver.onError(new StatusRuntimeException(Status.fromThrowable(t)));

@@ -23,13 +23,14 @@ package com.epl.service.geometry;
 import com.esri.core.geometry.*;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
+
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ProtocolStringList;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -89,27 +90,52 @@ class SpatialReferenceGroup {
     }
 }
 
+class ByteStringIterable implements Iterable<com.google.protobuf.ByteString> {
+    ByteBufferCursor m_byteBufferCursor;
+    ByteStringIterable(ByteBufferCursor byteBufferCursor) {
+        m_byteBufferCursor = byteBufferCursor;
+    }
+
+    @Override
+    public Iterator<ByteString> iterator() {
+        return new Iterator<ByteString>() {
+            @Override
+            public boolean hasNext() {
+                return m_byteBufferCursor.hasNext();
+            }
+
+            @Override
+            public ByteString next() {
+                return ByteString.copyFrom(m_byteBufferCursor.next());
+            }
+        };
+    }
+}
+
+class StringIterable implements Iterable<String> {
+    StringCursor m_stringCursor;
+    StringIterable(StringCursor stringCursor) {
+        m_stringCursor = stringCursor;
+    }
+
+
+    @Override
+    public Iterator<String> iterator() {
+        return new Iterator<String>() {
+            @Override
+            public boolean hasNext() {
+                return m_stringCursor.hasNext();
+            }
+
+            @Override
+            public String next() {
+                return m_stringCursor.next();
+            }
+        };
+    }
+}
+
 public class GeometryOperatorsUtil {
-    public static List<com.google.protobuf.ByteString> __exportByteBufferCursor(ByteBufferCursor byteBufferCursor) {
-        ByteBuffer byteBuffer = null;
-        // TODO add count on ByteBufferCursor?
-        List<com.google.protobuf.ByteString> byteStringList = new ArrayList<>();
-
-        while ((byteBuffer = byteBufferCursor.next()) != null) {
-            byteStringList.add(com.google.protobuf.ByteString.copyFrom(byteBuffer));
-        }
-
-        return byteStringList;
-    }
-
-    public static List<String> __exportStringBufferCursor(StringCursor stringCursor) {
-        String geomString = null;
-        List<String> stringList = new ArrayList<>();
-        while ((geomString = stringCursor.next()) != null)
-            stringList.add(geomString);
-        return stringList;
-    }
-
     public static ServiceGeometry __encodeGeometry(GeometryCursor geometryCursor, OperatorRequest operatorRequest, GeometryEncodingType encodingType) {
         ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder();
 
@@ -123,20 +149,26 @@ public class GeometryOperatorsUtil {
             }
         }
 
+        ByteStringIterable binaryStringIterable;
+        StringIterable stringIterable;
         switch (encodingType) {
             case wkb:
-                serviceGeometryBuilder.addAllGeometryBinary(__exportByteBufferCursor(new OperatorExportToWkbCursor(0, geometryCursor)));
+                binaryStringIterable = new ByteStringIterable(new OperatorExportToWkbCursor(0, geometryCursor));
+                serviceGeometryBuilder.addAllGeometryBinary(binaryStringIterable);
                 break;
             case wkt:
-                serviceGeometryBuilder.addAllGeometryString(__exportStringBufferCursor(new OperatorExportToWktCursor(0, geometryCursor, null)));
+                stringIterable = new StringIterable(new OperatorExportToWktCursor(0, geometryCursor, null));
+                serviceGeometryBuilder.addAllGeometryString(stringIterable);
                 break;
             case esrishape:
-                serviceGeometryBuilder.addAllGeometryBinary(__exportByteBufferCursor(new OperatorExportToESRIShapeCursor(0, geometryCursor)));
+                binaryStringIterable = new ByteStringIterable(new OperatorExportToESRIShapeCursor(0, geometryCursor));
+                serviceGeometryBuilder.addAllGeometryBinary(binaryStringIterable);
                 break;
             case geojson:
                 //TODO I'm just blindly setting the spatial reference here instead of projecting the resultSR into the spatial reference
                 // TODO add Spatial reference
-                serviceGeometryBuilder.addAllGeometryString(__exportStringBufferCursor(new OperatorExportToJsonCursor(null, geometryCursor)));
+                stringIterable = new StringIterable(new OperatorExportToJsonCursor(null, geometryCursor));
+                serviceGeometryBuilder.addAllGeometryString(stringIterable);
                 break;
         }
 
@@ -300,14 +332,14 @@ public class GeometryOperatorsUtil {
                 break;
             case Buffer:
                 // TODO clean this up
-//                GeometryCursor inputGeometries,
-//                SpatialReference sr,
-//                double[] distances,
-//                double max_deviation,
-//                int max_vertices_in_full_circle,
-//                boolean b_union,
-//                ProgressTracker progressTracker
-//                max_vertices_in_full_circle
+                //                GeometryCursor inputGeometries,
+                //                SpatialReference sr,
+                //                double[] distances,
+                //                double max_deviation,
+                //                int max_vertices_in_full_circle,
+                //                boolean b_union,
+                //                ProgressTracker progressTracker
+                //                max_vertices_in_full_circle
                 double[] d;
                 if (operatorRequest.getBufferDistancesCount() == 0) {
                     d = operatorRequest.getGenericDoublesList().stream().mapToDouble(Double::doubleValue).toArray();
@@ -456,121 +488,6 @@ public class GeometryOperatorsUtil {
     }
 
 
-
-    // TODO this is ignoring the differences between the geometry spatial references, the resultSR spatial references and the operatorSR spatial references
-    public static OperatorResult executeOperator(OperatorRequest operatorRequest) throws IOException {
-        GeometryCursor resultCursor = null;
-        OperatorResult.Builder operatorResultBuilder = OperatorResult.newBuilder();
-
-        GeometryCursor leftCursor = null;
-        if (operatorRequest.hasLeftGeometry())
-            leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometry());
-        else
-            // assumes there is always a left geometry
-            leftCursor = cursorFromRequest(operatorRequest.getLeftCursor(), null, null);
-
-        GeometryCursor rightCursor = null;
-        if (operatorRequest.hasRightGeometry())
-            rightCursor = __createGeometryCursor(operatorRequest.getRightGeometry());
-        else if (operatorRequest.hasRightCursor())
-            rightCursor = cursorFromRequest(operatorRequest.getRightCursor(), null, null);
-
-        SpatialReferenceGroup srGroup = new SpatialReferenceGroup(operatorRequest);
-        // project left if needed
-        if (srGroup.operatorSR != null && !srGroup.operatorSR.equals(srGroup.leftSR)) {
-            ProjectionTransformation projectionTransformation = new ProjectionTransformation(srGroup.leftSR, srGroup.operatorSR);
-            leftCursor = OperatorProject.local().execute(leftCursor, projectionTransformation, null);
-        }
-
-        if (srGroup.operatorSR != null && !srGroup.operatorSR.equals(srGroup.rightSR)) {
-            ProjectionTransformation projectionTransformation = new ProjectionTransformation(srGroup.rightSR, srGroup.operatorSR);
-            rightCursor = OperatorProject.local().execute(rightCursor, projectionTransformation, null);
-        }
-
-        // TODO this could throw an exception if unknown operatorSR type provided
-        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
-        GeometryEncodingType encodingType = null;
-        switch (operatorType) {
-            case Proximity2D:
-                break;
-            case Relate:
-                break;
-            case Equals:
-            case Disjoint:
-            case Intersects:
-            case Within:
-            case Contains:
-            case Crosses:
-            case Touches:
-            case Overlaps:
-                HashMap<Integer, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal.getInstance().getOperator(operatorType)).execute(leftCursor.next(), rightCursor, srGroup.operatorSR, null);
-                if (result_map.size() == 1) {
-                    operatorResultBuilder.setSpatialRelationship(result_map.get(0));
-                } else {
-                    operatorResultBuilder.putAllRelateMap(result_map);
-                }
-                break;
-
-            case Project:
-                ProjectionTransformation projectionTransformation = new ProjectionTransformation(srGroup.leftSR, srGroup.operatorSR);
-                resultCursor = OperatorProject.local().execute(leftCursor, projectionTransformation, null);
-                break;
-            case Distance:
-                operatorResultBuilder.setDistance(OperatorDistance.local().execute(leftCursor.next(), rightCursor.next(), null));
-                break;
-            case GeodeticArea:
-                break;
-            case GeodeticLength:
-                break;
-
-            case Buffer:
-            case Intersection:
-            case Clip:
-            case Cut:
-            case DensifyByLength:
-            case DensifyByAngle:
-            case LabelPoint:
-            case Union:
-            case Difference:
-            case GeodesicBuffer:
-            case GeodeticDensifyByLength:
-            case ShapePreservingDensify:
-            case Simplify:
-            case SimplifyOGC:
-            case Offset:
-            case Generalize:
-            case GeneralizeByArea:
-            case SymmetricDifference:
-            case ConvexHull:
-            case Boundary:
-            case RandomPoints:
-                resultCursor = cursorFromRequest(operatorRequest, null, null);
-                break;
-            case ExportToESRIShape:
-                resultCursor = leftCursor;
-                encodingType = GeometryEncodingType.esrishape;
-                break;
-            case ExportToWkb:
-                resultCursor = leftCursor;
-                encodingType = GeometryEncodingType.wkb;
-                break;
-            case ExportToWkt:
-                resultCursor = leftCursor;
-                encodingType = GeometryEncodingType.wkt;
-                break;
-            case ExportToGeoJson:
-                resultCursor = leftCursor;
-                encodingType = GeometryEncodingType.geojson;
-                break;
-        }
-
-        if (resultCursor != null)
-            operatorResultBuilder.setGeometry(__encodeGeometry(resultCursor, operatorRequest, encodingType));
-
-        return operatorResultBuilder.build();
-    }
-
-
     protected static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws IOException {
         return __extractGeometryCursor(serviceGeometry);
     }
@@ -611,33 +528,39 @@ public class GeometryOperatorsUtil {
 
 
     protected static GeometryCursor __extractGeometryCursor(ServiceGeometry serviceGeometry) throws IOException {
-
         GeometryCursor geometryCursor = null;
-        List<ByteBuffer> byteBufferList = null;
+
+        ArrayDeque<ByteBuffer> byteBufferArrayDeque = null;
+        ArrayDeque<String> stringArrayDeque = null;
         SimpleByteBufferCursor simpleByteBufferCursor = null;
         SimpleStringCursor simpleStringCursor = null;
-        ProtocolStringList protocolStringList = null;
         switch (serviceGeometry.getGeometryEncodingType()) {
             case wkb:
-                byteBufferList = serviceGeometry.getGeometryBinaryList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
-                simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferList);
+                byteBufferArrayDeque = serviceGeometry
+                        .getGeometryBinaryList()
+                        .stream()
+                        .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
+                        .collect(Collectors.toCollection(ArrayDeque::new));
+                simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque);
                 geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
                 break;
             case esrishape:
-                byteBufferList = serviceGeometry.getGeometryBinaryList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
-                simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferList);
+                byteBufferArrayDeque = serviceGeometry
+                        .getGeometryBinaryList()
+                        .stream()
+                        .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
+                        .collect(Collectors.toCollection(ArrayDeque::new));
+                simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque);
                 geometryCursor = new OperatorImportFromESRIShapeCursor(0, 0, simpleByteBufferCursor);
                 break;
             case wkt:
-                protocolStringList = serviceGeometry.getGeometryStringList();
-                simpleStringCursor = new SimpleStringCursor(protocolStringList.subList(0, protocolStringList.size()));
+                stringArrayDeque = new ArrayDeque<>(serviceGeometry.getGeometryStringList());
+                simpleStringCursor = new SimpleStringCursor(stringArrayDeque);
                 geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
                 break;
             case geojson:
                 JsonFactory factory = new JsonFactory();
-//                protocolStringList = serviceGeometry.getGeometryStringList();
                 String jsonString = serviceGeometry.getGeometryString(0);
-//                simpleStringCursor = new SimpleStringCursor(protocolStringList.subList(0, protocolStringList.size() - 1));
                 // TODO no idea whats going on here
                 JsonParser jsonParser = factory.createJsonParser(jsonString);
                 JsonParserReader jsonParserReader = new JsonParserReader(jsonParser);
