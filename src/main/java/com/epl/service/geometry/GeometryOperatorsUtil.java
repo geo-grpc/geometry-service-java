@@ -317,6 +317,7 @@ public class GeometryOperatorsUtil {
                         operatorRequest.getGenericDoubles(0),
                         operatorRequest.getGenericBooleans(0),
                         GeneralizeType.valueOf(operatorRequest.getGenericStrings(0)),
+                        srGroup.operatorSR,
                         null);
                 break;
             case RandomPoints:
