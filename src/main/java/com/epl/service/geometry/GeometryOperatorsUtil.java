@@ -406,6 +406,9 @@ public class GeometryOperatorsUtil {
             case Boundary:
                 resultCursor = OperatorBoundary.local().execute(leftCursor, null);
                 break;
+            case EnclosingCircle:
+                resultCursor = new OperatorEnclosingCircleCursor(leftCursor, srGroup.operatorSR, null);
+                break;
             default:
                 throw new IllegalArgumentException();
 
@@ -464,6 +467,7 @@ public class GeometryOperatorsUtil {
             case ConvexHull:
             case Boundary:
             case RandomPoints:
+            case EnclosingCircle:
                 resultCursor = cursorFromRequest(operatorRequest, null, null);
                 break;
             case ExportToESRIShape:
