@@ -284,7 +284,6 @@ public class GeometryOperatorsUtil {
             case LabelPoint:
                 break;
             case GeodesicBuffer:
-
                 List<Double> doubleList;
                 if (operatorRequest.getBufferDistancesCount() > 0)
                     doubleList = operatorRequest.getBufferDistancesList();
@@ -319,8 +318,6 @@ public class GeometryOperatorsUtil {
                         GeneralizeType.valueOf(operatorRequest.getGenericStrings(0)),
                         srGroup.operatorSR,
                         null);
-                break;
-            case RandomPoints:
                 break;
             case Project:
                 resultCursor = leftCursor;
@@ -408,6 +405,14 @@ public class GeometryOperatorsUtil {
                 break;
             case EnclosingCircle:
                 resultCursor = new OperatorEnclosingCircleCursor(leftCursor, srGroup.operatorSR, null);
+                break;
+            case RandomPoints:
+                resultCursor = new OperatorRandomPointsCursor(
+                        leftCursor,
+                        operatorRequest.getGenericDoublesList().stream().mapToDouble(Double::doubleValue).toArray(),
+                        operatorRequest.getGenericIntegers(0),
+                        srGroup.operatorSR,
+                        null);
                 break;
             default:
                 throw new IllegalArgumentException();
