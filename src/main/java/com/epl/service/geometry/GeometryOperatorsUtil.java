@@ -337,14 +337,26 @@ public class GeometryOperatorsUtil {
                 //                int max_vertices_in_full_circle,
                 //                boolean b_union,
                 //                ProgressTracker progressTracker
-                //                max_vertices_in_full_circle
+                //
+                int maxverticesFullCircle = operatorRequest.getMaxVerticesInFullCircle();
+                if (maxverticesFullCircle == 0)
+                    maxverticesFullCircle = 96;
+
                 double[] d;
                 if (operatorRequest.getBufferDistancesCount() == 0) {
                     d = operatorRequest.getGenericDoublesList().stream().mapToDouble(Double::doubleValue).toArray();
                 } else {
                     d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
                 }
-                resultCursor = OperatorBuffer.local().execute(leftCursor, srGroup.operatorSR, d, operatorRequest.getBufferUnionResult(), null);
+                resultCursor = OperatorBuffer.local().execute(leftCursor,
+                                                              srGroup.operatorSR,
+                                                              d,
+                                                              Double.NaN,
+                                                              maxverticesFullCircle,
+                                                              operatorRequest.getBufferUnionResult(),
+                                                              null);
+
+                //                resultCursor = OperatorBuffer.local().execute(leftCursor, srGroup.operatorSR, d, operatorRequest.getBufferUnionResult(), null);
                 break;
             case Intersection:
                 // TODO hasIntersectionDimensionMask needs to be automagically generated

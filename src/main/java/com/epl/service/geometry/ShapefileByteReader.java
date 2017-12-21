@@ -52,12 +52,14 @@ public class ShapefileByteReader {
             int recordSizeBytes = (recLength * 2);
             byte[] bytes = new byte[recordSizeBytes];
             int read = inputStream.read(bytes);
+            position += read;
 
             return bytes;
 
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         return null;
     }
 

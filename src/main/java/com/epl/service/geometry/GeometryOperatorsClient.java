@@ -105,11 +105,18 @@ public class GeometryOperatorsClient {
                 .setSpatialReference(inputSpatialReference);
 
         OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
-                .setOperatorType(ServiceOperatorType.Buffer)
-                .addBufferDistances(2.5)
+                .setOperatorType(ServiceOperatorType.ConvexHull)
+                .getLeftCursorBuilder()
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .setOperationSpatialReference(operatorSpatialReference)
                 .setResultSpatialReference(outputSpatialReference);
+//        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
+//                .setOperatorType(ServiceOperatorType.Buffer)
+//                .addBufferDistances(2.5)
+//                .setMaxVerticesInFullCircle(66)
+//                .setResultsEncodingType(GeometryEncodingType.wkb)
+//                .setOperationSpatialReference(operatorSpatialReference)
+//                .setResultSpatialReference(outputSpatialReference);
 
         this.shapefileThrottled(inFile, operatorRequestBuilder, serviceGeometryBuilder);
     }
@@ -196,6 +203,8 @@ public class GeometryOperatorsClient {
                                     OperatorRequest operatorRequest = operatorRequestBuilder
                                             .setLeftGeometry(serviceGeometry).build();
                                     requestStream.onNext(operatorRequest);
+                                } else {
+                                    break;
                                 }
                             }
                         });
@@ -204,7 +213,7 @@ public class GeometryOperatorsClient {
                     @Override
                     public void onNext(OperatorResult operatorResult) {
                         long id = operatorResult.getGeometry().getGeometryId(0);
-                        logger.info(operatorResult.getGeometry().getGeometryString(0));
+//                        logger.info(operatorResult.getGeometry().getGeometryString(0));
                         if (id % 1000 == 0) {
                             logger.info("Geometry number " + id);
                             logger.info(operatorResult.getGeometry().getGeometryString(0));
