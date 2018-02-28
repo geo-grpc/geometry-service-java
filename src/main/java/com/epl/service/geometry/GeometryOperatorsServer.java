@@ -25,11 +25,13 @@ import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 /**
  * Created by davidraleigh on 4/9/17.
@@ -53,7 +55,10 @@ public class GeometryOperatorsServer {
         // https://github.com/tensorflow/tensorflow/blob/d0d975f8c3330b5402263b2356b038bc8af919a2/tensorflow/core/platform/types.h#L52
         // TODO add a test to check data size can handle 2 gigs
         // maxInboundMessageSize
-        this(NettyServerBuilder.forPort(port).maxMessageSize(2147483647), port);
+        // https://github.com/grpc/grpc-java/blob/master/SECURITY.md
+        this(NettyServerBuilder
+                .forPort(port)
+                .maxMessageSize(2147483647), port);
     }
 
     /**
@@ -61,6 +66,19 @@ public class GeometryOperatorsServer {
      */
     public GeometryOperatorsServer(ServerBuilder<?> serverBuilder, int port) {
         this.port = port;
+
+        // try adding security
+        String chainPath = System.getenv("GRPC_CHAIN");
+        String keyPath = System.getenv("GRPC_KEY");
+        if (chainPath != null || keyPath != null) {
+            File chainFile = new File(chainPath);
+            File keyFile = new File(keyPath);
+            if (chainFile.exists() && !chainFile.isDirectory() &&
+                    keyFile.exists() && !keyFile.isDirectory()) {
+                serverBuilder.useTransportSecurity(chainFile, keyFile);
+            }
+        }
+
         server = serverBuilder.addService(new GeometryOperatorsService()).build();
     }
 
@@ -116,6 +134,35 @@ public class GeometryOperatorsServer {
      * <p>See route_guide.proto for details of the methods.
      */
     private static class GeometryOperatorsService extends GeometryOperatorsGrpc.GeometryOperatorsImplBase {
+
+
+        @Override
+        public StreamObserver<OperatorRequest> streamOperationsEx(StreamObserver<OperatorResult> responseObserver) {
+
+            return new StreamObserver<OperatorRequest>() {
+                @Override
+                public void onNext(OperatorRequest value) {
+                    try {
+                        __executeOperator(value);
+                    } catch (Throwable throwable) {
+                        responseObserver.onError(Status.UNKNOWN.withDescription("Error handling request").withCause(throwable).asException());
+                    }
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    logger.info("ERROR");
+                    responseObserver.onCompleted();
+                }
+
+                @Override
+                public void onCompleted() {
+                    // Signal the end of work when the client ends the request stream.
+                    logger.info("COMPLETED");
+                    responseObserver.onCompleted();
+                }
+            };
+        }
 
         @Override
         public StreamObserver<OperatorRequest> streamOperations(StreamObserver<OperatorResult> responseObserver) {

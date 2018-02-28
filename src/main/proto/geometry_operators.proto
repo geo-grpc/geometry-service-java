@@ -35,6 +35,8 @@ service GeometryOperators {
     rpc ExecuteOperation(OperatorRequest) returns (OperatorResult) {}
 
     rpc StreamOperations(stream OperatorRequest) returns (stream OperatorResult) {}
+
+    rpc StreamOperationsEx(stream OperatorRequest) returns (stream OperatorResult) {}
 }
 
 /*
