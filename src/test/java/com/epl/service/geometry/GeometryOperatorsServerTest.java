@@ -37,10 +37,7 @@ import org.junit.runners.JUnit4;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static junit.framework.TestCase.assertNull;
@@ -483,6 +480,142 @@ public class GeometryOperatorsServerTest {
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResult.getGeometry().getGeometryBinary(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(differenceProjected, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4269)));
 
+    }
+
+    @Test
+    public void testMultipointRoundTrip() {
+        /*
+                stub = geometry_grpc.GeometryOperatorsStub(self.channel)
+        serviceSpatialReference = ServiceSpatialReference(wkid=4326)
+        outputSpatialReference = ServiceSpatialReference(wkid=32632)
+        multipoints_array = []
+        for longitude in np.arange(-180.0, 180.0, 10.0):
+            for latitude in np.arange(-80, 80, 10.0):
+                multipoints_array.append((longitude, latitude))
+
+        multipoint = MultiPoint(multipoints_array)
+
+        serviceGeomPolyline = ServiceGeometry(
+            geometry_string=[multipoint.wkt],
+            geometry_encoding_type=GeometryEncodingType.Value('wkt'),
+            spatial_reference=serviceSpatialReference)
+
+        opRequestProject = OperatorRequest(
+            left_geometry=serviceGeomPolyline,
+            operator_type=ServiceOperatorType.Value('Project'),
+            operation_spatial_reference=outputSpatialReference)
+
+        opRequestOuter = OperatorRequest(
+            left_cursor=opRequestProject,
+            operator_type=ServiceOperatorType.Value('Project'),
+            operation_spatial_reference=serviceSpatialReference,
+            results_encoding_type=GeometryEncodingType.Value('wkt'))
+         */
+        MultiPoint multiPoint = new MultiPoint();
+        for (double longitude = -180; longitude < 180; longitude+=10.0) {
+            for (double latitude = -80; latitude < 80; latitude+=10.0) {
+                multiPoint.add(longitude, latitude);
+            }
+        }
+
+        ServiceSpatialReference spatialReferenceWGS = ServiceSpatialReference.newBuilder().setWkid(4326).build();
+        ServiceSpatialReference spatialReferenceGall = ServiceSpatialReference.newBuilder().setWkid(32632).build();
+
+        ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder()
+                .addGeometryString(GeometryEngine.geometryToWkt(multiPoint, 0))
+                .setGeometryEncodingType(GeometryEncodingType.wkt)
+                .setSpatialReference(spatialReferenceWGS)
+                .build();
+
+
+//        opRequestProject = OperatorRequest(
+//                left_geometry=serviceGeomPolyline,
+//                operator_type=ServiceOperatorType.Value('Project'),
+//                operation_spatial_reference=outputSpatialReference)
+        OperatorRequest serviceProjectOp = OperatorRequest.newBuilder()
+                .setLeftGeometry(serviceGeometry)
+                .setOperatorType(ServiceOperatorType.Project)
+                .setOperationSpatialReference(spatialReferenceGall)
+                .build();
+
+
+//        opRequestOuter = OperatorRequest(
+//                left_cursor=opRequestProject,
+//                operator_type=ServiceOperatorType.Value('Project'),
+//                operation_spatial_reference=serviceSpatialReference,
+//                results_encoding_type=GeometryEncodingType.Value('wkt'))
+        OperatorRequest serviceReProjectOp = OperatorRequest.newBuilder()
+                .setLeftCursor(serviceProjectOp)
+                .setOperatorType(ServiceOperatorType.Project)
+                .setOperationSpatialReference(spatialReferenceWGS)
+                .setResultsEncodingType(GeometryEncodingType.wkt)
+                .build();
+
+        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+        OperatorResult operatorResult = stub.executeOperation(serviceReProjectOp);
+
+    }
+
+    @Test
+    public void testETRS() {
+        List<String> arrayDeque = new ArrayList<>();
+        for (double longitude = -180; longitude < 180; longitude+=15.0) {
+            for (double latitude = -90; latitude < 80; latitude+=15.0) {
+                Point point = new Point(longitude, latitude);
+                arrayDeque.add(OperatorExportToWkt.local().execute(0, point,null));
+            }
+        }
+
+//      serviceSpatialReference = ServiceSpatialReference(wkid=4326)
+//      outputSpatialReference = ServiceSpatialReference(wkid=3035)
+        ServiceSpatialReference serviceSpatialReference = ServiceSpatialReference.newBuilder().setWkid(4326).build();
+        ServiceSpatialReference outputSpatialReference = ServiceSpatialReference.newBuilder().setWkid(3035).build();
+
+//        serviceGeomPolyline = ServiceGeometry(
+//                geometry_string=geometry_string,
+//                geometry_encoding_type=GeometryEncodingType.Value('wkt'),
+//                spatial_reference=serviceSpatialReference)
+        ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder()
+                .addAllGeometryString(arrayDeque)
+                .setGeometryEncodingType(GeometryEncodingType.wkt)
+                .setSpatialReference(serviceSpatialReference)
+                .build();
+
+
+//        opRequestProject = OperatorRequest(
+//                left_geometry=serviceGeomPolyline,
+//                operator_type=ServiceOperatorType.Value('Project'),
+//                operation_spatial_reference=outputSpatialReference)
+        OperatorRequest serviceProjectOp = OperatorRequest.newBuilder()
+                .setLeftGeometry(serviceGeometry)
+                .setOperatorType(ServiceOperatorType.Project)
+                .setOperationSpatialReference(outputSpatialReference)
+                .build();
+
+
+//        opRequestOuter = OperatorRequest(
+//                left_cursor=opRequestProject,
+//                operator_type=ServiceOperatorType.Value('Project'),
+//                operation_spatial_reference=serviceSpatialReference,
+//                results_encoding_type=GeometryEncodingType.Value('wkt'))
+        OperatorRequest serviceReProjectOp = OperatorRequest.newBuilder()
+                .setLeftCursor(serviceProjectOp)
+                .setOperatorType(ServiceOperatorType.Project)
+                .setOperationSpatialReference(serviceSpatialReference)
+                .setResultsEncodingType(GeometryEncodingType.wkt)
+                .build();
+
+        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+        OperatorResult operatorResult = stub.executeOperation(serviceReProjectOp);
+        SimpleStringCursor simpleByteBufferCursor = new SimpleStringCursor(operatorResult.getGeometry().getGeometryStringList());
+        boolean bFoundEmpty = false;
+        while (simpleByteBufferCursor.hasNext()) {
+            String words = simpleByteBufferCursor.next();
+            if (words.equals("POINT EMPTY")) {
+                bFoundEmpty = true;
+            }
+        }
+        assertTrue(bFoundEmpty);
     }
 
     @Ignore
