@@ -107,7 +107,7 @@ public class GeometryOperatorsClient {
 
         OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.ConvexHull)
-                .getLeftCursorBuilder()
+                .getLeftNestedRequestBuilder()
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .setOperationSpatialReference(operatorSpatialReference)
                 .setResultSpatialReference(outputSpatialReference);

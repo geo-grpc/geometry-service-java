@@ -223,7 +223,7 @@ public class GeometryOperatorsServerTest {
                 .build();
 
         OperatorRequest serviceOp = OperatorRequest.newBuilder()
-                .setLeftCursor(serviceConvexOp)
+                .setLeftNestedRequest(serviceConvexOp)
                 .addBufferDistances(1)
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .build();
@@ -334,7 +334,7 @@ public class GeometryOperatorsServerTest {
                 .build();
         OperatorRequest nestedLeft = OperatorRequest
                 .newBuilder()
-                .setLeftCursor(serviceOpLeft)
+                .setLeftNestedRequest(serviceOpLeft)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .setResultSpatialReference(spatialReferenceGall)
                 .build();
@@ -354,15 +354,15 @@ public class GeometryOperatorsServerTest {
                 .build();
         OperatorRequest nestedRight = OperatorRequest
                 .newBuilder()
-                .setLeftCursor(serviceOpRight)
+                .setLeftNestedRequest(serviceOpRight)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .setResultSpatialReference(spatialReferenceGall)
                 .build();
 
         OperatorRequest operatorRequestContains = OperatorRequest
                 .newBuilder()
-                .setLeftCursor(nestedLeft)
-                .setRightCursor(nestedRight)
+                .setLeftNestedRequest(nestedLeft)
+                .setRightNestedRequest(nestedRight)
                 .setOperatorType(ServiceOperatorType.Contains)
                 .setOperationSpatialReference(spatialReferenceMerc)
                 .build();
@@ -419,7 +419,7 @@ public class GeometryOperatorsServerTest {
 
         OperatorRequest nestedLeft = OperatorRequest
                 .newBuilder()
-                .setLeftCursor(serviceOpLeft)
+                .setLeftNestedRequest(serviceOpLeft)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .setResultSpatialReference(spatialReferenceGall)
                 .build();
@@ -451,7 +451,7 @@ public class GeometryOperatorsServerTest {
 
         OperatorRequest nestedRight = OperatorRequest
                 .newBuilder()
-                .setLeftCursor(serviceOpRight)
+                .setLeftNestedRequest(serviceOpRight)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .setResultSpatialReference(spatialReferenceGall)
                 .build();
@@ -463,8 +463,8 @@ public class GeometryOperatorsServerTest {
 
         OperatorRequest operatorRequestSymDifference = OperatorRequest
                 .newBuilder()
-                .setLeftCursor(nestedLeft)
-                .setRightCursor(nestedRight)
+                .setLeftNestedRequest(nestedLeft)
+                .setRightNestedRequest(nestedRight)
                 .setOperatorType(ServiceOperatorType.SymmetricDifference)
                 .setOperationSpatialReference(spatialReferenceMerc)
                 .setResultSpatialReference(spatialReferenceNAD)
@@ -545,7 +545,7 @@ public class GeometryOperatorsServerTest {
 //                operation_spatial_reference=serviceSpatialReference,
 //                results_encoding_type=GeometryEncodingType.Value('wkt'))
         OperatorRequest serviceReProjectOp = OperatorRequest.newBuilder()
-                .setLeftCursor(serviceProjectOp)
+                .setLeftNestedRequest(serviceProjectOp)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(spatialReferenceWGS)
                 .setResultsEncodingType(GeometryEncodingType.wkt)
@@ -599,7 +599,7 @@ public class GeometryOperatorsServerTest {
 //                operation_spatial_reference=serviceSpatialReference,
 //                results_encoding_type=GeometryEncodingType.Value('wkt'))
         OperatorRequest serviceReProjectOp = OperatorRequest.newBuilder()
-                .setLeftCursor(serviceProjectOp)
+                .setLeftNestedRequest(serviceProjectOp)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(serviceSpatialReference)
                 .setResultsEncodingType(GeometryEncodingType.wkt)

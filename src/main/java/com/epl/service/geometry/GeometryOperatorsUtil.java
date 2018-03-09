@@ -54,13 +54,13 @@ class SpatialReferenceGroup {
             leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getLeftGeometryBag());
         } else {
             // assumes left cursor exists
-            leftSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getLeftCursor());
+            leftSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getLeftNestedRequest());
         }
 
         if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSpatialReference()) {
             rightSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getRightGeometryBag());
-        } else if (operatorRequest.hasRightCursor()){
-            rightSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getRightCursor());
+        } else if (operatorRequest.hasRightNestedRequest()){
+            rightSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getRightNestedRequest());
         }
 
         // TODO, there are possibilities for error in here. Also possiblities for too many assumptions. ass of you an me.
@@ -72,12 +72,12 @@ class SpatialReferenceGroup {
 
         if (leftSR == null) {
             leftSR = operatorSR;
-            if (rightSR == null && (operatorRequest.hasRightGeometryBag() || operatorRequest.hasRightCursor()))
+            if (rightSR == null && (operatorRequest.hasRightGeometryBag() || operatorRequest.hasRightNestedRequest()))
                 rightSR = operatorSR;
         }
 
         // TODO improve geometry to work with local spatial references. This is super ugly as it stands
-        if ((operatorRequest.hasRightCursor() || operatorRequest.hasRightGeometryBag()) &&
+        if ((operatorRequest.hasRightNestedRequest() || operatorRequest.hasRightGeometryBag()) &&
                 ((leftSR != null && rightSR == null) ||
                 (leftSR == null && rightSR != null))) {
             throw new IllegalArgumentException("either both spatial references are local or neither");
@@ -182,7 +182,7 @@ public class GeometryOperatorsUtil {
         return geometryBagBuilder.build();
     }
 
-    public static GeometryCursor __getLeftCursorFromRequest(
+    public static GeometryCursor __getLeftNestedRequestFromRequest(
             OperatorRequest operatorRequest,
             GeometryCursor leftCursor,
             SpatialReferenceGroup srGroup) throws IOException {
@@ -191,7 +191,7 @@ public class GeometryOperatorsUtil {
                 leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
             else
                 // assumes there is always a left geometry
-                leftCursor = cursorFromRequest(operatorRequest.getLeftCursor(), null, null);
+                leftCursor = cursorFromRequest(operatorRequest.getLeftNestedRequest(), null, null);
         }
 
         // project left if needed
@@ -203,7 +203,7 @@ public class GeometryOperatorsUtil {
         return leftCursor;
     }
 
-    public static GeometryCursor __getRightCursorFromRequest(
+    public static GeometryCursor __getRightNestedRequestFromRequest(
             OperatorRequest operatorRequest,
             GeometryCursor leftCursor,
             GeometryCursor rightCursor,
@@ -211,8 +211,8 @@ public class GeometryOperatorsUtil {
         if (leftCursor != null && rightCursor == null) {
             if (operatorRequest.hasRightGeometryBag())
                 rightCursor = __createGeometryCursor(operatorRequest.getRightGeometryBag());
-            else if (operatorRequest.hasRightCursor())
-                rightCursor = cursorFromRequest(operatorRequest.getRightCursor(), null, null);
+            else if (operatorRequest.hasRightNestedRequest())
+                rightCursor = cursorFromRequest(operatorRequest.getRightNestedRequest(), null, null);
         }
 
         if (rightCursor != null && srGroup.operatorSR != null && !srGroup.operatorSR.equals(srGroup.rightSR)) {
@@ -227,8 +227,8 @@ public class GeometryOperatorsUtil {
             GeometryCursor leftCursor,
             GeometryCursor rightCursor) throws IOException {
         SpatialReferenceGroup srGroup = new SpatialReferenceGroup(operatorRequest);
-        leftCursor = __getLeftCursorFromRequest(operatorRequest, leftCursor, srGroup);
-        rightCursor = __getRightCursorFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
+        leftCursor = __getLeftNestedRequestFromRequest(operatorRequest, leftCursor, srGroup);
+        rightCursor = __getRightNestedRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         OperatorResult.Builder operatorResultBuilder = OperatorResult.newBuilder();
         Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
@@ -273,8 +273,8 @@ public class GeometryOperatorsUtil {
             GeometryCursor leftCursor,
             GeometryCursor rightCursor) throws IOException {
         SpatialReferenceGroup srGroup = new SpatialReferenceGroup(operatorRequest);
-        leftCursor = __getLeftCursorFromRequest(operatorRequest, leftCursor, srGroup);
-        rightCursor = __getRightCursorFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
+        leftCursor = __getLeftNestedRequestFromRequest(operatorRequest, leftCursor, srGroup);
+        rightCursor = __getRightNestedRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryCursor resultCursor = null;
         Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
@@ -525,8 +525,8 @@ public class GeometryOperatorsUtil {
             return __extractSpatialReference(operatorRequestCursor.getResultSpatialReference());
         else if (operatorRequestCursor.hasOperationSpatialReference())
             return __extractSpatialReference(operatorRequestCursor.getOperationSpatialReference());
-        else if (operatorRequestCursor.hasLeftCursor())
-            return __extractSpatialReferenceCursor(operatorRequestCursor.getLeftCursor());
+        else if (operatorRequestCursor.hasLeftNestedRequest())
+            return __extractSpatialReferenceCursor(operatorRequestCursor.getLeftNestedRequest());
         else if (operatorRequestCursor.hasLeftGeometryBag())
             return __extractSpatialReference(operatorRequestCursor.getLeftGeometryBag().getSpatialReference());
         return null;
