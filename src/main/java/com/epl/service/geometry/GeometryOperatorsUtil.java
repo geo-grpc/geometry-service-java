@@ -50,15 +50,15 @@ class SpatialReferenceGroup {
         // optionalish: this is the final spatial reference for the resultSR (project after operatorSR)
         resultSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getResultSpatialReference());
 
-        if (operatorRequest.hasLeftGeometry() && operatorRequest.getLeftGeometry().hasSpatialReference()) {
-            leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getLeftGeometry());
+        if (operatorRequest.hasLeftGeometryBag() && operatorRequest.getLeftGeometryBag().hasSpatialReference()) {
+            leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getLeftGeometryBag());
         } else {
             // assumes left cursor exists
             leftSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getLeftCursor());
         }
 
-        if (operatorRequest.hasRightGeometry() && operatorRequest.getRightGeometry().hasSpatialReference()) {
-            rightSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getRightGeometry());
+        if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSpatialReference()) {
+            rightSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getRightGeometryBag());
         } else if (operatorRequest.hasRightCursor()){
             rightSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getRightCursor());
         }
@@ -72,12 +72,12 @@ class SpatialReferenceGroup {
 
         if (leftSR == null) {
             leftSR = operatorSR;
-            if (rightSR == null && (operatorRequest.hasRightGeometry() || operatorRequest.hasRightCursor()))
+            if (rightSR == null && (operatorRequest.hasRightGeometryBag() || operatorRequest.hasRightCursor()))
                 rightSR = operatorSR;
         }
 
         // TODO improve geometry to work with local spatial references. This is super ugly as it stands
-        if ((operatorRequest.hasRightCursor() || operatorRequest.hasRightGeometry()) &&
+        if ((operatorRequest.hasRightCursor() || operatorRequest.hasRightGeometryBag()) &&
                 ((leftSR != null && rightSR == null) ||
                 (leftSR == null && rightSR != null))) {
             throw new IllegalArgumentException("either both spatial references are local or neither");
@@ -137,7 +137,7 @@ class StringIterable implements Iterable<String> {
 
 public class GeometryOperatorsUtil {
     public static GeometryBagData __encodeGeometry(GeometryCursor geometryCursor, OperatorRequest operatorRequest, GeometryEncodingType encodingType) {
-        GeometryBagData.Builder serviceGeometryBuilder = GeometryBagData.newBuilder();
+        GeometryBagData.Builder geometryBagBuilder = GeometryBagData.newBuilder();
 
 
         // TODO not getting stubbed out due to grpc proto stubbing bug
@@ -154,32 +154,32 @@ public class GeometryOperatorsUtil {
         switch (encodingType) {
             case wkb:
                 binaryStringIterable = new ByteStringIterable(new OperatorExportToWkbCursor(0, geometryCursor));
-                serviceGeometryBuilder.addAllGeometryBinaries(binaryStringIterable);
+                geometryBagBuilder.addAllGeometryBinaries(binaryStringIterable);
                 break;
             case wkt:
                 stringIterable = new StringIterable(new OperatorExportToWktCursor(0, geometryCursor, null));
-                serviceGeometryBuilder.addAllGeometryStrings(stringIterable);
+                geometryBagBuilder.addAllGeometryStrings(stringIterable);
                 break;
             case esrishape:
                 binaryStringIterable = new ByteStringIterable(new OperatorExportToESRIShapeCursor(0, geometryCursor));
-                serviceGeometryBuilder.addAllGeometryBinaries(binaryStringIterable);
+                geometryBagBuilder.addAllGeometryBinaries(binaryStringIterable);
                 break;
             case geojson:
                 //TODO I'm just blindly setting the spatial reference here instead of projecting the resultSR into the spatial reference
                 // TODO add Spatial reference
                 stringIterable = new StringIterable(new OperatorExportToJsonCursor(null, geometryCursor));
-                serviceGeometryBuilder.addAllGeometryStrings(stringIterable);
+                geometryBagBuilder.addAllGeometryStrings(stringIterable);
                 break;
         }
 
         //TODO I'm just blindly setting the spatial reference here instead of projecting the resultSR into the spatial reference
         // TODO There needs to be better tracking of geometry id throughout process
-        serviceGeometryBuilder
+        geometryBagBuilder
                 .setGeometryEncodingType(encodingType)
-                .addAllGeometryIds(operatorRequest.getLeftGeometry().getGeometryIdsList())
+                .addAllGeometryIds(operatorRequest.getLeftGeometryBag().getGeometryIdsList())
                 .setSpatialReference(operatorRequest.getResultSpatialReference());
 
-        return serviceGeometryBuilder.build();
+        return geometryBagBuilder.build();
     }
 
     public static GeometryCursor __getLeftCursorFromRequest(
@@ -187,8 +187,8 @@ public class GeometryOperatorsUtil {
             GeometryCursor leftCursor,
             SpatialReferenceGroup srGroup) throws IOException {
         if (leftCursor == null) {
-            if (operatorRequest.hasLeftGeometry())
-                leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometry());
+            if (operatorRequest.hasLeftGeometryBag())
+                leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
             else
                 // assumes there is always a left geometry
                 leftCursor = cursorFromRequest(operatorRequest.getLeftCursor(), null, null);
@@ -209,8 +209,8 @@ public class GeometryOperatorsUtil {
             GeometryCursor rightCursor,
             SpatialReferenceGroup srGroup) throws IOException {
         if (leftCursor != null && rightCursor == null) {
-            if (operatorRequest.hasRightGeometry())
-                rightCursor = __createGeometryCursor(operatorRequest.getRightGeometry());
+            if (operatorRequest.hasRightGeometryBag())
+                rightCursor = __createGeometryCursor(operatorRequest.getRightGeometryBag());
             else if (operatorRequest.hasRightCursor())
                 rightCursor = cursorFromRequest(operatorRequest.getRightCursor(), null, null);
         }
@@ -330,7 +330,7 @@ public class GeometryOperatorsUtil {
                 break;
             case Buffer:
                 // TODO clean this up
-                //                GeometryCursor inputGeometries,
+                //                GeometryCursor inputGeometryBag,
                 //                SpatialReference sr,
                 //                double[] distances,
                 //                double max_deviation,
@@ -503,20 +503,20 @@ public class GeometryOperatorsUtil {
         // If the only operation used by the user is to export to one of the formats then enter this if statement and
         // assign the left cursor to the result cursor
         if (encodingType != GeometryEncodingType.unknown) {
-            resultCursor = __createGeometryCursor(operatorRequest.getLeftGeometry());
+            resultCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
         }
         operatorResultBuilder.setGeometry(__encodeGeometry(resultCursor, operatorRequest, encodingType));
         return operatorResultBuilder.build();
     }
 
 
-    protected static GeometryCursor __createGeometryCursor(GeometryBagData serviceGeometry) throws IOException {
-        return __extractGeometryCursor(serviceGeometry);
+    protected static GeometryCursor __createGeometryCursor(GeometryBagData geometryBag) throws IOException {
+        return __extractGeometryCursor(geometryBag);
     }
 
 
-    protected static SpatialReference __extractSpatialReference(GeometryBagData serviceGeometry) {
-        return serviceGeometry.hasSpatialReference() ? __extractSpatialReference(serviceGeometry.getSpatialReference()) : null;
+    protected static SpatialReference __extractSpatialReference(GeometryBagData geometryBag) {
+        return geometryBag.hasSpatialReference() ? __extractSpatialReference(geometryBag.getSpatialReference()) : null;
     }
 
 
@@ -527,8 +527,8 @@ public class GeometryOperatorsUtil {
             return __extractSpatialReference(operatorRequestCursor.getOperationSpatialReference());
         else if (operatorRequestCursor.hasLeftCursor())
             return __extractSpatialReferenceCursor(operatorRequestCursor.getLeftCursor());
-        else if (operatorRequestCursor.hasLeftGeometry())
-            return __extractSpatialReference(operatorRequestCursor.getLeftGeometry().getSpatialReference());
+        else if (operatorRequestCursor.hasLeftGeometryBag())
+            return __extractSpatialReference(operatorRequestCursor.getLeftGeometryBag().getSpatialReference());
         return null;
     }
 
@@ -549,16 +549,16 @@ public class GeometryOperatorsUtil {
     }
 
 
-    protected static GeometryCursor __extractGeometryCursor(GeometryBagData serviceGeometry) throws IOException {
+    protected static GeometryCursor __extractGeometryCursor(GeometryBagData geometryBag) throws IOException {
         GeometryCursor geometryCursor = null;
 
         ArrayDeque<ByteBuffer> byteBufferArrayDeque = null;
         ArrayDeque<String> stringArrayDeque = null;
         SimpleByteBufferCursor simpleByteBufferCursor = null;
         SimpleStringCursor simpleStringCursor = null;
-        switch (serviceGeometry.getGeometryEncodingType()) {
+        switch (geometryBag.getGeometryEncodingType()) {
             case wkb:
-                byteBufferArrayDeque = serviceGeometry
+                byteBufferArrayDeque = geometryBag
                         .getGeometryBinariesList()
                         .stream()
                         .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
@@ -567,7 +567,7 @@ public class GeometryOperatorsUtil {
                 geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
                 break;
             case esrishape:
-                byteBufferArrayDeque = serviceGeometry
+                byteBufferArrayDeque = geometryBag
                         .getGeometryBinariesList()
                         .stream()
                         .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
@@ -576,13 +576,13 @@ public class GeometryOperatorsUtil {
                 geometryCursor = new OperatorImportFromESRIShapeCursor(0, 0, simpleByteBufferCursor);
                 break;
             case wkt:
-                stringArrayDeque = new ArrayDeque<>(serviceGeometry.getGeometryStringsList());
+                stringArrayDeque = new ArrayDeque<>(geometryBag.getGeometryStringsList());
                 simpleStringCursor = new SimpleStringCursor(stringArrayDeque);
                 geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
                 break;
             case geojson:
                 JsonFactory factory = new JsonFactory();
-                String jsonString = serviceGeometry.getGeometryStrings(0);
+                String jsonString = geometryBag.getGeometryStrings(0);
                 // TODO no idea whats going on here
                 JsonParser jsonParser = factory.createJsonParser(jsonString);
                 JsonParserReader jsonParserReader = new JsonParserReader(jsonParser);

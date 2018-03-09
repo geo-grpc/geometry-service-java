@@ -99,7 +99,7 @@ public class GeometryOperatorsClient {
         SpatialReferenceData inputSpatialReference = SpatialReferenceData.newBuilder().setWkid(4326).build();
         SpatialReferenceData outputSpatialReference = inputSpatialReference;
 
-        GeometryBagData.Builder serviceGeometryBuilder = GeometryBagData.newBuilder()
+        GeometryBagData.Builder geometryBagBuilder = GeometryBagData.newBuilder()
                 .addGeometryBinaries(ByteString.copyFromUtf8(""))
                 .addGeometryIds(0)
                 .setGeometryEncodingType(GeometryEncodingType.esrishape)
@@ -119,7 +119,7 @@ public class GeometryOperatorsClient {
 //                .setOperationSpatialReference(operatorSpatialReference)
 //                .setResultSpatialReference(outputSpatialReference);
 
-        this.shapefileThrottled(inFile, operatorRequestBuilder, serviceGeometryBuilder);
+        this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBagBuilder);
     }
 
     public void testParcelsFile(String pathFile) throws IOException, InterruptedException {
@@ -133,7 +133,7 @@ public class GeometryOperatorsClient {
         SpatialReferenceData wgs84SpatiralReference = SpatialReferenceData.newBuilder()
                 .setWkid(4326).build();
 
-        GeometryBagData.Builder serviceGeometryBuilder = GeometryBagData.newBuilder()
+        GeometryBagData.Builder geometryBagBuilder = GeometryBagData.newBuilder()
                 .addGeometryBinaries(ByteString.copyFromUtf8(""))
                 .addGeometryIds(0)
                 .setGeometryEncodingType(GeometryEncodingType.esrishape)
@@ -145,7 +145,7 @@ public class GeometryOperatorsClient {
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .setResultSpatialReference(wgs84SpatiralReference);
 
-        this.shapefileThrottled(inFile, operatorRequestBuilder, serviceGeometryBuilder);
+        this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBagBuilder);
     }
 
     /**
@@ -157,7 +157,7 @@ public class GeometryOperatorsClient {
      */
     public void shapefileThrottled(File inFile,
                                    OperatorRequest.Builder operatorRequestBuilder,
-                                   GeometryBagData.Builder serviceGeometryBuilder) throws IOException, InterruptedException {
+                                   GeometryBagData.Builder geometryBagBuilder) throws IOException, InterruptedException {
         CountDownLatch done = new CountDownLatch(4);
         ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
 
@@ -197,12 +197,12 @@ public class GeometryOperatorsClient {
                                     ByteString byteString = ByteString.copyFrom(data);
 //                                    logger.info("bytes length -->" + data.length);
 
-                                    GeometryBagData serviceGeometry = serviceGeometryBuilder
+                                    GeometryBagData geometryBag = geometryBagBuilder
                                             .setGeometryBinaries(0, byteString)
                                             .setGeometryIds(0, id)
                                             .build();
                                     OperatorRequest operatorRequest = operatorRequestBuilder
-                                            .setLeftGeometry(serviceGeometry).build();
+                                            .setLeftGeometryBag(geometryBag).build();
                                     requestStream.onNext(operatorRequest);
                                 } else {
                                     break;
@@ -255,7 +255,7 @@ public class GeometryOperatorsClient {
                 .setWkid(32632)
                 .build();
 
-        GeometryBagData serviceGeometry = GeometryBagData.newBuilder()
+        GeometryBagData geometryBag = GeometryBagData.newBuilder()
                 .setGeometryEncodingType(GeometryEncodingType.wkb)
                 .setSpatialReference(inputSpatialReference)
                 .addGeometryBinaries(ByteString.copyFrom(op.execute(0, polyline, null)))
@@ -268,7 +268,7 @@ public class GeometryOperatorsClient {
 
         OperatorRequest serviceProjectOp = OperatorRequest
                 .newBuilder()
-                .setLeftGeometry(serviceGeometry)
+                .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(outputSpatialReference)
                 .build();
