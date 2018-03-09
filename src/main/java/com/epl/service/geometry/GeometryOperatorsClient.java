@@ -100,8 +100,8 @@ public class GeometryOperatorsClient {
         SpatialReferenceData outputSpatialReference = inputSpatialReference;
 
         GeometryBagData.Builder serviceGeometryBuilder = GeometryBagData.newBuilder()
-                .addGeometryBinary(ByteString.copyFromUtf8(""))
-                .addGeometryId(0)
+                .addGeometryBinaries(ByteString.copyFromUtf8(""))
+                .addGeometryIds(0)
                 .setGeometryEncodingType(GeometryEncodingType.esrishape)
                 .setSpatialReference(inputSpatialReference);
 
@@ -134,8 +134,8 @@ public class GeometryOperatorsClient {
                 .setWkid(4326).build();
 
         GeometryBagData.Builder serviceGeometryBuilder = GeometryBagData.newBuilder()
-                .addGeometryBinary(ByteString.copyFromUtf8(""))
-                .addGeometryId(0)
+                .addGeometryBinaries(ByteString.copyFromUtf8(""))
+                .addGeometryIds(0)
                 .setGeometryEncodingType(GeometryEncodingType.esrishape)
                 .setSpatialReference(serviceSpatialReference);
 
@@ -198,8 +198,8 @@ public class GeometryOperatorsClient {
 //                                    logger.info("bytes length -->" + data.length);
 
                                     GeometryBagData serviceGeometry = serviceGeometryBuilder
-                                            .setGeometryBinary(0, byteString)
-                                            .setGeometryId(0, id)
+                                            .setGeometryBinaries(0, byteString)
+                                            .setGeometryIds(0, id)
                                             .build();
                                     OperatorRequest operatorRequest = operatorRequestBuilder
                                             .setLeftGeometry(serviceGeometry).build();
@@ -213,11 +213,11 @@ public class GeometryOperatorsClient {
 
                     @Override
                     public void onNext(OperatorResult operatorResult) {
-                        long id = operatorResult.getGeometry().getGeometryId(0);
-//                        logger.info(operatorResult.getGeometry().getGeometryString(0));
+                        long id = operatorResult.getGeometry().getGeometryIds(0);
+//                        logger.info(operatorResult.getGeometry().getGeometryStrings(0));
                         if (id % 1000 == 0) {
                             logger.info("Geometry number " + id);
-                            logger.info(operatorResult.getGeometry().getGeometryString(0));
+                            logger.info(operatorResult.getGeometry().getGeometryStrings(0));
                         }
                         // Signal the sender to send one message.
                         requestStream.request(1);
@@ -258,7 +258,7 @@ public class GeometryOperatorsClient {
         GeometryBagData serviceGeometry = GeometryBagData.newBuilder()
                 .setGeometryEncodingType(GeometryEncodingType.wkb)
                 .setSpatialReference(inputSpatialReference)
-                .addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null)))
+                .addGeometryBinaries(ByteString.copyFrom(op.execute(0, polyline, null)))
                 .build();
 
         SpatialReferenceData outputSpatialReference = SpatialReferenceData.newBuilder()
@@ -284,7 +284,7 @@ public class GeometryOperatorsClient {
                 Geometry.Type.Unknown,
                 operatorResult
                         .getGeometry()
-                        .getGeometryBinary(0)
+                        .getGeometryBinaries(0)
                         .asReadOnlyByteBuffer(),
                 null);
         System.out.println(GeometryEngine.geometryToWkt(result, 0));

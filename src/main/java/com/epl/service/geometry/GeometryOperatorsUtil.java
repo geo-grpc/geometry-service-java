@@ -154,21 +154,21 @@ public class GeometryOperatorsUtil {
         switch (encodingType) {
             case wkb:
                 binaryStringIterable = new ByteStringIterable(new OperatorExportToWkbCursor(0, geometryCursor));
-                serviceGeometryBuilder.addAllGeometryBinary(binaryStringIterable);
+                serviceGeometryBuilder.addAllGeometryBinaries(binaryStringIterable);
                 break;
             case wkt:
                 stringIterable = new StringIterable(new OperatorExportToWktCursor(0, geometryCursor, null));
-                serviceGeometryBuilder.addAllGeometryString(stringIterable);
+                serviceGeometryBuilder.addAllGeometryStrings(stringIterable);
                 break;
             case esrishape:
                 binaryStringIterable = new ByteStringIterable(new OperatorExportToESRIShapeCursor(0, geometryCursor));
-                serviceGeometryBuilder.addAllGeometryBinary(binaryStringIterable);
+                serviceGeometryBuilder.addAllGeometryBinaries(binaryStringIterable);
                 break;
             case geojson:
                 //TODO I'm just blindly setting the spatial reference here instead of projecting the resultSR into the spatial reference
                 // TODO add Spatial reference
                 stringIterable = new StringIterable(new OperatorExportToJsonCursor(null, geometryCursor));
-                serviceGeometryBuilder.addAllGeometryString(stringIterable);
+                serviceGeometryBuilder.addAllGeometryStrings(stringIterable);
                 break;
         }
 
@@ -176,7 +176,7 @@ public class GeometryOperatorsUtil {
         // TODO There needs to be better tracking of geometry id throughout process
         serviceGeometryBuilder
                 .setGeometryEncodingType(encodingType)
-                .addAllGeometryId(operatorRequest.getLeftGeometry().getGeometryIdList())
+                .addAllGeometryIds(operatorRequest.getLeftGeometry().getGeometryIdsList())
                 .setSpatialReference(operatorRequest.getResultSpatialReference());
 
         return serviceGeometryBuilder.build();
@@ -544,7 +544,7 @@ public class GeometryOperatorsUtil {
     }
 
 
-    protected static Envelope2D __extractEnvelope2D(ServiceEnvelope2D env) {
+    protected static Envelope2D __extractEnvelope2D(EnvelopeData env) {
         return Envelope2D.construct(env.getXmin(), env.getYmin(), env.getXmax(), env.getYmax());
     }
 
@@ -559,7 +559,7 @@ public class GeometryOperatorsUtil {
         switch (serviceGeometry.getGeometryEncodingType()) {
             case wkb:
                 byteBufferArrayDeque = serviceGeometry
-                        .getGeometryBinaryList()
+                        .getGeometryBinariesList()
                         .stream()
                         .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
                         .collect(Collectors.toCollection(ArrayDeque::new));
@@ -568,7 +568,7 @@ public class GeometryOperatorsUtil {
                 break;
             case esrishape:
                 byteBufferArrayDeque = serviceGeometry
-                        .getGeometryBinaryList()
+                        .getGeometryBinariesList()
                         .stream()
                         .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
                         .collect(Collectors.toCollection(ArrayDeque::new));
@@ -576,13 +576,13 @@ public class GeometryOperatorsUtil {
                 geometryCursor = new OperatorImportFromESRIShapeCursor(0, 0, simpleByteBufferCursor);
                 break;
             case wkt:
-                stringArrayDeque = new ArrayDeque<>(serviceGeometry.getGeometryStringList());
+                stringArrayDeque = new ArrayDeque<>(serviceGeometry.getGeometryStringsList());
                 simpleStringCursor = new SimpleStringCursor(stringArrayDeque);
                 geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
                 break;
             case geojson:
                 JsonFactory factory = new JsonFactory();
-                String jsonString = serviceGeometry.getGeometryString(0);
+                String jsonString = serviceGeometry.getGeometryStrings(0);
                 // TODO no idea whats going on here
                 JsonParser jsonParser = factory.createJsonParser(jsonString);
                 JsonParserReader jsonParserReader = new JsonParserReader(jsonParser);
