@@ -138,7 +138,7 @@ message SpatialReferenceData {
 }
 
 message OperatorResult {
-    GeometryBagData geometry = 1;
+    GeometryBagData geometry_bag = 1;
 
     bool spatial_relationship = 2;
 

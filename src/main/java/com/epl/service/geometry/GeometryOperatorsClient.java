@@ -213,11 +213,11 @@ public class GeometryOperatorsClient {
 
                     @Override
                     public void onNext(OperatorResult operatorResult) {
-                        long id = operatorResult.getGeometry().getGeometryIds(0);
-//                        logger.info(operatorResult.getGeometry().getGeometryStrings(0));
+                        long id = operatorResult.getGeometryBag().getGeometryIds(0);
+//                        logger.info(operatorResult.getGeometryBag().getGeometryStrings(0));
                         if (id % 1000 == 0) {
                             logger.info("Geometry number " + id);
-                            logger.info(operatorResult.getGeometry().getGeometryStrings(0));
+                            logger.info(operatorResult.getGeometryBag().getGeometryStrings(0));
                         }
                         // Signal the sender to send one message.
                         requestStream.request(1);
@@ -283,7 +283,7 @@ public class GeometryOperatorsClient {
                 0,
                 Geometry.Type.Unknown,
                 operatorResult
-                        .getGeometry()
+                        .getGeometryBag()
                         .getGeometryBinaries(0)
                         .asReadOnlyByteBuffer(),
                 null);

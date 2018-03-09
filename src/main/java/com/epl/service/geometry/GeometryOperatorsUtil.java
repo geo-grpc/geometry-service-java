@@ -505,7 +505,7 @@ public class GeometryOperatorsUtil {
         if (encodingType != GeometryEncodingType.unknown) {
             resultCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
         }
-        operatorResultBuilder.setGeometry(__encodeGeometry(resultCursor, operatorRequest, encodingType));
+        operatorResultBuilder.setGeometryBag(__encodeGeometry(resultCursor, operatorRequest, encodingType));
         return operatorResultBuilder.build();
     }
 

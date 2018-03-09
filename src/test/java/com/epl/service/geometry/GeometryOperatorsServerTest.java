@@ -90,7 +90,7 @@ public class GeometryOperatorsServerTest {
         GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
         OperatorResult operatorResult = stub.executeOperation(requestOp);
 
-        assertEquals(operatorResult.getGeometry().getGeometryStrings(0), geometryBag.getGeometryStrings(0));
+        assertEquals(operatorResult.getGeometryBag().getGeometryStrings(0), geometryBag.getGeometryStrings(0));
     }
 
     @Test
@@ -113,7 +113,7 @@ public class GeometryOperatorsServerTest {
 
         OperatorExportToWkt op2 = OperatorExportToWkt.local();
         String geom = op2.execute(0, polyline, null);
-        assertEquals(operatorResult.getGeometry().getGeometryStrings(0), geom);
+        assertEquals(operatorResult.getGeometryBag().getGeometryStrings(0), geom);
     }
 
     @Test
@@ -144,7 +144,7 @@ public class GeometryOperatorsServerTest {
         OperatorResult operatorResult = stub.executeOperation(serviceOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
-        Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer(), null);
+        Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer(), null);
 
         boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 
@@ -185,7 +185,7 @@ public class GeometryOperatorsServerTest {
         OperatorResult operatorResult = stub.executeOperation(serviceProjectOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
-        Polyline result = (Polyline) op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer(), null);
+        Polyline result = (Polyline) op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer(), null);
         TestCase.assertNotNull(result);
 
         TestCase.assertFalse(polyline.equals(result));
@@ -233,7 +233,7 @@ public class GeometryOperatorsServerTest {
         OperatorResult operatorResult = stub.executeOperation(serviceOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
-        Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer(), null);
+        Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer(), null);
 
         boolean bContains = OperatorContains.local().execute(result, polyline, SpatialReference.create(4326), null);
 
@@ -261,10 +261,10 @@ public class GeometryOperatorsServerTest {
         GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
         OperatorResult operatorResult = stub.executeOperation(serviceBufferOp);
 
-        List<ByteBuffer> byteBufferList = operatorResult.getGeometry().getGeometryBinariesList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
+        List<ByteBuffer> byteBufferList = operatorResult.getGeometryBag().getGeometryBinariesList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
         SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferList);
         OperatorImportFromWkbCursor operatorImportFromWkbCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
-        Geometry result = OperatorImportFromWkb.local().execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer(), null);
+        Geometry result = OperatorImportFromWkb.local().execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer(), null);
         assertTrue(result.calculateArea2D() > (Math.PI * 2.5 * 2.5 * 2));
 
 //    assertEquals(resultSR.calculateArea2D(), Math.PI * 2.5 * 2.5, 0.1);
@@ -413,7 +413,7 @@ public class GeometryOperatorsServerTest {
         Geometry bufferedLeft = GeometryEngine.buffer(polyline, SpatialReference.create(4269), .5);
         Geometry projectedBuffered = GeometryEngine.project(bufferedLeft, SpatialReference.create(4269), SpatialReference.create(4326));
         OperatorResult operatorResultLeft = stub.executeOperation(serviceOpLeft);
-        SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeft.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer());
+        SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeft.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(projectedBuffered, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4326)));
 
 
@@ -426,7 +426,7 @@ public class GeometryOperatorsServerTest {
         Geometry projectedBufferedConvex = GeometryEngine.convexHull(projectedBuffered);
         Geometry reProjectedBufferedConvexHull = GeometryEngine.project(projectedBufferedConvex, SpatialReference.create(4326), SpatialReference.create(54016));
         OperatorResult operatorResultLeftNested = stub.executeOperation(nestedLeft);
-        simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeftNested.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer());
+        simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeftNested.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(reProjectedBufferedConvexHull, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
 
         GeometryBagData geometryBagRight = GeometryBagData.newBuilder()
@@ -445,7 +445,7 @@ public class GeometryOperatorsServerTest {
         Geometry projectedRight = GeometryEngine.project(polyline, SpatialReference.create(4269), SpatialReference.create(4326));
         Geometry projectedBufferedRight = GeometryEngine.geodesicBuffer(projectedRight, SpatialReference.create(4326), 1000);
         OperatorResult operatorResultRight = stub.executeOperation(serviceOpRight);
-        simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRight.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer());
+        simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRight.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(projectedBufferedRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4326)));
 
 
@@ -458,7 +458,7 @@ public class GeometryOperatorsServerTest {
         Geometry projectedBufferedConvexRight = GeometryEngine.convexHull(projectedBufferedRight);
         Geometry reProjectedBufferedConvexHullRight = GeometryEngine.project(projectedBufferedConvexRight, SpatialReference.create(4326), SpatialReference.create(54016));
         OperatorResult operatorResultRightNested = stub.executeOperation(nestedRight);
-        simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRightNested.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer());
+        simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRightNested.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(reProjectedBufferedConvexHullRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
 
         OperatorRequest operatorRequestSymDifference = OperatorRequest
@@ -477,7 +477,7 @@ public class GeometryOperatorsServerTest {
         Geometry differenceProjected = GeometryEngine.project(difference, SpatialReference.create(3857), SpatialReference.create(4269));
 
         OperatorResult operatorResult = stub.executeOperation(operatorRequestSymDifference);
-        simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResult.getGeometry().getGeometryBinaries(0).asReadOnlyByteBuffer());
+        simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResult.getGeometryBag().getGeometryBinaries(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(differenceProjected, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4269)));
 
     }
@@ -607,7 +607,7 @@ public class GeometryOperatorsServerTest {
 
         GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
         OperatorResult operatorResult = stub.executeOperation(serviceReProjectOp);
-        SimpleStringCursor simpleByteBufferCursor = new SimpleStringCursor(operatorResult.getGeometry().getGeometryStringsList());
+        SimpleStringCursor simpleByteBufferCursor = new SimpleStringCursor(operatorResult.getGeometryBag().getGeometryStringsList());
         boolean bFoundEmpty = false;
         while (simpleByteBufferCursor.hasNext()) {
             String words = simpleByteBufferCursor.next();
