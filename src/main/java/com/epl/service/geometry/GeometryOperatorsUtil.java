@@ -136,8 +136,8 @@ class StringIterable implements Iterable<String> {
 }
 
 public class GeometryOperatorsUtil {
-    public static ServiceGeometry __encodeGeometry(GeometryCursor geometryCursor, OperatorRequest operatorRequest, GeometryEncodingType encodingType) {
-        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder();
+    public static GeometryBagData __encodeGeometry(GeometryCursor geometryCursor, OperatorRequest operatorRequest, GeometryEncodingType encodingType) {
+        GeometryBagData.Builder serviceGeometryBuilder = GeometryBagData.newBuilder();
 
 
         // TODO not getting stubbed out due to grpc proto stubbing bug
@@ -510,12 +510,12 @@ public class GeometryOperatorsUtil {
     }
 
 
-    protected static GeometryCursor __createGeometryCursor(ServiceGeometry serviceGeometry) throws IOException {
+    protected static GeometryCursor __createGeometryCursor(GeometryBagData serviceGeometry) throws IOException {
         return __extractGeometryCursor(serviceGeometry);
     }
 
 
-    protected static SpatialReference __extractSpatialReference(ServiceGeometry serviceGeometry) {
+    protected static SpatialReference __extractSpatialReference(GeometryBagData serviceGeometry) {
         return serviceGeometry.hasSpatialReference() ? __extractSpatialReference(serviceGeometry.getSpatialReference()) : null;
     }
 
@@ -533,7 +533,7 @@ public class GeometryOperatorsUtil {
     }
 
 
-    protected static SpatialReference __extractSpatialReference(ServiceSpatialReference serviceSpatialReference) {
+    protected static SpatialReference __extractSpatialReference(SpatialReferenceData serviceSpatialReference) {
         // TODO there seems to be a bug where hasWkid() is not getting generated. check back later
         if (serviceSpatialReference.getWkid() != 0)
             return SpatialReference.create(serviceSpatialReference.getWkid());
@@ -549,7 +549,7 @@ public class GeometryOperatorsUtil {
     }
 
 
-    protected static GeometryCursor __extractGeometryCursor(ServiceGeometry serviceGeometry) throws IOException {
+    protected static GeometryCursor __extractGeometryCursor(GeometryBagData serviceGeometry) throws IOException {
         GeometryCursor geometryCursor = null;
 
         ArrayDeque<ByteBuffer> byteBufferArrayDeque = null;

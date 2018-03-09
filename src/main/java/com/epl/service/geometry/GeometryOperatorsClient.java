@@ -95,11 +95,11 @@ public class GeometryOperatorsClient {
 
     public void testWRSShapefile(String pathFile) throws IOException, InterruptedException {
         File inFile = new File(pathFile);
-        ServiceSpatialReference operatorSpatialReference = ServiceSpatialReference.newBuilder().setWkid(3857).build();
-        ServiceSpatialReference inputSpatialReference = ServiceSpatialReference.newBuilder().setWkid(4326).build();
-        ServiceSpatialReference outputSpatialReference = inputSpatialReference;
+        SpatialReferenceData operatorSpatialReference = SpatialReferenceData.newBuilder().setWkid(3857).build();
+        SpatialReferenceData inputSpatialReference = SpatialReferenceData.newBuilder().setWkid(4326).build();
+        SpatialReferenceData outputSpatialReference = inputSpatialReference;
 
-        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder()
+        GeometryBagData.Builder serviceGeometryBuilder = GeometryBagData.newBuilder()
                 .addGeometryBinary(ByteString.copyFromUtf8(""))
                 .addGeometryId(0)
                 .setGeometryEncodingType(GeometryEncodingType.esrishape)
@@ -127,13 +127,13 @@ public class GeometryOperatorsClient {
         String prfFile = inFile.getAbsolutePath().substring(0, inFile.getAbsolutePath().lastIndexOf('.')) + ".prj";
         String projectionWKT = new String(Files.readAllBytes(Paths.get(prfFile)));
 
-        ServiceSpatialReference serviceSpatialReference = ServiceSpatialReference.newBuilder()
+        SpatialReferenceData serviceSpatialReference = SpatialReferenceData.newBuilder()
                 .setEsriWkt(projectionWKT).build();
 
-        ServiceSpatialReference wgs84SpatiralReference = ServiceSpatialReference.newBuilder()
+        SpatialReferenceData wgs84SpatiralReference = SpatialReferenceData.newBuilder()
                 .setWkid(4326).build();
 
-        ServiceGeometry.Builder serviceGeometryBuilder = ServiceGeometry.newBuilder()
+        GeometryBagData.Builder serviceGeometryBuilder = GeometryBagData.newBuilder()
                 .addGeometryBinary(ByteString.copyFromUtf8(""))
                 .addGeometryId(0)
                 .setGeometryEncodingType(GeometryEncodingType.esrishape)
@@ -157,7 +157,7 @@ public class GeometryOperatorsClient {
      */
     public void shapefileThrottled(File inFile,
                                    OperatorRequest.Builder operatorRequestBuilder,
-                                   ServiceGeometry.Builder serviceGeometryBuilder) throws IOException, InterruptedException {
+                                   GeometryBagData.Builder serviceGeometryBuilder) throws IOException, InterruptedException {
         CountDownLatch done = new CountDownLatch(4);
         ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
 
@@ -197,7 +197,7 @@ public class GeometryOperatorsClient {
                                     ByteString byteString = ByteString.copyFrom(data);
 //                                    logger.info("bytes length -->" + data.length);
 
-                                    ServiceGeometry serviceGeometry = serviceGeometryBuilder
+                                    GeometryBagData serviceGeometry = serviceGeometryBuilder
                                             .setGeometryBinary(0, byteString)
                                             .setGeometryId(0, id)
                                             .build();
@@ -251,17 +251,17 @@ public class GeometryOperatorsClient {
         polyline.lineTo(600000, -100000);
         OperatorExportToWkb op = OperatorExportToWkb.local();
 
-        ServiceSpatialReference inputSpatialReference = ServiceSpatialReference.newBuilder()
+        SpatialReferenceData inputSpatialReference = SpatialReferenceData.newBuilder()
                 .setWkid(32632)
                 .build();
 
-        ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder()
+        GeometryBagData serviceGeometry = GeometryBagData.newBuilder()
                 .setGeometryEncodingType(GeometryEncodingType.wkb)
                 .setSpatialReference(inputSpatialReference)
                 .addGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null)))
                 .build();
 
-        ServiceSpatialReference outputSpatialReference = ServiceSpatialReference.newBuilder()
+        SpatialReferenceData outputSpatialReference = SpatialReferenceData.newBuilder()
                 .setWkid(4326)
                 .build();
 
