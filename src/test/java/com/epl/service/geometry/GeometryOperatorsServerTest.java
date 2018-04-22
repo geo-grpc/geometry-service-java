@@ -222,9 +222,11 @@ public class GeometryOperatorsServerTest {
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .build();
 
+//        OperatorRequest.BufferParameters bufferParameters = OperatorRequest.BufferParameters.newBuilder().addDistances(1).build();
+
         OperatorRequest serviceOp = OperatorRequest.newBuilder()
                 .setLeftNestedRequest(serviceConvexOp)
-                .addBufferDistances(1)
+                .setBufferParams(OperatorRequest.BufferParams.newBuilder().addDistances(1).build())
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .build();
 
@@ -257,7 +259,12 @@ public class GeometryOperatorsServerTest {
             pointList.add(new Point(x, y));
         }
         GeometryBagData geometryBag = GeometryBagData.newBuilder().addAllGeometryStrings(points).setGeometryEncodingType(GeometryEncodingType.wkt).build();
-        OperatorRequest serviceBufferOp = OperatorRequest.newBuilder().setLeftGeometryBag(geometryBag).setOperatorType(ServiceOperatorType.Buffer).addBufferDistances(2.5).setBufferUnionResult(true).build();
+        OperatorRequest serviceBufferOp = OperatorRequest.newBuilder()
+                .setLeftGeometryBag(geometryBag)
+                .setOperatorType(ServiceOperatorType.Buffer)
+                .setBufferParams(OperatorRequest.BufferParams.newBuilder().addDistances(2.5).setUnionResult(true).build())
+                .build();
+
         GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
         OperatorResult operatorResult = stub.executeOperation(serviceBufferOp);
 
@@ -329,7 +336,8 @@ public class GeometryOperatorsServerTest {
                 .newBuilder()
                 .setLeftGeometryBag(geometryBagLeft)
                 .setOperatorType(ServiceOperatorType.Buffer)
-                .addBufferDistances(.5)
+                .setBufferParams(OperatorRequest.BufferParams.newBuilder().addDistances(.5).build())
+
                 .setResultSpatialReference(spatialReferenceWGS)
                 .build();
         OperatorRequest nestedLeft = OperatorRequest
@@ -348,9 +356,8 @@ public class GeometryOperatorsServerTest {
                 .newBuilder()
                 .setLeftGeometryBag(geometryBagRight)
                 .setOperatorType(ServiceOperatorType.GeodesicBuffer)
-                .addBufferDistances(1000)
+                .setBufferParams(OperatorRequest.BufferParams.newBuilder().addDistances(1000).setUnionResult(false).build())
                 .setOperationSpatialReference(spatialReferenceWGS)
-                .addGenericBooleans(false)
                 .build();
         OperatorRequest nestedRight = OperatorRequest
                 .newBuilder()
@@ -406,7 +413,8 @@ public class GeometryOperatorsServerTest {
                 .newBuilder()
                 .setLeftGeometryBag(geometryBagLeft)
                 .setOperatorType(ServiceOperatorType.Buffer)
-                .addBufferDistances(.5)
+                .setBufferParams(OperatorRequest.BufferParams.newBuilder().addDistances(.5).build())
+
                 .setResultSpatialReference(spatialReferenceWGS)
                 .build();
 
@@ -438,9 +446,8 @@ public class GeometryOperatorsServerTest {
                 .newBuilder()
                 .setLeftGeometryBag(geometryBagRight)
                 .setOperatorType(ServiceOperatorType.GeodesicBuffer)
-                .addBufferDistances(1000)
+                .setBufferParams(OperatorRequest.BufferParams.newBuilder().addDistances(1000).setUnionResult(false).build())
                 .setOperationSpatialReference(spatialReferenceWGS)
-                .addGenericBooleans(false)
                 .build();
         Geometry projectedRight = GeometryEngine.project(polyline, SpatialReference.create(4269), SpatialReference.create(4326));
         Geometry projectedBufferedRight = GeometryEngine.geodesicBuffer(projectedRight, SpatialReference.create(4326), 1000);

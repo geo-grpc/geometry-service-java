@@ -141,7 +141,8 @@ public class GeometryOperatorsClient {
 
         OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
-                .addBufferDistances(2.5)
+                .setBufferParams(OperatorRequest.BufferParams.newBuilder().addDistances(2.5).build())
+//                .addBufferDistances(2.5)
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .setResultSpatialReference(wgs84SpatiralReference);
 

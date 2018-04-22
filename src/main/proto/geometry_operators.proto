@@ -84,14 +84,14 @@ enum ServiceOperatorType {
     Clip = 21; // clip a geometry or geometries by a horizon
     Cut = 22; // cut geometry
     DensifyByLength = 23;
-    DensifyByAngle = 24;
-    LabelPoint = 25;
+//    DensifyByAngle = 24;
+//    LabelPoint = 25;
 
     GeodesicBuffer = 26;
     GeodeticDensifyByLength = 27;
-    ShapePreservingDensify = 28;
+//    ShapePreservingDensify = 28;
     GeodeticLength = 29;
-    GeodeticArea = 30;
+//    GeodeticArea = 30;
 
     Simplify = 31;
     SimplifyOGC = 32;
@@ -112,6 +112,13 @@ enum ServiceOperatorType {
     EnclosingCircle = 46;
 }
 
+enum OffsetJoinType {
+    Round = 0;
+    Bevel = 1;
+    Miter = 2;
+    Square =3;
+}
+
 //message ServiceGeometryBag {
 message GeometryBagData {
     // id is usually associated with position in file format or database
@@ -122,8 +129,10 @@ message GeometryBagData {
     GeometryEncodingType geometry_encoding_type = 2;
 
     // the geometry encoded as base64 (wkb or esri) or as a string (wkt or geojson)
+
     repeated string geometry_strings = 3;
     repeated bytes geometry_binaries = 4;
+
 
     SpatialReferenceData spatial_reference = 5;
 }
@@ -196,6 +205,7 @@ message OperatorResult {
 //    string de_9im = 29;
 //}
 
+
 message OperatorRequest {
 
 //    GeometryBagData geometry_bag = 30;
@@ -216,40 +226,86 @@ message OperatorRequest {
     SpatialReferenceData result_spatial_reference = 8;
 
 
-    bool convex_hull_merge = 9;
+    message BufferParams {
 
-    repeated double buffer_distances = 10;
-    repeated double buffer_max_deviations = 28;
-    bool buffer_union_result = 11;
+        repeated double distances = 1;
+        repeated double max_deviations = 2;
+        bool union_result = 3;
+        int32 max_vertices_in_full_circle = 4;
+    }
 
-    int32 intersection_dimension_mask = 12;
+    message GeodeticBufferParams {
+        repeated double distances = 1;
+        repeated double max_deviations = 2;
+        bool union_result = 3;
+        int32 max_vertices_in_full_circle = 4;
+    }
 
-    EnvelopeData clip_envelope = 13;
+    message ConvexParams {
+        bool convex_hull_merge = 1;
+    }
 
-    bool cut_consider_touch = 14;
+    message RelateParams {
+        string de_9im = 1;
+    }
 
-    double densify_max_length = 15;
+    message RandomPointsParams {
+        repeated double points_per_square_km = 1;
+        int64 seed = 2;
+    }
 
-    bool simplify_force = 16;
+    message GeneralizeParams {
+        double max_deviation = 1;
+        bool remove_degenerates = 2;
+    }
 
-    double offset_distance = 17;
-    //TODO replace with Enum
-    string offset_join_type = 18;
-    double offset_bevel_ratio = 19;
-    double offset_flatten_error = 20;
+    message GeneralizeByAreaParams {
+        double max_deviation = 1;
+        bool remove_degenerates = 2;
+    }
 
-    double generalize_max_deviation = 21;
-    bool generalize_remove_degenerates = 22;
-    int32 max_vertices_in_full_circle = 23;
+    message IntersectionParams {
+        int32 dimension_mask = 1;
+    }
 
-    repeated bool generic_booleans = 24;
-    repeated double generic_doubles = 25;
-    repeated int32 generic_integers = 26;
-    repeated string generic_strings = 27;
-    string de_9im = 29;
+    message OffsetParams {
+        double distance = 1;
+        OffsetJoinType join_type = 2;
+        double bevel_ratio = 3;
+        double flatten_error = 4;
+    }
 
+    message CutParams {
+        bool consider_touch = 14;
+    }
 
+    message ClipParams {
+        EnvelopeData envelope = 13;
+    }
+
+    message DensifyParams {
+        double max_length = 15;
+    }
+
+    message SimplifyParams {
+        bool force = 16;
+    }
+
+    oneof params {
+        BufferParams buffer_params = 31;
+        ConvexParams convex_params = 32;
+        RelateParams relate_params = 33;
+        RandomPointsParams random_points_params = 34;
+        GeneralizeParams generalize_params = 35;
+        IntersectionParams intersection_params = 36;
+        OffsetParams offset_params = 37;
+        CutParams cut_params = 38;
+        ClipParams clip_params = 39;
+        DensifyParams densify_params = 40;
+        SimplifyParams simplify_params = 41;
+    }
 }
+
 
 message EnvelopeData {
     double xmin = 1;

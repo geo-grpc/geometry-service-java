@@ -236,7 +236,7 @@ public class GeometryOperatorsUtil {
             case Proximity2D:
                 break;
             case Relate:
-                boolean result = OperatorRelate.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, operatorRequest.getDe9Im(), null);
+                boolean result = OperatorRelate.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, operatorRequest.getRelateParams().getDe9Im(), null);
                 operatorResultBuilder.setSpatialRelationship(result);
                 break;
             case Equals:
@@ -284,28 +284,28 @@ public class GeometryOperatorsUtil {
             case LabelPoint:
                 break;
             case GeodesicBuffer:
-                List<Double> doubleList;
-                if (operatorRequest.getBufferDistancesCount() > 0)
-                    doubleList = operatorRequest.getBufferDistancesList();
-                else
-                    doubleList = operatorRequest.getGenericDoublesList().subList(0, 1);
+                List<Double> doubleList = operatorRequest.getBufferParams().getDistancesList();
 
+                double maxDeviations = Double.NaN;
+                if (operatorRequest.getBufferParams().getMaxDeviationsCount() > 0) {
+                    maxDeviations = operatorRequest.getBufferParams().getMaxDeviations(0);
+                }
                 resultCursor = OperatorGeodesicBuffer.local().execute(
                         leftCursor,
                         srGroup.operatorSR,
                         0,
                         doubleList.stream().mapToDouble(Double::doubleValue).toArray(),
-                        Double.NaN,
+                        maxDeviations,
                         false,
-                        operatorRequest.getGenericBooleans(0),
+                        operatorRequest.getBufferParams().getUnionResult(),
                         null);
                 break;
             case GeodeticDensifyByLength:
                 resultCursor = OperatorGeodeticDensifyByLength.local().execute(
                         leftCursor,
                         srGroup.operatorSR,
-                        operatorRequest.getGenericDoubles(0),
-                        operatorRequest.getGenericIntegers(0),
+                        operatorRequest.getDensifyParams().getMaxLength(),
+                        0,
                         null);
                 break;
             case ShapePreservingDensify:
@@ -313,9 +313,9 @@ public class GeometryOperatorsUtil {
             case GeneralizeByArea:
                 resultCursor = OperatorGeneralizeByArea.local().execute(
                         leftCursor,
-                        operatorRequest.getGenericDoubles(0),
-                        operatorRequest.getGenericBooleans(0),
-                        GeneralizeType.valueOf(operatorRequest.getGenericStrings(0)),
+                        operatorRequest.getGeneralizeParams().getMaxDeviation(),
+                        operatorRequest.getGeneralizeParams().getRemoveDegenerates(),
+                        GeneralizeType.ResultContainsOriginal,
                         srGroup.operatorSR,
                         null);
                 break;
@@ -338,79 +338,67 @@ public class GeometryOperatorsUtil {
                 //                boolean b_union,
                 //                ProgressTracker progressTracker
                 //
-                int maxverticesFullCircle = operatorRequest.getMaxVerticesInFullCircle();
-                if (maxverticesFullCircle == 0)
-                    maxverticesFullCircle = 96;
 
-                double[] d;
-                if (operatorRequest.getBufferDistancesCount() == 0) {
-                    d = operatorRequest.getGenericDoublesList().stream().mapToDouble(Double::doubleValue).toArray();
-                } else {
-                    d = operatorRequest.getBufferDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
+                int maxverticesFullCircle = operatorRequest.getBufferParams().getMaxVerticesInFullCircle();
+                if (maxverticesFullCircle == 0) {
+                    maxverticesFullCircle = 96;
                 }
+
+                double[] d = operatorRequest.getBufferParams().getDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
                 resultCursor = OperatorBuffer.local().execute(leftCursor,
                                                               srGroup.operatorSR,
                                                               d,
                                                               Double.NaN,
                                                               maxverticesFullCircle,
-                                                              operatorRequest.getBufferUnionResult(),
+                                                              operatorRequest.getBufferParams().getUnionResult(),
                                                               null);
 
                 //                resultCursor = OperatorBuffer.local().execute(leftCursor, srGroup.operatorSR, d, operatorRequest.getBufferUnionResult(), null);
                 break;
             case Intersection:
                 // TODO hasIntersectionDimensionMask needs to be automagically generated
-                if (operatorRequest.getIntersectionDimensionMask() == 0)
-                    resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
+                if (operatorRequest.hasIntersectionParams() && operatorRequest.getIntersectionParams().getDimensionMask() != 0)
+                    resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null, operatorRequest.getIntersectionParams().getDimensionMask());
                 else
-                    resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null, operatorRequest.getIntersectionDimensionMask());
+                    resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
                 break;
             case Clip:
-                Envelope2D envelope2D = __extractEnvelope2D(operatorRequest.getClipEnvelope());
+                Envelope2D envelope2D = __extractEnvelope2D(operatorRequest.getClipParams().getEnvelope());
                 resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, srGroup.operatorSR, null);
                 break;
             case Cut:
-                resultCursor = OperatorCut.local().execute(operatorRequest.getCutConsiderTouch(), leftCursor.next(), (Polyline) rightCursor.next(), srGroup.operatorSR, null);
+                resultCursor = OperatorCut.local().execute(operatorRequest.getCutParams().getConsiderTouch(), leftCursor.next(), (Polyline) rightCursor.next(), srGroup.operatorSR, null);
                 break;
             case DensifyByLength:
-                double densifyMax = operatorRequest.getGenericDoublesCount() == 0 ? operatorRequest.getDensifyMaxLength() : operatorRequest.getGenericDoubles(0);
-                resultCursor = OperatorDensifyByLength.local().execute(leftCursor, densifyMax, null);
+                resultCursor = OperatorDensifyByLength.local().execute(leftCursor, operatorRequest.getDensifyParams().getMaxLength(), null);
                 break;
             case Simplify:
-                resultCursor = OperatorSimplify.local().execute(leftCursor, null, operatorRequest.getSimplifyForce(), null);
+                resultCursor = OperatorSimplify.local().execute(leftCursor, srGroup.operatorSR, operatorRequest.getSimplifyParams().getForce(), null);
                 break;
             case SimplifyOGC:
-                resultCursor = OperatorSimplifyOGC.local().execute(leftCursor, null, operatorRequest.getSimplifyForce(), null);
+                resultCursor = OperatorSimplifyOGC.local().execute(leftCursor, srGroup.operatorSR, operatorRequest.getSimplifyParams().getForce(), null);
                 break;
             case Offset:
-                double offsetDistance = 0;
-                if (operatorRequest.getGenericDoublesCount() > 0) {
-                    offsetDistance = operatorRequest.getGenericDoubles(0);
-                } else {
-                    offsetDistance = operatorRequest.getOffsetDistance();
-                }
-
                 resultCursor = OperatorOffset.local().execute(
                         leftCursor,
-                        null,
-                        offsetDistance,
-                        OperatorOffset.JoinType.valueOf(operatorRequest.getOffsetJoinType()),
-                        operatorRequest.getOffsetBevelRatio(),
-                        operatorRequest.getOffsetFlattenError(), null);
+                        srGroup.operatorSR,
+                        operatorRequest.getOffsetParams().getDistance(),
+                        OperatorOffset.JoinType.valueOf(operatorRequest.getOffsetParams().getJoinType().toString()),
+                        operatorRequest.getOffsetParams().getBevelRatio(),
+                        operatorRequest.getOffsetParams().getFlattenError(), null);
                 break;
             case Generalize:
                 resultCursor = OperatorGeneralize.local().execute(
                         leftCursor,
-                        operatorRequest.getGeneralizeMaxDeviation(),
-                        operatorRequest.getGeneralizeRemoveDegenerates(),
+                        operatorRequest.getGeneralizeParams().getMaxDeviation(),
+                        operatorRequest.getGeneralizeParams().getRemoveDegenerates(),
                         null);
                 break;
             case SymmetricDifference:
-                resultCursor = OperatorSymmetricDifference.local().execute(leftCursor, rightCursor, null, null);
+                resultCursor = OperatorSymmetricDifference.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
                 break;
             case ConvexHull:
-                boolean convexMerge = (operatorRequest.getGenericBooleansCount() > 0 && operatorRequest.getGenericBooleans(0)) || operatorRequest.getConvexHullMerge() ? true : false;
-                resultCursor = OperatorConvexHull.local().execute(leftCursor, convexMerge, null);
+                resultCursor = OperatorConvexHull.local().execute(leftCursor, operatorRequest.getConvexParams().getConvexHullMerge(), null);
                 break;
             case Boundary:
                 resultCursor = OperatorBoundary.local().execute(leftCursor, null);
@@ -419,10 +407,12 @@ public class GeometryOperatorsUtil {
                 resultCursor = new OperatorEnclosingCircleCursor(leftCursor, srGroup.operatorSR, null);
                 break;
             case RandomPoints:
+                double[] pointsPerSqrKm = operatorRequest.getRandomPointsParams().getPointsPerSquareKmList().stream().mapToDouble(Double::doubleValue).toArray();
+                long seed = operatorRequest.getRandomPointsParams().getSeed();
                 resultCursor = new OperatorRandomPointsCursor(
                         leftCursor,
-                        operatorRequest.getGenericDoublesList().stream().mapToDouble(Double::doubleValue).toArray(),
-                        operatorRequest.getGenericIntegers(0),
+                        pointsPerSqrKm,
+                        seed,
                         srGroup.operatorSR,
                         null);
                 break;
