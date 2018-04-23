@@ -43,6 +43,83 @@ class SpatialReferenceGroup {
     SpatialReference resultSR;
     SpatialReference operatorSR;
 
+    static SpatialReference spatialFromGeometry(GeometryBagData geometryBagData,
+                                                    OperatorRequest nestedRequest) {
+        if (geometryBagData.hasSpatialReference()) {
+            return GeometryOperatorsUtil.__extractSpatialReference(geometryBagData);
+        }
+
+        return GeometryOperatorsUtil.__extractSpatialReferenceCursor(nestedRequest);
+    }
+
+    SpatialReferenceGroup(OperatorRequest operatorRequest1,
+                          SpatialReferenceData paramsSR,
+                          GeometryBagData geometryBagData,
+                          OperatorRequest nestedRequest) {
+        // optional: this is the spatial reference for performing the geometric operation
+        operatorSR = GeometryOperatorsUtil.__extractSpatialReference(paramsSR);
+
+        // optionalish: this is the final spatial reference for the resultSR (project after operatorSR)
+        resultSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest1.getResultSpatialReference());
+
+        leftSR = SpatialReferenceGroup.spatialFromGeometry(geometryBagData, nestedRequest);
+
+        // TODO, there are possibilities for error in here. Also possiblities for too many assumptions. ass of you an me.
+        // if there is a rightSR and a leftSR geometry but no operatorSR spatial reference, then set operatorSpatialReference
+        if (operatorSR == null && leftSR != null) {
+            operatorSR = leftSR;
+        }
+
+        if (leftSR == null) {
+            leftSR = operatorSR;
+        }
+
+        // if there is no resultSpatialReference set it to be the operatorSpatialReference
+        if (resultSR == null) {
+            resultSR = operatorSR;
+        }
+    }
+
+    SpatialReferenceGroup(OperatorRequest operatorRequest1,
+                          SpatialReferenceData paramsSR,
+                          GeometryBagData leftGeometryBagData,
+                          OperatorRequest leftNestedRequest,
+                          GeometryBagData rightGeometryBagData,
+                          OperatorRequest rightNestedRequest) {
+        // optional: this is the spatial reference for performing the geometric operation
+        operatorSR = GeometryOperatorsUtil.__extractSpatialReference(paramsSR);
+
+        // optionalish: this is the final spatial reference for the resultSR (project after operatorSR)
+        resultSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest1.getResultSpatialReference());
+
+        leftSR = SpatialReferenceGroup.spatialFromGeometry(leftGeometryBagData, leftNestedRequest);
+
+        rightSR = SpatialReferenceGroup.spatialFromGeometry(rightGeometryBagData, rightNestedRequest);
+
+        // TODO, there are possibilities for error in here. Also possiblities for too many assumptions. ass of you an me.
+        // if there is a rightSR and a leftSR geometry but no operatorSR spatial reference, then set operatorSpatialReference
+        if (operatorSR == null && leftSR != null && (rightSR == null || leftSR.equals(rightSR))) {
+            operatorSR = leftSR;
+        }
+
+        if (leftSR == null) {
+            leftSR = operatorSR;
+            if (rightSR == null) {
+                rightSR = operatorSR;
+            }
+        }
+
+        // TODO improve geometry to work with local spatial references. This is super ugly as it stands
+        if (((leftSR != null && rightSR == null) || (leftSR == null && rightSR != null))) {
+            throw new IllegalArgumentException("either both spatial references are local or neither");
+        }
+
+        // if there is no resultSpatialReference set it to be the operatorSpatialReference
+        if (resultSR == null) {
+            resultSR = operatorSR;
+        }
+    }
+
     SpatialReferenceGroup(OperatorRequest operatorRequest) {
         // optional: this is the spatial reference for performing the geometric operation
         operatorSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getOperationSpatialReference());
@@ -72,14 +149,15 @@ class SpatialReferenceGroup {
 
         if (leftSR == null) {
             leftSR = operatorSR;
-            if (rightSR == null && (operatorRequest.hasRightGeometryBag() || operatorRequest.hasRightNestedRequest()))
+            if (rightSR == null && (operatorRequest.hasRightGeometryBag() || operatorRequest.hasRightNestedRequest())) {
                 rightSR = operatorSR;
+            }
         }
 
         // TODO improve geometry to work with local spatial references. This is super ugly as it stands
         if ((operatorRequest.hasRightNestedRequest() || operatorRequest.hasRightGeometryBag()) &&
                 ((leftSR != null && rightSR == null) ||
-                (leftSR == null && rightSR != null))) {
+                        (leftSR == null && rightSR != null))) {
             throw new IllegalArgumentException("either both spatial references are local or neither");
         }
 
@@ -209,10 +287,11 @@ public class GeometryOperatorsUtil {
             GeometryCursor rightCursor,
             SpatialReferenceGroup srGroup) throws IOException {
         if (leftCursor != null && rightCursor == null) {
-            if (operatorRequest.hasRightGeometryBag())
+            if (operatorRequest.hasRightGeometryBag()) {
                 rightCursor = __createGeometryCursor(operatorRequest.getRightGeometryBag());
-            else if (operatorRequest.hasRightNestedRequest())
+            } else if (operatorRequest.hasRightNestedRequest()) {
                 rightCursor = cursorFromRequest(operatorRequest.getRightNestedRequest(), null, null);
+            }
         }
 
         if (rightCursor != null && srGroup.operatorSR != null && !srGroup.operatorSR.equals(srGroup.rightSR)) {
@@ -285,7 +364,7 @@ public class GeometryOperatorsUtil {
                 break;
             case GeodesicBuffer:
                 List<Double> doubleList = operatorRequest.getBufferParams().getDistancesList();
-
+//                srGroup = new SpatialReferenceGroup(operatorRequest.getBufferParams(), operatorRequest.getResultSpatialReference());
                 double maxDeviations = Double.NaN;
                 if (operatorRequest.getBufferParams().getMaxDeviationsCount() > 0) {
                     maxDeviations = operatorRequest.getBufferParams().getMaxDeviations(0);
@@ -338,7 +417,7 @@ public class GeometryOperatorsUtil {
                 //                boolean b_union,
                 //                ProgressTracker progressTracker
                 //
-
+//                srGroup = new SpatialReferenceGroup(operatorRequest.getBufferParams(), operatorRequest.getResultSpatialReference());
                 int maxverticesFullCircle = operatorRequest.getBufferParams().getMaxVerticesInFullCircle();
                 if (maxverticesFullCircle == 0) {
                     maxverticesFullCircle = 96;

@@ -205,6 +205,94 @@ message OperatorResult {
 //    string de_9im = 29;
 //}
 
+//message AbstractOneGeometry {
+//    oneof left_geoms {
+//        GeometryBagData left_geometry_bag = 1;
+//        OperatorRequest left_nested_request = 2;
+//    }
+//    SpatialReferenceData operation_spatial_reference = 3;
+//}
+
+message AbstractOneGeometry {
+    oneof left_geoms {
+        GeometryBagData left_geometry_bag = 1;
+        OperatorRequest left_nested_request = 2;
+    }
+    SpatialReferenceData operation_spatial_reference = 3;
+    oneof right_geoms {
+        GeometryBagData right_geometry_bag = 4;
+        OperatorRequest right_nested_request = 5;
+    }
+}
+
+message BufferParams {
+    oneof left_geoms {
+        GeometryBagData left_geometry_bag = 1;
+        OperatorRequest left_nested_request = 2;
+    }
+    SpatialReferenceData operation_spatial_reference = 3;
+    repeated double distances = 4;
+    repeated double max_deviations = 5;
+    bool union_result = 6;
+    int32 max_vertices_in_full_circle = 7;
+}
+
+message GeodeticBufferParams {
+    repeated double distances = 1;
+    repeated double max_deviations = 2;
+    bool union_result = 3;
+    int32 max_vertices_in_full_circle = 4;
+}
+
+message ConvexParams {
+    bool convex_hull_merge = 1;
+}
+
+message RelateParams {
+    string de_9im = 1;
+}
+
+message RandomPointsParams {
+    repeated double points_per_square_km = 1;
+    int64 seed = 2;
+}
+
+message GeneralizeParams {
+    double max_deviation = 1;
+    bool remove_degenerates = 2;
+}
+
+message GeneralizeByAreaParams {
+    double max_deviation = 1;
+    bool remove_degenerates = 2;
+}
+
+message IntersectionParams {
+    int32 dimension_mask = 1;
+}
+
+message OffsetParams {
+    double distance = 1;
+    OffsetJoinType join_type = 2;
+    double bevel_ratio = 3;
+    double flatten_error = 4;
+}
+
+message CutParams {
+    bool consider_touch = 14;
+}
+
+message ClipParams {
+    EnvelopeData envelope = 13;
+}
+
+message DensifyParams {
+    double max_length = 15;
+}
+
+message SimplifyParams {
+    bool force = 16;
+}
 
 message OperatorRequest {
 
@@ -224,72 +312,6 @@ message OperatorRequest {
     SpatialReferenceData operation_spatial_reference = 7;
 
     SpatialReferenceData result_spatial_reference = 8;
-
-
-    message BufferParams {
-
-        repeated double distances = 1;
-        repeated double max_deviations = 2;
-        bool union_result = 3;
-        int32 max_vertices_in_full_circle = 4;
-    }
-
-    message GeodeticBufferParams {
-        repeated double distances = 1;
-        repeated double max_deviations = 2;
-        bool union_result = 3;
-        int32 max_vertices_in_full_circle = 4;
-    }
-
-    message ConvexParams {
-        bool convex_hull_merge = 1;
-    }
-
-    message RelateParams {
-        string de_9im = 1;
-    }
-
-    message RandomPointsParams {
-        repeated double points_per_square_km = 1;
-        int64 seed = 2;
-    }
-
-    message GeneralizeParams {
-        double max_deviation = 1;
-        bool remove_degenerates = 2;
-    }
-
-    message GeneralizeByAreaParams {
-        double max_deviation = 1;
-        bool remove_degenerates = 2;
-    }
-
-    message IntersectionParams {
-        int32 dimension_mask = 1;
-    }
-
-    message OffsetParams {
-        double distance = 1;
-        OffsetJoinType join_type = 2;
-        double bevel_ratio = 3;
-        double flatten_error = 4;
-    }
-
-    message CutParams {
-        bool consider_touch = 14;
-    }
-
-    message ClipParams {
-        EnvelopeData envelope = 13;
-    }
-
-    message DensifyParams {
-        double max_length = 15;
-    }
-
-    message SimplifyParams {
-        bool force = 16;
-    }
 
     oneof params {
         BufferParams buffer_params = 31;

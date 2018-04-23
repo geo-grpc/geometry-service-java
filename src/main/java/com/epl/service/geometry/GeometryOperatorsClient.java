@@ -139,9 +139,11 @@ public class GeometryOperatorsClient {
                 .setGeometryEncodingType(GeometryEncodingType.esrishape)
                 .setSpatialReference(serviceSpatialReference);
 
+        BufferParams bufferParams = BufferParams.newBuilder().addDistances(2.5).build();
+
         OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
-                .setBufferParams(OperatorRequest.BufferParams.newBuilder().addDistances(2.5).build())
+                .setBufferParams(bufferParams)
 //                .addBufferDistances(2.5)
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .setResultSpatialReference(wgs84SpatiralReference);
