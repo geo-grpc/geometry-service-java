@@ -28,10 +28,7 @@ import com.google.protobuf.ByteString;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -129,9 +126,13 @@ class SpatialReferenceGroup {
 
         if (operatorRequest.hasLeftGeometryBag() && operatorRequest.getLeftGeometryBag().hasSpatialReference()) {
             leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getLeftGeometryBag());
+        } else if (operatorRequest.hasGeometryBag() && operatorRequest.getGeometryBag().hasSpatialReference()) {
+            leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getGeometryBag());
+        } else if (operatorRequest.hasLeftNestedRequest()) {
+            leftSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getLeftNestedRequest());
         } else {
             // assumes left cursor exists
-            leftSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getLeftNestedRequest());
+            leftSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getNestedRequest());
         }
 
         if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSpatialReference()) {
@@ -251,25 +252,35 @@ public class GeometryOperatorsUtil {
         }
 
         //TODO I'm just blindly setting the spatial reference here instead of projecting the resultSR into the spatial reference
-        // TODO There needs to be better tracking of geometry id throughout process
         geometryBagBuilder
                 .setGeometryEncodingType(encodingType)
-                .addAllGeometryIds(operatorRequest.getLeftGeometryBag().getGeometryIdsList())
                 .setSpatialReference(operatorRequest.getResultSpatialReference());
+
+        // TODO There needs to be better tracking of geometry id throughout process
+        // the only way that input geometry ids should be carried onto the result is if the input is not a left geometry, but just a geometry
+        if (operatorRequest.hasGeometryBag()) {
+            geometryBagBuilder.addAllGeometryIds(operatorRequest.getGeometryBag().getGeometryIdsList());
+        }
 
         return geometryBagBuilder.build();
     }
+
 
     public static GeometryCursor __getLeftNestedRequestFromRequest(
             OperatorRequest operatorRequest,
             GeometryCursor leftCursor,
             SpatialReferenceGroup srGroup) throws IOException {
         if (leftCursor == null) {
-            if (operatorRequest.hasLeftGeometryBag())
+            if (operatorRequest.hasLeftGeometryBag()) {
                 leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
-            else
-                // assumes there is always a left geometry
+            } else if (operatorRequest.hasGeometryBag()) {
+                leftCursor = __createGeometryCursor(operatorRequest.getGeometryBag());
+            } else if (operatorRequest.hasLeftNestedRequest()) {
                 leftCursor = cursorFromRequest(operatorRequest.getLeftNestedRequest(), null, null);
+            } else {
+                // assumes there is always a nested request if none of the above worked
+                leftCursor = cursorFromRequest(operatorRequest.getNestedRequest(), null, null);
+            }
         }
 
         // project left if needed
@@ -364,7 +375,6 @@ public class GeometryOperatorsUtil {
                 break;
             case GeodesicBuffer:
                 List<Double> doubleList = operatorRequest.getBufferParams().getDistancesList();
-//                srGroup = new SpatialReferenceGroup(operatorRequest.getBufferParams(), operatorRequest.getResultSpatialReference());
                 double maxDeviations = Double.NaN;
                 if (operatorRequest.getBufferParams().getMaxDeviationsCount() > 0) {
                     maxDeviations = operatorRequest.getBufferParams().getMaxDeviations(0);
@@ -417,7 +427,6 @@ public class GeometryOperatorsUtil {
                 //                boolean b_union,
                 //                ProgressTracker progressTracker
                 //
-//                srGroup = new SpatialReferenceGroup(operatorRequest.getBufferParams(), operatorRequest.getResultSpatialReference());
                 int maxverticesFullCircle = operatorRequest.getBufferParams().getMaxVerticesInFullCircle();
                 if (maxverticesFullCircle == 0) {
                     maxverticesFullCircle = 96;
@@ -432,7 +441,6 @@ public class GeometryOperatorsUtil {
                                                               operatorRequest.getBufferParams().getUnionResult(),
                                                               null);
 
-                //                resultCursor = OperatorBuffer.local().execute(leftCursor, srGroup.operatorSR, d, operatorRequest.getBufferUnionResult(), null);
                 break;
             case Intersection:
                 // TODO hasIntersectionDimensionMask needs to be automagically generated
@@ -477,7 +485,7 @@ public class GeometryOperatorsUtil {
                 resultCursor = OperatorSymmetricDifference.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
                 break;
             case ConvexHull:
-                resultCursor = OperatorConvexHull.local().execute(leftCursor, operatorRequest.getConvexParams().getConvexHullMerge(), null);
+                resultCursor = OperatorConvexHull.local().execute(leftCursor, operatorRequest.getConvexParams().getMerge(), null);
                 break;
             case Boundary:
                 resultCursor = OperatorBoundary.local().execute(leftCursor, null);
@@ -572,7 +580,11 @@ public class GeometryOperatorsUtil {
         // If the only operation used by the user is to export to one of the formats then enter this if statement and
         // assign the left cursor to the result cursor
         if (encodingType != GeometryEncodingType.unknown) {
-            resultCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
+            if (operatorRequest.hasLeftGeometryBag()) {
+                resultCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
+            } else {
+                resultCursor = __createGeometryCursor(operatorRequest.getGeometryBag());
+            }
         }
         operatorResultBuilder.setGeometryBag(__encodeGeometry(resultCursor, operatorRequest, encodingType));
         return operatorResultBuilder.build();
@@ -590,14 +602,19 @@ public class GeometryOperatorsUtil {
 
 
     protected static SpatialReference __extractSpatialReferenceCursor(OperatorRequest operatorRequestCursor) {
-        if (operatorRequestCursor.hasResultSpatialReference())
+        if (operatorRequestCursor.hasResultSpatialReference()) {
             return __extractSpatialReference(operatorRequestCursor.getResultSpatialReference());
-        else if (operatorRequestCursor.hasOperationSpatialReference())
+        } else if (operatorRequestCursor.hasOperationSpatialReference()) {
             return __extractSpatialReference(operatorRequestCursor.getOperationSpatialReference());
-        else if (operatorRequestCursor.hasLeftNestedRequest())
+        } else if (operatorRequestCursor.hasLeftNestedRequest()) {
             return __extractSpatialReferenceCursor(operatorRequestCursor.getLeftNestedRequest());
-        else if (operatorRequestCursor.hasLeftGeometryBag())
+        } else if (operatorRequestCursor.hasLeftGeometryBag()) {
             return __extractSpatialReference(operatorRequestCursor.getLeftGeometryBag().getSpatialReference());
+        } else if (operatorRequestCursor.hasNestedRequest()) {
+            return __extractSpatialReferenceCursor(operatorRequestCursor.getNestedRequest());
+        } else if (operatorRequestCursor.hasGeometryBag()) {
+            return __extractSpatialReference(operatorRequestCursor.getGeometryBag().getSpatialReference());
+        }
         return null;
     }
 

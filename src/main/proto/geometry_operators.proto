@@ -205,36 +205,12 @@ message OperatorResult {
 //    string de_9im = 29;
 //}
 
-//message AbstractOneGeometry {
-//    oneof left_geoms {
-//        GeometryBagData left_geometry_bag = 1;
-//        OperatorRequest left_nested_request = 2;
-//    }
-//    SpatialReferenceData operation_spatial_reference = 3;
-//}
-
-message AbstractOneGeometry {
-    oneof left_geoms {
-        GeometryBagData left_geometry_bag = 1;
-        OperatorRequest left_nested_request = 2;
-    }
-    SpatialReferenceData operation_spatial_reference = 3;
-    oneof right_geoms {
-        GeometryBagData right_geometry_bag = 4;
-        OperatorRequest right_nested_request = 5;
-    }
-}
 
 message BufferParams {
-    oneof left_geoms {
-        GeometryBagData left_geometry_bag = 1;
-        OperatorRequest left_nested_request = 2;
-    }
-    SpatialReferenceData operation_spatial_reference = 3;
-    repeated double distances = 4;
-    repeated double max_deviations = 5;
-    bool union_result = 6;
-    int32 max_vertices_in_full_circle = 7;
+    repeated double distances = 1;
+    repeated double max_deviations = 2;
+    bool union_result = 3;
+    int32 max_vertices_in_full_circle = 4;
 }
 
 message GeodeticBufferParams {
@@ -245,7 +221,7 @@ message GeodeticBufferParams {
 }
 
 message ConvexParams {
-    bool convex_hull_merge = 1;
+    bool merge = 1;
 }
 
 message RelateParams {
@@ -279,52 +255,54 @@ message OffsetParams {
 }
 
 message CutParams {
-    bool consider_touch = 14;
+    bool consider_touch = 1;
 }
 
 message ClipParams {
-    EnvelopeData envelope = 13;
+    EnvelopeData envelope = 1;
 }
 
 message DensifyParams {
-    double max_length = 15;
+    double max_length = 1;
 }
 
 message SimplifyParams {
-    bool force = 16;
+    bool force = 1;
 }
 
 message OperatorRequest {
+    oneof primary_geoms {
+        GeometryBagData geometry_bag = 1;
+        OperatorRequest nested_request = 2;
+        GeometryBagData left_geometry_bag = 3;
+        OperatorRequest left_nested_request = 4;
+    }
 
-//    GeometryBagData geometry_bag = 30;
-//    OperatorRequest nested_request = 31;
+    oneof secondary_geoms {
+        GeometryBagData right_geometry_bag = 5;
+        OperatorRequest right_nested_request = 6;
+    }
 
-    GeometryBagData left_geometry_bag = 1;
-    GeometryBagData right_geometry_bag = 2;
+    ServiceOperatorType operator_type = 7;
 
-    OperatorRequest left_nested_request = 3;
-    OperatorRequest right_nested_request = 4;
+    GeometryEncodingType results_encoding_type = 8;
 
-    ServiceOperatorType operator_type = 5;
+    SpatialReferenceData operation_spatial_reference = 9;
 
-    GeometryEncodingType results_encoding_type = 6;
-
-    SpatialReferenceData operation_spatial_reference = 7;
-
-    SpatialReferenceData result_spatial_reference = 8;
+    SpatialReferenceData result_spatial_reference = 10;
 
     oneof params {
-        BufferParams buffer_params = 31;
-        ConvexParams convex_params = 32;
-        RelateParams relate_params = 33;
-        RandomPointsParams random_points_params = 34;
-        GeneralizeParams generalize_params = 35;
-        IntersectionParams intersection_params = 36;
-        OffsetParams offset_params = 37;
-        CutParams cut_params = 38;
-        ClipParams clip_params = 39;
-        DensifyParams densify_params = 40;
-        SimplifyParams simplify_params = 41;
+        BufferParams buffer_params = 11;
+        ConvexParams convex_params = 12;
+        RelateParams relate_params = 13;
+        RandomPointsParams random_points_params = 14;
+        GeneralizeParams generalize_params = 15;
+        IntersectionParams intersection_params = 16;
+        OffsetParams offset_params = 17;
+        CutParams cut_params = 18;
+        ClipParams clip_params = 19;
+        DensifyParams densify_params = 20;
+        SimplifyParams simplify_params = 21;
     }
 }
 
