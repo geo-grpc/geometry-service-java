@@ -400,13 +400,28 @@ public class GeometryOperatorsUtil {
             case ShapePreservingDensify:
                 break;
             case GeneralizeByArea:
-                resultCursor = OperatorGeneralizeByArea.local().execute(
-                        leftCursor,
-                        operatorRequest.getGeneralizeByAreaParams().getPercentReduction(),
-                        operatorRequest.getGeneralizeByAreaParams().getRemoveDegenerates(),
-                        GeneralizeType.ResultContainsOriginal,
-                        srGroup.operatorSR,
-                        null);
+                GeneralizeByAreaParams generalizeByAreaParams = operatorRequest.getGeneralizeByAreaParams();
+                if (generalizeByAreaParams.getPercentReduction() > 0) {
+                    resultCursor = OperatorGeneralizeByArea.local().execute(
+                            leftCursor,
+                            generalizeByAreaParams.getPercentReduction(),
+                            generalizeByAreaParams.getRemoveDegenerates(),
+                            GeneralizeType.ResultContainsOriginal,
+                            srGroup.operatorSR,
+                            null);
+                } else if (generalizeByAreaParams.getMaxPointCount() > 0) {
+                    resultCursor = OperatorGeneralizeByArea.local().execute(
+                            leftCursor,
+                            generalizeByAreaParams.getRemoveDegenerates(),
+                            generalizeByAreaParams.getMaxPointCount(),
+                            GeneralizeType.ResultContainsOriginal,
+                            srGroup.operatorSR,
+                            null);
+                } else {
+                    // maybe a user passes a 0 for maxPoint count, which is impossible or 0 for percent reduced
+                    // which means not reduced at all. so we just pass back the input
+                    resultCursor = leftCursor;
+                }
                 break;
             case Project:
                 resultCursor = leftCursor;

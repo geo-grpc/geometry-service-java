@@ -208,6 +208,7 @@ message GeneralizeParams {
 message GeneralizeByAreaParams {
     double percent_reduction = 1;
     bool remove_degenerates = 2;
+    int32 max_point_count = 3;
 }
 
 message IntersectionParams {
