@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 /**
  * Reads a shapefile
@@ -30,6 +31,7 @@ import java.io.InputStream;
 public class ShapefileByteReader {
 
     private final MixedEndianDataInputStream inputStream;
+    private ArrayList<MixedEndianDataInputStream> inputStreamList;
     private final Envelope2D envelope2D;
 
     private OperatorImportFromESRIShape importFromESRIShape = OperatorImportFromESRIShape.local();
@@ -44,7 +46,6 @@ public class ShapefileByteReader {
             return null;
         }
         try {
-
             recordNumber = inputStream.readInt();//1 based
             int recLength = inputStream.readInt();
             position += 8;
@@ -76,7 +77,6 @@ public class ShapefileByteReader {
     }
 
     public ShapefileByteReader(InputStream in) throws IOException {
-
         this.inputStream = new MixedEndianDataInputStream(in);
 
         /*
@@ -134,6 +134,7 @@ public class ShapefileByteReader {
 
         position = 2 * 50; //header is always 50 words long
 
+        inputStreamList = new ArrayList<>();
     }
 
     /**

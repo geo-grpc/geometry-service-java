@@ -26,11 +26,24 @@ import java.io.InputStream;
  */
 class MixedEndianDataInputStream extends DataInputStream {
     private byte readBuffer[] = new byte[8];
+    private int input_stream_size = 0;
 
     MixedEndianDataInputStream(InputStream inputStream) {
         super(inputStream);
     }
 
+    MixedEndianDataInputStream(InputStream inputStream, int input_stream_size) {
+        super(inputStream);
+        this.input_stream_size = input_stream_size;
+    }
+
+    void updateSize(int subtract) {
+        input_stream_size -= subtract;
+    }
+
+    int getSize() {
+        return input_stream_size;
+    }
     /**
      * modification of {@link DataInputStream#readInt()} reversing byte order
      */

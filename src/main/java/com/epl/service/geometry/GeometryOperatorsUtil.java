@@ -402,8 +402,8 @@ public class GeometryOperatorsUtil {
             case GeneralizeByArea:
                 resultCursor = OperatorGeneralizeByArea.local().execute(
                         leftCursor,
-                        operatorRequest.getGeneralizeParams().getMaxDeviation(),
-                        operatorRequest.getGeneralizeParams().getRemoveDegenerates(),
+                        operatorRequest.getGeneralizeByAreaParams().getPercentReduction(),
+                        operatorRequest.getGeneralizeByAreaParams().getRemoveDegenerates(),
                         GeneralizeType.ResultContainsOriginal,
                         srGroup.operatorSR,
                         null);
