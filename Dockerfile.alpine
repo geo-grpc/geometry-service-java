@@ -1,11 +1,20 @@
-ARG JDK_TAG=8-jdk-slim
+ARG JDK_TAG=8-jdk-alpine
 ARG JRE_TAG=${JDK_TAG}
 
 FROM us.gcr.io/echoparklabs/geometry-api-java:${JDK_TAG} as builder
 
 MAINTAINER David Raleigh <david@echoparklabs.io>
 
-RUN apt-get update
+RUN apk update
+RUN apk add --no-cache bash
+
+# https://github.com/xolstice/protobuf-maven-plugin/issues/23
+# https://github.com/sgerrand/alpine-pkg-glibc
+# stupid bash
+RUN apk --no-cache add ca-certificates wget
+RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
+RUN wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.28-r0/glibc-2.28-r0.apk
+RUN apk add glibc-2.28-r0.apk
 
 COPY ./ /opt/src/geometry-service-java
 
@@ -15,7 +24,7 @@ RUN ./gradlew build install
 
 
 FROM us.gcr.io/echoparklabs/geometry-api-java:${JRE_TAG}
-RUN apt-get update
+RUN apk update
 
 WORKDIR /opt/src/geometry-service-java/build/install
 COPY --from=builder /opt/src/geometry-service-java/build/install .
