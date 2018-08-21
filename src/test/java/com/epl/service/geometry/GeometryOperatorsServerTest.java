@@ -582,38 +582,4 @@ public class GeometryOperatorsServerTest {
         }
         assertTrue(bFoundEmpty);
     }
-
-    @Ignore
-    @Test
-    public void testRicksSA() {
-        try {
-            OperatorImportFromGeoJson op = (OperatorImportFromGeoJson) OperatorFactoryLocal.getInstance().getOperator(Operator.Type.ImportFromGeoJson);
-
-            InputStreamReader isr = new FileReader("/Users/davidraleigh/code/geometry-api-java/build/resources/test/com/esri/core/geometry/shapes_v1c.json");
-            JSONObject geoJsonObject = new JSONObject(isr);
-            Iterator<String> iter = geoJsonObject.keys();
-            List<Geometry> geometryList = new ArrayList<Geometry>();
-            OperatorSimplify operatorSimplify = (OperatorSimplify.local());
-            SpatialReference sr = SpatialReference.create(4326);
-            while (iter.hasNext()) {
-                JSONObject jsonObject = geoJsonObject.getJSONObject(iter.next());
-                MapGeometry mg = op.execute(0, Geometry.Type.Unknown, jsonObject.toString(), null);
-                Geometry mgSimple = operatorSimplify.execute(mg.getGeometry(), sr, true, null);
-                geometryList.add(mgSimple);
-            }
-            SimpleGeometryCursor sgc = new SimpleGeometryCursor(geometryList);
-            OperatorUnion union = (OperatorUnion) OperatorFactoryLocal.getInstance().getOperator(Operator.Type.Union);
-
-            GeometryCursor outputCursor = union.execute(sgc, sr, null);
-            Geometry result = outputCursor.next();
-            OperatorExportToGeoJson operatorExportToGeoJson = OperatorExportToGeoJson.local();
-
-            Geometry resSimple = operatorSimplify.execute(result, sr, true, null);
-
-            String s = operatorExportToGeoJson.execute(resSimple);
-            int a = 0;
-        } catch (Exception e) {
-            assertNull(e);
-        }
-    }
 }
