@@ -104,7 +104,6 @@ public class GeometryOperatorsClientTest {
     public void testAsyncClientStreaming() throws Exception {
     }
 
-
     /**
      * Example for testing bi-directional call.
      */

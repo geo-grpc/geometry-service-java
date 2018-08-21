@@ -8,3 +8,6 @@ out/
 .idea/libraries/*.xml
 *.log
 examples/*.json
+doc/
+local_api_check.sh
+src/main/java/com/epl/core/
