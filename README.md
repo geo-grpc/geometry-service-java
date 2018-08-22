@@ -8,7 +8,7 @@ They're basically like a binary JSON message. It's platform and language neutral
 Quote from google docs:
 >Protocol buffers are a flexible, efficient, automated mechanism for serializing structured data – think XML, but smaller, faster, and simpler. You define how you want your data to be structured once, then you can use special generated source code to easily write and read your structured data to and from a variety of data streams and using a variety of languages. You can even update your data structure without breaking deployed programs that are compiled against the "old" format.
 
-###HTTP2 vs HTTP1
+### HTTP2 vs HTTP1
 gRPC uses HTTP2 only. So why use HTTP2? The advantage is to have one TCP connection with true multiplexing. From [HTTP/2 FAQ](https://http2.github.io/faq/#why-just-one-tcp-connection):
 > One application opening so many connections simultaneously breaks a lot of the assumptions that TCP was built upon; since each connection will start a flood of data in the response, there’s a real risk that buffers in the intervening network will overflow, causing a congestion event and retransmits.
 
