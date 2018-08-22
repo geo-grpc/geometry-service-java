@@ -1,18 +1,7 @@
 # v0 gRPC geometry operator service
 This service uses a fork of ESRI's open source computational geometry library to provide computational geometry operators over gRPC.
 
-## Why gRPC and protocol buffers
-### Protocol Buffers
-They're basically like a binary JSON message. It's platform and language neutral (Python, C++, Java, Go, Node.js). Google provides libraries for each language for auto-generating gRPC communication library code to use the service defined in the proto file.
 
-Quote from google docs:
->Protocol buffers are a flexible, efficient, automated mechanism for serializing structured data – think XML, but smaller, faster, and simpler. You define how you want your data to be structured once, then you can use special generated source code to easily write and read your structured data to and from a variety of data streams and using a variety of languages. You can even update your data structure without breaking deployed programs that are compiled against the "old" format.
-
-### HTTP2 vs HTTP1
-gRPC uses HTTP2 only. So why use HTTP2? The advantage is to have one TCP connection with true multiplexing. From [HTTP/2 FAQ](https://http2.github.io/faq/#why-just-one-tcp-connection):
-> One application opening so many connections simultaneously breaks a lot of the assumptions that TCP was built upon; since each connection will start a flood of data in the response, there’s a real risk that buffers in the intervening network will overflow, causing a congestion event and retransmits.
-
-http://www.http2demo.io/
 
 ## Building for developement
 
@@ -161,19 +150,69 @@ to run the python sample:
 python geometry-client-python/geometry_client/sample.py
 ```
 
-## API Style
-### Chaining :
- ```java
-ServiceGeometry serviceGeometry = ServiceGeometry.newBuilder().setGeometryEncodingType("wkb").setGeometryBinary(ByteString.copyFrom(op.execute(0, polyline, null))).build();
-    OperatorRequest serviceConvexOp = OperatorRequest
-            .newBuilder()
-            .setLeftGeometry(serviceGeometry)
-            .setOperatorType(Operator.Type.ConvexHull.toString())
-            .build();
+## Examples
+### Chaining in Go:
+ ```go
+spatialReferenceWGS := pb.SpatialReferenceData{Wkid:4326}
+	spatialReferenceNAD := pb.SpatialReferenceData{Wkid:4269}//SpatialReferenceData.newBuilder().setWkid(4269).build();
+	spatialReferenceMerc := pb.SpatialReferenceData{Wkid:3857}
+	spatialReferenceGall := pb.SpatialReferenceData{Wkid:54016}
 
-    OperatorRequest serviceOp = OperatorRequest.newBuilder()
-            .setLeftCursor(serviceConvexOp)
-            .addBufferDistances(1)
-            .setOperatorType(Operator.Type.Buffer.toString())
-            .build();
+	//var polyline = "MULTILINESTRING ((-120 -45, -100 -55, -90 -63, 0 0, 1 1, 100 25, 170 45, 175 65))";
+	geometry_string := []string{"MULTILINESTRING ((-120 -45, -100 -55, -90 -63, 0 0, 1 1, 100 25, 170 45, 175 65))"}
+	lefGeometryBag := pb.GeometryBagData{
+		Wkt: geometry_string,
+		GeometryEncodingType:pb.GeometryEncodingType_wkt,
+		SpatialReference:&spatialReferenceNAD}
+
+	operatorLeft := pb.OperatorRequest{
+		GeometryBag:&lefGeometryBag,
+		OperatorType:pb.ServiceOperatorType_Buffer,
+		BufferParams:&pb.BufferParams{Distances:[]float64{.5}},
+		ResultSpatialReference:&spatialReferenceWGS}
+
+	operatorNestedLeft := pb.OperatorRequest{
+		GeometryRequest:&operatorLeft,
+		OperatorType:pb.ServiceOperatorType_ConvexHull,
+		ResultSpatialReference:&spatialReferenceGall}
+
+	rightGeometryBag := pb.GeometryBagData{
+		Wkt: geometry_string,
+		GeometryEncodingType:pb.GeometryEncodingType_wkt,
+		SpatialReference:&spatialReferenceNAD}
+
+	operatorRight := pb.OperatorRequest{
+		GeometryBag:&rightGeometryBag,
+		OperatorType:pb.ServiceOperatorType_GeodesicBuffer,
+		BufferParams:&pb.BufferParams{
+			Distances:[]float64{1000},
+			UnionResult:false},
+		OperationSpatialReference:&spatialReferenceWGS}
+
+	operatorNestedRight := pb.OperatorRequest{
+		GeometryRequest:&operatorRight,
+		OperatorType:pb.ServiceOperatorType_ConvexHull,
+		ResultSpatialReference:&spatialReferenceGall}
+
+	operatorContains := pb.OperatorRequest{
+		LeftGeometryRequest:&operatorNestedLeft,
+		RightGeometryRequest:&operatorNestedRight,
+		OperatorType:pb.ServiceOperatorType_Contains,
+		OperationSpatialReference:&spatialReferenceMerc}
+	operatorResultEquals, err := client.ExecuteOperation(context.Background(), &operatorContains)
 ```
+
+
+
+## Why gRPC and protocol buffers
+### Protocol Buffers
+They're basically like a binary JSON message. It's platform and language neutral (Python, C++, Java, Go, Node.js). Google provides libraries for each language for auto-generating gRPC communication library code to use the service defined in the proto file.
+
+Quote from google docs:
+>Protocol buffers are a flexible, efficient, automated mechanism for serializing structured data – think XML, but smaller, faster, and simpler. You define how you want your data to be structured once, then you can use special generated source code to easily write and read your structured data to and from a variety of data streams and using a variety of languages. You can even update your data structure without breaking deployed programs that are compiled against the "old" format.
+
+### HTTP2 vs HTTP1
+gRPC uses HTTP2 only. So why use HTTP2? The advantage is to have one TCP connection with true multiplexing. From [HTTP/2 FAQ](https://http2.github.io/faq/#why-just-one-tcp-connection):
+> One application opening so many connections simultaneously breaks a lot of the assumptions that TCP was built upon; since each connection will start a flood of data in the response, there’s a real risk that buffers in the intervening network will overflow, causing a congestion event and retransmits.
+
+http://www.http2demo.io/
