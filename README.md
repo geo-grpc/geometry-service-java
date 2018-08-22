@@ -1,14 +1,15 @@
-#First version gRPC geometry service based off of the ESRI geometry-api-java library.
+# v0 gRPC geometry operator service
+This service uses a fork of ESRI's open source computational geometry library to provide computational geometry operators over gRPC.
 
 ## Why gRPC and protocol buffers
 ### Protocol Buffers
-They're basically like a binary JSON message. It's platform and language neutral (Python, C++, Java, Go, Node.js). Google provides libraries for each language for auto-generating library code to use the service defined in the proto file. Serializing and deserializing a smaller message is going to improve throughput.
+They're basically like a binary JSON message. It's platform and language neutral (Python, C++, Java, Go, Node.js). Google provides libraries for each language for auto-generating gRPC communication library code to use the service defined in the proto file.
 
 Quote from google docs:
 >Protocol buffers are a flexible, efficient, automated mechanism for serializing structured data – think XML, but smaller, faster, and simpler. You define how you want your data to be structured once, then you can use special generated source code to easily write and read your structured data to and from a variety of data streams and using a variety of languages. You can even update your data structure without breaking deployed programs that are compiled against the "old" format.
 
 ###HTTP2 vs HTTP1
-One TCP connection with true multiplexing. From [HTTP/2 FAQ](https://http2.github.io/faq/#why-just-one-tcp-connection):
+gRPC uses HTTP2 only. So why use HTTP2? The advantage is to have one TCP connection with true multiplexing. From [HTTP/2 FAQ](https://http2.github.io/faq/#why-just-one-tcp-connection):
 > One application opening so many connections simultaneously breaks a lot of the assumptions that TCP was built upon; since each connection will start a flood of data in the response, there’s a real risk that buffers in the intervening network will overflow, causing a congestion event and retransmits.
 
 http://www.http2demo.io/
@@ -27,7 +28,6 @@ brew reinstall autoconf
 brew reinstall automake
 brew install ant
 ```
-
 
 ### Building project for Java
 To build the library call (if you don't have gradle, `brew install gradle`, if you own a linux/windoze, godspeed):
