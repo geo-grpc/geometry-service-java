@@ -241,10 +241,14 @@ public class GeometryOperatorsServer {
                 responseObserver.onNext(__executeOperator(request));
                 responseObserver.onCompleted();
                 // System.out.println("End process");
+            } catch (StatusRuntimeException sre) {
+                logger.log(Level.WARNING, "executeOperation error : ".concat(sre.getMessage()));
+                StatusRuntimeException s = new StatusRuntimeException(Status.fromThrowable(sre));
+                responseObserver.onError(s.getStatus().withDescription("executeOperation error : ".concat(sre.getMessage())).asRuntimeException());
             } catch (Throwable t) {
-                logger.log(Level.WARNING, "executeOperation error : ".concat(t.getMessage()));
+                logger.log(Level.WARNING, "executeOperation error : ".concat(t.toString()));
                 StatusRuntimeException s = new StatusRuntimeException(Status.fromThrowable(t));
-                responseObserver.onError(s.getStatus().withDescription("executeOperation error : ".concat(t.getMessage())).asRuntimeException());
+                responseObserver.onError(s.getStatus().withDescription("executeOperation error : ".concat(t.toString())).asRuntimeException());
 //                responseObserver.onError(new StatusRuntimeException(Status.fromThrowable(t)));
             }
         }
