@@ -1,7 +1,7 @@
 ARG JDK_TAG=8-jdk-alpine
 ARG JRE_TAG=${JDK_TAG}
 
-FROM us.gcr.io/echoparklabs/geometry-api-java:${JDK_TAG} as builder
+FROM echoparklabs/geometry-api-java:${JDK_TAG} as builder
 
 MAINTAINER David Raleigh <david@echoparklabs.io>
 
