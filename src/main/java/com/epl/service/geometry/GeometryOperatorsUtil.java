@@ -246,8 +246,11 @@ public class GeometryOperatorsUtil {
             case geojson:
                 //TODO I'm just blindly setting the spatial reference here instead of projecting the resultSR into the spatial reference
                 // TODO add Spatial reference
-                stringIterable = new StringIterable(new OperatorExportToJsonCursor(null, geometryCursor));
+                stringIterable = new StringIterable(new OperatorExportToGeoJsonCursor(GeoJsonExportFlags.geoJsonExportSkipCRS, null, geometryCursor));
                 geometryBagBuilder.addAllGeojson(stringIterable);
+            case esrijson:
+                stringIterable = new StringIterable(new OperatorExportToJsonCursor(null, geometryCursor));
+                geometryBagBuilder.addAllEsriJson(stringIterable);
                 break;
         }
 
@@ -591,6 +594,9 @@ public class GeometryOperatorsUtil {
             case ExportToGeoJson:
                 encodingType = GeometryEncodingType.geojson;
                 break;
+            case ExportToJson:
+                encodingType = GeometryEncodingType.esrijson;
+                break;
         }
         // If the only operation used by the user is to export to one of the formats then enter this if statement and
         // assign the left cursor to the result cursor
@@ -678,8 +684,13 @@ public class GeometryOperatorsUtil {
             simpleStringCursor = new SimpleStringCursor(stringArrayDeque);
             geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
         } else if (geometryBag.getGeojsonCount() > 0) {
+            stringArrayDeque = new ArrayDeque<>(geometryBag.getGeojsonList());
+            simpleStringCursor = new SimpleStringCursor(stringArrayDeque);
+            MapGeometryCursor mapGeometryCursor = new OperatorImportFromGeoJsonCursor(GeoJsonImportFlags.geoJsonImportSkipCRS, simpleStringCursor, null);
+            geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
+        } else if (geometryBag.getEsriJsonCount() > 0) {
             JsonFactory factory = new JsonFactory();
-            String jsonString = geometryBag.getGeojson(0);
+            String jsonString = geometryBag.getEsriJson(0);
             // TODO no idea whats going on here
             JsonParser jsonParser = factory.createJsonParser(jsonString);
             JsonParserReader jsonParserReader = new JsonParserReader(jsonParser);
