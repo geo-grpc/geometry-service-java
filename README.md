@@ -8,20 +8,20 @@ The Docker images are based off of the [openjdk](https://hub.docker.com/_/openjd
 ### Building Debian
 To build the latest debian 8 jdk image:
 ```bash
-docker build -t echoparklabs/geometry-operators-service:8-jdk-slim .
+docker build -t echoparklabs/geometry-service-java:8-jdk-slim .
 ```
 The latest debian 8 jre image
 ```bash
-docker build --build-arg JRE_TAG=8-jre-slim -t echoparklabs/geometry-operators-service:8-jre-slim .
+docker build --build-arg JRE_TAG=8-jre-slim -t echoparklabs/geometry-service-java:8-jre-slim .
 ```
 To build the latest debian 10 jdk:
 ```bash
-docker build --build-arg JDK_TAG=10-jdk-slim -t echoparklabs/geometry-operators-service:10-jdk-slim .
+docker build --build-arg JDK_TAG=10-jdk-slim -t echoparklabs/geometry-service-java:10-jdk-slim .
 ```
 To build the latest debian 10 jre:
 ```bash
 docker build --build-arg JDK_TAG=10-jdk-slim --build-arg JRE_TAG=10-jre-slim \
-       -t echoparklabs/geometry-operators-service:10-jdk-slim .
+       -t echoparklabs/geometry-service-java:10-jdk-slim .
 ```
 
 
@@ -30,13 +30,13 @@ At this time, the resulting Alpine docker image is about 50% smaller than the sl
 
 To build the latest Alpine JDK 8 image:
 ```bash
-docker build -t echoparklabs/geometry-operators-service:8-jdk-alpine -f Dockerfile.alpine .
+docker build -t echoparklabs/geometry-service-java:8-jdk-alpine -f Dockerfile.alpine .
 ```
 
 To build the latest Alpine JRE image use the jre tag with a `--build-arg` (it will default to the latest JDK 8 alpine image):
 ```bash
 docker build --build-arg JRE_TAG=8-jre-alpine \
-       -t echoparklabs/geometry-operators-service:8-jre-alpine -f Dockerfile.alpine .
+       -t echoparklabs/geometry-service-java:8-jre-alpine -f Dockerfile.alpine .
 ```
 
 
@@ -45,19 +45,19 @@ docker build --build-arg JRE_TAG=8-jre-alpine \
 To build a specific Alpine JDK 8 image use the `--build-arg`. For example if you wanted to build off of the `8u171-jdk-alpine3.8` openjdk image:
 ```bash
 docker build --build-arg JDK_TAG=8u171-jdk-alpine3.8 \
-       -t echoparklabs/geometry-operators-service:8u171-jdk-alpine3.8 -f Dockerfile.alpine .
+       -t echoparklabs/geometry-service-java:8u171-jdk-alpine3.8 -f Dockerfile.alpine .
 ```
 
 And to build a specific jre image use the following `--build-args`. For example if you wanted to the `8u171-jre-alpine3.8`  you would need to also specifiy `8u171-jdk-alpine3.8` JDK:
 ```bash
 docker build --build-arg JRE_TAG=8u171-jre-alpine3.8 \
        --build-arg JDK_TAG=8u171-jdk-alpine3.8 \
-       -t echoparklabs/geometry-operators-service:8u171-jre-alpine3.8 -f Dockerfile.alpine .
+       -t echoparklabs/geometry-service-java:8u171-jre-alpine3.8 -f Dockerfile.alpine .
 ```
 
 Run a container on a local dev machine:
 ```bash
-docker run -p 8980:8980 -it --name=temp-c echoparklabs/geometry-operators-service
+docker run -p 8980:8980 -it --name=temp-c echoparklabs/geometry-service-java
 ```
 
 to test your local java client build against the docker container (after you've run `gradle build` on local dev machine), you'll run:
