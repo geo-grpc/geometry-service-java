@@ -1,6 +1,33 @@
 # v0 gRPC geometry operator service
 This service uses a fork of ESRI's open source computational geometry library to provide computational geometry operators over gRPC.
 
+## Run an the Geometry Service from Docker 
+Run a container on a local dev machine:
+```bash
+docker run -p 8980:8980 -it --name=temp-c echoparklabs/geometry-service-java:8-jre-slim
+```
+
+### Python Sample
+running a python sample will also test the docker container. To build it you will need to follow the instructions in the [geometry-client-python](https://github.com/geo-grpc/geometry-client-python) directory's README.md:
+```bash
+python -m pip install --upgrade pip
+pip install grpc
+pip install shapely
+python -m pip install grpcio
+python -mgrpc_tools.protoc -I=./proto/ --python_out=./ --grpc_python_out=./ ./proto/epl/grpc/geometry/geometry_operators.proto
+```
+
+to run the python sample:
+```bash
+
+pytest test/sample.py
+```
+
+Right now the local Java client tests are not filled out, but if they were you can run them as follows against the containerized service (after you've run `./gradlew build` on local dev machine), you'll run:
+```bash
+./build/install/geometry-service/bin/geometry-operators-client
+```
+
 ## Build Docker Image
 
 The Docker images are based off of the [openjdk](https://hub.docker.com/_/openjdk/) images. You can build a jdk image or a jre image, you can use Java 8 or 10 (maybe 11, haven't tested), and you can use debian or alpine.
@@ -53,29 +80,6 @@ And to build a specific jre image use the following `--build-args`. For example 
 docker build --build-arg JRE_TAG=8u171-jre-alpine3.8 \
        --build-arg JDK_TAG=8u171-jdk-alpine3.8 \
        -t echoparklabs/geometry-service-java:8u171-jre-alpine3.8 -f Dockerfile.alpine .
-```
-
-Run a container on a local dev machine:
-```bash
-docker run -p 8980:8980 -it --name=temp-c echoparklabs/geometry-service-java
-```
-
-to test your local java client build against the docker container (after you've run `gradle build` on local dev machine), you'll run:
-```bash
-./build/install/geometry-service/bin/geometry-operators-client
-```
-
-running a python sample will also test the docker container. To build it you will need to follow the instructions in the geometry-client-python directory's README.md:
-```bash
-python -m pip install --upgrade pip
-pip install grpc
-pip install shapely
-python -m pip install grpcio
-```
-
-to run the python sample:
-```bash
-python geometry-client-python/geometry_client/sample.py
 ```
 
 ## Examples
