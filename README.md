@@ -1,4 +1,4 @@
-# v0 gRPC geometry operator service
+# gRPC geometry operator service
 This service uses a fork of ESRI's open source computational geometry library to provide computational geometry operators over gRPC.
 
 ## Run an the Geometry Service from Docker 
