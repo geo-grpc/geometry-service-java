@@ -8,18 +8,18 @@ docker run -p 8980:8980 -it --name=temp-c echoparklabs/geometry-service-java:8-j
 ```
 
 ### Python Sample
-running a python sample will also test the docker container. To build it you will need to follow the instructions in the [geometry-client-python](https://github.com/geo-grpc/geometry-client-python) directory's README.md:
+running a python sample will also test the docker container. To build it you will need to follow the instructions in the [geometry-client-python](https://github.com/geo-grpc/geometry-client-python) directory's [README.md](https://github.com/geo-grpc/geometry-client-python/blob/master/README.md):
 ```bash
 python -m pip install --upgrade pip
 pip install grpc
-pip install shapely
 python -m pip install grpcio
 python -mgrpc_tools.protoc -I=./proto/ --python_out=./ --grpc_python_out=./ ./proto/epl/grpc/geometry/geometry_operators.proto
 ```
 
 to run the python sample:
 ```bash
-
+pip install shapely
+pip install pytest
 pytest test/sample.py
 ```
 
