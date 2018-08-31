@@ -7,6 +7,9 @@ Run a container on a local dev machine:
 docker run -p 8980:8980 -it --name=temp-c echoparklabs/geometry-service-java:8-jre-slim
 ```
 
+### Go Sample
+There are a few examples described in the README in the [Go repo](https://github.com/geo-grpc/geometry-client-python)
+
 ### Python Sample
 running a python sample will also test the docker container. To build it you will need to follow the instructions in the [geometry-client-python](https://github.com/geo-grpc/geometry-client-python) directory's [README.md](https://github.com/geo-grpc/geometry-client-python/blob/master/README.md):
 ```bash
@@ -23,6 +26,7 @@ pip install pytest
 pytest test/sample.py
 ```
 
+### Java Sample
 Right now the local Java client tests are not filled out, but if they were you can run them as follows against the containerized service (after you've run `./gradlew build` on local dev machine), you'll run:
 ```bash
 ./build/install/geometry-service/bin/geometry-operators-client
