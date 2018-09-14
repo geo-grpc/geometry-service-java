@@ -168,6 +168,7 @@ public class GeometryOperatorsServerTest {
 
         GeometryBagData geometryBag = GeometryBagData.newBuilder()
                 .addWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
+                .addGeometryIds(44)
                 .setSpatialReference(inputSpatialReference)
                 .build();
 
@@ -192,6 +193,7 @@ public class GeometryOperatorsServerTest {
 
         TestCase.assertFalse(polyline.equals(result));
         assertEquals(polyline.getPointCount(), result.getPointCount());
+        assertEquals(operatorResult.getGeometryBag().getGeometryIds(0), 44);
 //    projectionTransformation = new ProjectionTransformation(SpatialReference.create(4326), SpatialReference.create(32632));
 //    Polyline originalPolyline = (Polyline)OperatorProject.local().execute(polylineOut, projectionTransformation, null);
 //
@@ -388,9 +390,9 @@ public class GeometryOperatorsServerTest {
 
         GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
         OperatorResult operatorResult = stub.executeOperation(operatorRequestContains);
-        Map<Integer, Boolean> map = operatorResult.getRelateMapMap();
+        Map<Long, Boolean> map = operatorResult.getRelateMapMap();
 
-        assertTrue(map.get(0));
+        assertTrue(map.get(0L));
     }
 
 

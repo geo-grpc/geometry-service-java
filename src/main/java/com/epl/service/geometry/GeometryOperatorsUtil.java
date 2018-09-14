@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Echo Park Labs
+Copyright 2017-2018 Echo Park Labs
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 
 import com.google.protobuf.ByteString;
+import javafx.util.Pair;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -169,6 +170,31 @@ class SpatialReferenceGroup {
     }
 }
 
+class ByteStringIDIterable implements Iterable<Pair<Long, com.google.protobuf.ByteString>> {
+    ByteBufferCursor m_byteBufferCursor;
+    ByteStringIDIterable(ByteBufferCursor byteBufferCursor) {
+        m_byteBufferCursor = byteBufferCursor;
+    }
+
+    @Override
+    public Iterator<Pair<Long, com.google.protobuf.ByteString>> iterator() {
+        return new Iterator<Pair<Long, com.google.protobuf.ByteString>>() {
+            @Override
+            public boolean hasNext() {
+                return m_byteBufferCursor.hasNext();
+            }
+
+            @Override
+            public Pair<Long, com.google.protobuf.ByteString> next() {
+                ByteBuffer byteBuffer = m_byteBufferCursor.next();
+                long id = m_byteBufferCursor.getByteBufferID();
+                Pair<Long, com.google.protobuf.ByteString> pair = new Pair<>(id, ByteString.copyFrom(byteBuffer));
+                return pair;
+            }
+        };
+    }
+}
+
 class ByteStringIterable implements Iterable<com.google.protobuf.ByteString> {
     ByteBufferCursor m_byteBufferCursor;
     ByteStringIterable(ByteBufferCursor byteBufferCursor) {
@@ -176,16 +202,17 @@ class ByteStringIterable implements Iterable<com.google.protobuf.ByteString> {
     }
 
     @Override
-    public Iterator<ByteString> iterator() {
-        return new Iterator<ByteString>() {
+    public Iterator<com.google.protobuf.ByteString> iterator() {
+        return new Iterator<com.google.protobuf.ByteString>() {
             @Override
             public boolean hasNext() {
                 return m_byteBufferCursor.hasNext();
             }
 
             @Override
-            public ByteString next() {
-                return ByteString.copyFrom(m_byteBufferCursor.next());
+            public com.google.protobuf.ByteString next() {
+                ByteBuffer byteBuffer = m_byteBufferCursor.next();
+                return ByteString.copyFrom(byteBuffer);
             }
         };
     }
@@ -229,23 +256,45 @@ public class GeometryOperatorsUtil {
         }
 
         ByteStringIterable binaryStringIterable;
+        ByteStringIDIterable byteStringIDIterable;
         StringIterable stringIterable;
         switch (encodingType) {
             case wkb:
-                binaryStringIterable = new ByteStringIterable(new OperatorExportToWkbCursor(0, geometryCursor));
-                geometryBagBuilder.addAllWkb(binaryStringIterable);
+
+                OperatorExportToWkbCursor operatorExportToWkbCursor = new OperatorExportToWkbCursor(0, geometryCursor);
+                if (_requestPreservesIDs(operatorRequest)) {
+                    byteStringIDIterable = new ByteStringIDIterable(operatorExportToWkbCursor);
+                    for (Pair<Long, com.google.protobuf.ByteString> pair : byteStringIDIterable) {
+                        geometryBagBuilder.addWkb(pair.getValue());
+                        geometryBagBuilder.addGeometryIds(pair.getKey());
+                    }
+                } else {
+                    binaryStringIterable = new ByteStringIterable(operatorExportToWkbCursor);
+                    geometryBagBuilder.addAllWkb(binaryStringIterable);
+                }
+
                 break;
             case wkt:
                 stringIterable = new StringIterable(new OperatorExportToWktCursor(0, geometryCursor, null));
                 geometryBagBuilder.addAllWkt(stringIterable);
                 break;
             case esrishape:
-                binaryStringIterable = new ByteStringIterable(new OperatorExportToESRIShapeCursor(0, geometryCursor));
-                geometryBagBuilder.addAllEsriShape(binaryStringIterable);
+                OperatorExportToESRIShapeCursor operatorExportToESRIShapeCursor = new OperatorExportToESRIShapeCursor(0, geometryCursor);
+
+                if (_requestPreservesIDs(operatorRequest)) {
+                    byteStringIDIterable = new ByteStringIDIterable(operatorExportToESRIShapeCursor);
+                    for (Pair<Long, com.google.protobuf.ByteString> pair : byteStringIDIterable) {
+                        geometryBagBuilder.addEsriShape(pair.getValue());
+                        geometryBagBuilder.addGeometryIds(pair.getKey());
+                    }
+                } else {
+                    binaryStringIterable = new ByteStringIterable(operatorExportToESRIShapeCursor);
+                    geometryBagBuilder.addAllEsriShape(binaryStringIterable);
+                }
+
                 break;
             case geojson:
-                //TODO I'm just blindly setting the spatial reference here instead of projecting the resultSR into the spatial reference
-                // TODO add Spatial reference
+                // TODO maybe we force geojson to project to WGS 84 if it hasn't already?
                 stringIterable = new StringIterable(new OperatorExportToGeoJsonCursor(GeoJsonExportFlags.geoJsonExportSkipCRS, null, geometryCursor));
                 geometryBagBuilder.addAllGeojson(stringIterable);
             case esrijson:
@@ -340,9 +389,9 @@ public class GeometryOperatorsUtil {
             case Crosses:
             case Touches:
             case Overlaps:
-                HashMap<Integer, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal.getInstance().getOperator(operatorType)).execute(leftCursor.next(), rightCursor, srGroup.operatorSR, null);
+                HashMap<Long, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal.getInstance().getOperator(operatorType)).execute(leftCursor.next(), rightCursor, srGroup.operatorSR, null);
                 if (result_map.size() == 1) {
-                    operatorResultBuilder.setSpatialRelationship(result_map.get(0));
+                    operatorResultBuilder.setSpatialRelationship(result_map.get(0L));
                     operatorResultBuilder.putAllRelateMap(result_map);
                 } else {
                     operatorResultBuilder.putAllRelateMap(result_map);
@@ -661,6 +710,10 @@ public class GeometryOperatorsUtil {
 
         ArrayDeque<ByteBuffer> byteBufferArrayDeque = null;
         ArrayDeque<String> stringArrayDeque = null;
+        ArrayDeque<Long> idsDeque = null;
+        if (geometryBag.getGeometryIdsList().size() > 0) {
+            idsDeque = new ArrayDeque<>(geometryBag.getGeometryIdsList());
+        }
         SimpleByteBufferCursor simpleByteBufferCursor = null;
         SimpleStringCursor simpleStringCursor = null;
         if (geometryBag.getWkbCount() > 0) {
@@ -669,7 +722,8 @@ public class GeometryOperatorsUtil {
                     .stream()
                     .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
                     .collect(Collectors.toCollection(ArrayDeque::new));
-            simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque);
+
+            simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque, idsDeque);
             geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
         } else if (geometryBag.getEsriShapeCount() > 0) {
             byteBufferArrayDeque = geometryBag
@@ -677,15 +731,15 @@ public class GeometryOperatorsUtil {
                     .stream()
                     .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
                     .collect(Collectors.toCollection(ArrayDeque::new));
-            simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque);
+            simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque, idsDeque);
             geometryCursor = new OperatorImportFromESRIShapeCursor(0, 0, simpleByteBufferCursor);
         } else if (geometryBag.getWktCount() > 0) {
             stringArrayDeque = new ArrayDeque<>(geometryBag.getWktList());
-            simpleStringCursor = new SimpleStringCursor(stringArrayDeque);
+            simpleStringCursor = new SimpleStringCursor(stringArrayDeque, idsDeque);
             geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
         } else if (geometryBag.getGeojsonCount() > 0) {
             stringArrayDeque = new ArrayDeque<>(geometryBag.getGeojsonList());
-            simpleStringCursor = new SimpleStringCursor(stringArrayDeque);
+            simpleStringCursor = new SimpleStringCursor(stringArrayDeque, idsDeque);
             MapGeometryCursor mapGeometryCursor = new OperatorImportFromGeoJsonCursor(GeoJsonImportFlags.geoJsonImportSkipCRS, simpleStringCursor, null);
             geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
         } else if (geometryBag.getEsriJsonCount() > 0) {
@@ -699,5 +753,19 @@ public class GeometryOperatorsUtil {
             geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
         }
         return geometryCursor;
+    }
+
+    private static boolean _requestPreservesIDs(OperatorRequest geometryRequest) {
+        if (geometryRequest.hasRightGeometryBag() || geometryRequest.hasRightGeometryRequest()) {
+            return false;
+        }
+        if (geometryRequest.hasLeftGeometryBag() || geometryRequest.hasGeometryBag()) {
+            return true;
+        }
+        if (geometryRequest.hasLeftGeometryRequest()) {
+            return _requestPreservesIDs(geometryRequest.getLeftGeometryRequest());
+        } else {
+            return _requestPreservesIDs(geometryRequest.getGeometryRequest());
+        }
     }
 }

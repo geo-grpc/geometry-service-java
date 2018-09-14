@@ -34,10 +34,12 @@ service GeometryOperators {
     // Execute a single geometry operation
     rpc ExecuteOperation(OperatorRequest) returns (OperatorResult) {}
 
+    // Stream in requests and return a stream of results
     rpc StreamOperations(stream OperatorRequest) returns (stream OperatorResult) {}
 
     rpc StreamOperationsEx(stream OperatorRequest) returns (stream OperatorResult) {}
 
+    // stream in file chunks for a geometry file type and stream back results for each geometry encountered
     rpc StreamFileOperations(stream FileChunk) returns (stream OperatorResult) {}
 }
 
@@ -120,6 +122,18 @@ enum OffsetJoinType {
     Square =3;
 }
 
+//message GeometryData {
+//    int64 geometry_id = 1;
+//    string wkt = 3;
+//    string geojson = 4;
+//    bytes wkb = 5;
+//    bytes esri_shape = 6;
+//
+//    SpatialReferenceData spatial_reference = 7;
+//
+//    repeated string esri_json = 8;
+//}
+
 //message ServiceGeometryBag {
 message GeometryBagData {
     // id is usually associated with position in file format or database
@@ -155,7 +169,7 @@ message OperatorResult {
 
     double distance = 3;
 
-    map<int32, bool> relate_map = 4;
+    map<int64, bool> relate_map = 4;
 }
 
 enum FileType {
