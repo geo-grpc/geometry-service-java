@@ -70,10 +70,12 @@ public class GeometryOperatorsClientTest {
         String uniqueServerName = "fake server for " + getClass();
 
         // use a mutable service registry for later registering the service impl for each test case.
-        fakeServer = InProcessServerBuilder.forName(uniqueServerName)
-                .fallbackHandlerRegistry(serviceRegistry).directExecutor().build().start();
-        client =
-                new GeometryOperatorsClient(InProcessChannelBuilder.forName(uniqueServerName).directExecutor());
+        fakeServer = InProcessServerBuilder
+                .forName(uniqueServerName)
+                .fallbackHandlerRegistry(serviceRegistry)
+                .directExecutor()
+                .build().start();
+        client = new GeometryOperatorsClient(InProcessChannelBuilder.forName(uniqueServerName).directExecutor());
         client.setTestHelper(testHelper);
     }
 

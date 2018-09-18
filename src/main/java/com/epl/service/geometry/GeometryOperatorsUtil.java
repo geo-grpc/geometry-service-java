@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 
 import com.google.protobuf.ByteString;
-import javafx.util.Pair;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -170,154 +169,117 @@ class SpatialReferenceGroup {
     }
 }
 
-class ByteStringIDIterable implements Iterable<Pair<Long, com.google.protobuf.ByteString>> {
-    ByteBufferCursor m_byteBufferCursor;
-    ByteStringIDIterable(ByteBufferCursor byteBufferCursor) {
-        m_byteBufferCursor = byteBufferCursor;
+class OperatorResultsIterator implements Iterator<OperatorResult> {
+    private StringCursor m_stringCursor = null;
+    private ByteBufferCursor m_byteBufferCursor = null;
+    private GeometryEncodingType m_encodingType = GeometryEncodingType.wkb;
+    private SpatialReferenceData m_spatialReferenceData;
+    private boolean m_bForceCompact;
+
+    private OperatorResult m_precookedResult = null;
+    private boolean m_bPrecookedRetrieved = false;
+
+    OperatorResultsIterator(OperatorResult operatorResult) {
+        m_precookedResult = operatorResult;
     }
 
-    @Override
-    public Iterator<Pair<Long, com.google.protobuf.ByteString>> iterator() {
-        return new Iterator<Pair<Long, com.google.protobuf.ByteString>>() {
-            @Override
-            public boolean hasNext() {
-                return m_byteBufferCursor.hasNext();
+    OperatorResultsIterator(GeometryCursor geometryCursor,
+                            OperatorRequest operatorRequest,
+                            GeometryEncodingType geometryEncodingType,
+                            boolean bForceCompact) {
+        m_bForceCompact = bForceCompact;
+        m_encodingType = geometryEncodingType;
+        m_spatialReferenceData = operatorRequest.getResultSpatialReference();
+
+        if (m_encodingType == null || m_encodingType == GeometryEncodingType.unknown) {
+            if (operatorRequest.getResultsEncodingType() == GeometryEncodingType.unknown) {
+                m_encodingType = GeometryEncodingType.wkb;
+            } else {
+                m_encodingType = operatorRequest.getResultsEncodingType();
             }
+        }
 
-            @Override
-            public Pair<Long, com.google.protobuf.ByteString> next() {
-                ByteBuffer byteBuffer = m_byteBufferCursor.next();
-                long id = m_byteBufferCursor.getByteBufferID();
-                Pair<Long, com.google.protobuf.ByteString> pair = new Pair<>(id, ByteString.copyFrom(byteBuffer));
-                return pair;
-            }
-        };
-    }
-}
-
-class ByteStringIterable implements Iterable<com.google.protobuf.ByteString> {
-    ByteBufferCursor m_byteBufferCursor;
-    ByteStringIterable(ByteBufferCursor byteBufferCursor) {
-        m_byteBufferCursor = byteBufferCursor;
-    }
-
-    @Override
-    public Iterator<com.google.protobuf.ByteString> iterator() {
-        return new Iterator<com.google.protobuf.ByteString>() {
-            @Override
-            public boolean hasNext() {
-                return m_byteBufferCursor.hasNext();
-            }
-
-            @Override
-            public com.google.protobuf.ByteString next() {
-                ByteBuffer byteBuffer = m_byteBufferCursor.next();
-                return ByteString.copyFrom(byteBuffer);
-            }
-        };
-    }
-}
-
-class StringIterable implements Iterable<String> {
-    private StringCursor m_stringCursor;
-    StringIterable(StringCursor stringCursor) {
-        m_stringCursor = stringCursor;
+        switch (m_encodingType) {
+            case unknown:
+            case wkb:
+                m_byteBufferCursor = new OperatorExportToWkbCursor(0, geometryCursor);
+                break;
+            case wkt:
+                m_stringCursor = new OperatorExportToWktCursor(0, geometryCursor, null);
+                break;
+            case geojson:
+                m_stringCursor = new OperatorExportToGeoJsonCursor(GeoJsonExportFlags.geoJsonExportSkipCRS, null, geometryCursor);
+                break;
+            case esrishape:
+                m_byteBufferCursor = new OperatorExportToESRIShapeCursor(0, geometryCursor);
+                break;
+            case esrijson:
+                break;
+            case UNRECOGNIZED:
+                break;
+        }
     }
 
 
     @Override
-    public Iterator<String> iterator() {
-        return new Iterator<String>() {
-            @Override
-            public boolean hasNext() {
-                return m_stringCursor.hasNext();
+    public boolean hasNext() {
+        if (m_precookedResult != null && !m_bPrecookedRetrieved) {
+            return true;
+        }
+
+        if ((m_byteBufferCursor != null && m_byteBufferCursor.hasNext()) || (m_stringCursor != null && m_stringCursor.hasNext()))
+            return true;
+        return false;
+    }
+
+    @Override
+    public OperatorResult next() {
+        if (m_precookedResult != null) {
+            m_bPrecookedRetrieved = true;
+            OperatorResult tempResults = m_precookedResult;
+            m_precookedResult = null;
+            return tempResults;
+        }
+
+        GeometryBagData.Builder geometryBagBuilder = GeometryBagData
+                .newBuilder()
+                .setGeometryEncodingType(m_encodingType)
+                .setSpatialReference(m_spatialReferenceData);
+
+        while (hasNext()) {
+            switch (m_encodingType) {
+                case unknown:
+                case wkb:
+                    geometryBagBuilder.addWkb(ByteString.copyFrom(m_byteBufferCursor.next()));
+                    geometryBagBuilder.addGeometryIds(m_byteBufferCursor.getByteBufferID());
+                    break;
+                case wkt:
+                    geometryBagBuilder.addWkt(m_stringCursor.next());
+                    geometryBagBuilder.addGeometryIds(m_stringCursor.getID());
+                    break;
+                case geojson:
+                    geometryBagBuilder.addGeojson(m_stringCursor.next());
+                    geometryBagBuilder.addGeometryIds(m_stringCursor.getID());
+                    break;
+                case esrishape:
+                    geometryBagBuilder.addEsriShape(ByteString.copyFrom(m_byteBufferCursor.next()));
+                    geometryBagBuilder.addGeometryIds(m_byteBufferCursor.getByteBufferID());
+                    break;
+                case UNRECOGNIZED:
+                    break;
             }
 
-            @Override
-            public String next() {
-                return m_stringCursor.next();
+            // the while loop will continue if all geometries are to be compact into one bag
+            if (!m_bForceCompact) {
+                break;
             }
-        };
+        }
+
+        return OperatorResult.newBuilder().setGeometryBag(geometryBagBuilder).build();
     }
 }
 
 public class GeometryOperatorsUtil {
-    private static GeometryBagData __encodeGeometry(GeometryCursor geometryCursor, OperatorRequest operatorRequest, GeometryEncodingType encodingType) {
-        GeometryBagData.Builder geometryBagBuilder = GeometryBagData.newBuilder();
-
-
-        // TODO not getting stubbed out due to grpc proto stubbing bug
-        if (encodingType == null || encodingType == GeometryEncodingType.unknown) {
-            if (operatorRequest.getResultsEncodingType() == GeometryEncodingType.unknown) {
-                encodingType = GeometryEncodingType.wkb;
-            } else {
-                encodingType = operatorRequest.getResultsEncodingType();
-            }
-        }
-
-        ByteStringIterable binaryStringIterable;
-        ByteStringIDIterable byteStringIDIterable;
-        StringIterable stringIterable;
-        switch (encodingType) {
-            case wkb:
-
-                OperatorExportToWkbCursor operatorExportToWkbCursor = new OperatorExportToWkbCursor(0, geometryCursor);
-                if (_requestPreservesIDs(operatorRequest)) {
-                    byteStringIDIterable = new ByteStringIDIterable(operatorExportToWkbCursor);
-                    for (Pair<Long, com.google.protobuf.ByteString> pair : byteStringIDIterable) {
-                        geometryBagBuilder.addWkb(pair.getValue());
-                        geometryBagBuilder.addGeometryIds(pair.getKey());
-                    }
-                } else {
-                    binaryStringIterable = new ByteStringIterable(operatorExportToWkbCursor);
-                    geometryBagBuilder.addAllWkb(binaryStringIterable);
-                }
-
-                break;
-            case wkt:
-                stringIterable = new StringIterable(new OperatorExportToWktCursor(0, geometryCursor, null));
-                geometryBagBuilder.addAllWkt(stringIterable);
-                break;
-            case esrishape:
-                OperatorExportToESRIShapeCursor operatorExportToESRIShapeCursor = new OperatorExportToESRIShapeCursor(0, geometryCursor);
-
-                if (_requestPreservesIDs(operatorRequest)) {
-                    byteStringIDIterable = new ByteStringIDIterable(operatorExportToESRIShapeCursor);
-                    for (Pair<Long, com.google.protobuf.ByteString> pair : byteStringIDIterable) {
-                        geometryBagBuilder.addEsriShape(pair.getValue());
-                        geometryBagBuilder.addGeometryIds(pair.getKey());
-                    }
-                } else {
-                    binaryStringIterable = new ByteStringIterable(operatorExportToESRIShapeCursor);
-                    geometryBagBuilder.addAllEsriShape(binaryStringIterable);
-                }
-
-                break;
-            case geojson:
-                // TODO maybe we force geojson to project to WGS 84 if it hasn't already?
-                stringIterable = new StringIterable(new OperatorExportToGeoJsonCursor(GeoJsonExportFlags.geoJsonExportSkipCRS, null, geometryCursor));
-                geometryBagBuilder.addAllGeojson(stringIterable);
-            case esrijson:
-                stringIterable = new StringIterable(new OperatorExportToJsonCursor(null, geometryCursor));
-                geometryBagBuilder.addAllEsriJson(stringIterable);
-                break;
-        }
-
-        //TODO I'm just blindly setting the spatial reference here instead of projecting the resultSR into the spatial reference
-        geometryBagBuilder
-                .setGeometryEncodingType(encodingType)
-                .setSpatialReference(operatorRequest.getResultSpatialReference());
-
-        // TODO There needs to be better tracking of geometry id throughout process
-        // the only way that input geometry ids should be carried onto the result is if the input is not a left geometry, but just a geometry
-        if (operatorRequest.hasGeometryBag()) {
-            geometryBagBuilder.addAllGeometryIds(operatorRequest.getGeometryBag().getGeometryIdsList());
-        }
-
-        return geometryBagBuilder.build();
-    }
-
-
     private static GeometryCursor __getLeftGeometryRequestFromRequest(
             OperatorRequest operatorRequest,
             GeometryCursor leftCursor,
@@ -333,12 +295,18 @@ public class GeometryOperatorsUtil {
                 // assumes there is always a nested request if none of the above worked
                 leftCursor = cursorFromRequest(operatorRequest.getGeometryRequest(), null, null);
             }
+        } else {
+            if (operatorRequest.hasLeftGeometryRequest()) {
+                leftCursor = cursorFromRequest(operatorRequest.getLeftGeometryRequest(), leftCursor, null);
+            } else if (operatorRequest.hasGeometryRequest()) {
+                leftCursor = cursorFromRequest(operatorRequest.getGeometryRequest(), leftCursor, null);
+            }
         }
 
         // project left if needed
         if (srGroup.operatorSR != null && !srGroup.operatorSR.equals(srGroup.leftSR)) {
-            ProjectionTransformation projectionTransformation = new ProjectionTransformation(srGroup.leftSR, srGroup.operatorSR);
-            leftCursor = OperatorProject.local().execute(leftCursor, projectionTransformation, null);
+            ProjectionTransformation projTransformation = new ProjectionTransformation(srGroup.leftSR, srGroup.operatorSR);
+            leftCursor = OperatorProject.local().execute(leftCursor, projTransformation, null);
         }
 
         return leftCursor;
@@ -358,8 +326,8 @@ public class GeometryOperatorsUtil {
         }
 
         if (rightCursor != null && srGroup.operatorSR != null && !srGroup.operatorSR.equals(srGroup.rightSR)) {
-            ProjectionTransformation projectionTransformation = new ProjectionTransformation(srGroup.rightSR, srGroup.operatorSR);
-            rightCursor = OperatorProject.local().execute(rightCursor, projectionTransformation, null);
+            ProjectionTransformation projTransformation = new ProjectionTransformation(srGroup.rightSR, srGroup.operatorSR);
+            rightCursor = OperatorProject.local().execute(rightCursor, projTransformation, null);
         }
         return rightCursor;
     }
@@ -479,10 +447,17 @@ public class GeometryOperatorsUtil {
                 resultCursor = leftCursor;
                 break;
             case Union:
-                resultCursor = OperatorUnion.local().execute(leftCursor, srGroup.operatorSR, null);
+                resultCursor = OperatorUnion.local().execute(
+                        leftCursor,
+                        srGroup.operatorSR,
+                        null);
                 break;
             case Difference:
-                resultCursor = OperatorDifference.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
+                resultCursor = OperatorDifference.local().execute(
+                        leftCursor,
+                        rightCursor,
+                        srGroup.operatorSR,
+                        null);
                 break;
             case Buffer:
                 // TODO clean this up
@@ -499,7 +474,13 @@ public class GeometryOperatorsUtil {
                     maxverticesFullCircle = 96;
                 }
 
-                double[] d = operatorRequest.getBufferParams().getDistancesList().stream().mapToDouble(Double::doubleValue).toArray();
+                double[] d = operatorRequest
+                        .getBufferParams()
+                        .getDistancesList()
+                        .stream()
+                        .mapToDouble(Double::doubleValue)
+                        .toArray();
+
                 resultCursor = OperatorBuffer.local().execute(leftCursor,
                                                               srGroup.operatorSR,
                                                               d,
@@ -511,26 +492,49 @@ public class GeometryOperatorsUtil {
                 break;
             case Intersection:
                 // TODO hasIntersectionDimensionMask needs to be automagically generated
-                if (operatorRequest.hasIntersectionParams() && operatorRequest.getIntersectionParams().getDimensionMask() != 0)
-                    resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null, operatorRequest.getIntersectionParams().getDimensionMask());
-                else
+                if (operatorRequest.hasIntersectionParams() &&
+                        operatorRequest.getIntersectionParams().getDimensionMask() != 0) {
+                    resultCursor = OperatorIntersection.local().execute(
+                            leftCursor,
+                            rightCursor,
+                            srGroup.operatorSR,
+                            null,
+                            operatorRequest.getIntersectionParams().getDimensionMask());
+                } else {
                     resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
+                }
                 break;
             case Clip:
                 Envelope2D envelope2D = __extractEnvelope2D(operatorRequest.getClipParams().getEnvelope());
                 resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, srGroup.operatorSR, null);
                 break;
             case Cut:
-                resultCursor = OperatorCut.local().execute(operatorRequest.getCutParams().getConsiderTouch(), leftCursor.next(), (Polyline) rightCursor.next(), srGroup.operatorSR, null);
+                resultCursor = OperatorCut.local().execute(
+                        operatorRequest.getCutParams().getConsiderTouch(),
+                        leftCursor.next(),
+                        (Polyline) rightCursor.next(),
+                        srGroup.operatorSR,
+                        null);
                 break;
             case DensifyByLength:
-                resultCursor = OperatorDensifyByLength.local().execute(leftCursor, operatorRequest.getDensifyParams().getMaxLength(), null);
+                resultCursor = OperatorDensifyByLength.local().execute(
+                        leftCursor,
+                        operatorRequest.getDensifyParams().getMaxLength(),
+                        null);
                 break;
             case Simplify:
-                resultCursor = OperatorSimplify.local().execute(leftCursor, srGroup.operatorSR, operatorRequest.getSimplifyParams().getForce(), null);
+                resultCursor = OperatorSimplify.local().execute(
+                        leftCursor,
+                        srGroup.operatorSR,
+                        operatorRequest.getSimplifyParams().getForce(),
+                        null);
                 break;
             case SimplifyOGC:
-                resultCursor = OperatorSimplifyOGC.local().execute(leftCursor, srGroup.operatorSR, operatorRequest.getSimplifyParams().getForce(), null);
+                resultCursor = OperatorSimplifyOGC.local().execute(
+                        leftCursor,
+                        srGroup.operatorSR,
+                        operatorRequest.getSimplifyParams().getForce(),
+                        null);
                 break;
             case Offset:
                 resultCursor = OperatorOffset.local().execute(
@@ -549,10 +553,17 @@ public class GeometryOperatorsUtil {
                         null);
                 break;
             case SymmetricDifference:
-                resultCursor = OperatorSymmetricDifference.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
+                resultCursor = OperatorSymmetricDifference.local().execute(
+                        leftCursor,
+                        rightCursor,
+                        srGroup.operatorSR,
+                        null);
                 break;
             case ConvexHull:
-                resultCursor = OperatorConvexHull.local().execute(leftCursor, operatorRequest.getConvexParams().getMerge(), null);
+                resultCursor = OperatorConvexHull.local().execute(
+                        leftCursor,
+                        operatorRequest.getConvexParams().getMerge(),
+                        null);
                 break;
             case Boundary:
                 resultCursor = OperatorBoundary.local().execute(leftCursor, null);
@@ -561,7 +572,12 @@ public class GeometryOperatorsUtil {
                 resultCursor = new OperatorEnclosingCircleCursor(leftCursor, srGroup.operatorSR, null);
                 break;
             case RandomPoints:
-                double[] pointsPerSqrKm = operatorRequest.getRandomPointsParams().getPointsPerSquareKmList().stream().mapToDouble(Double::doubleValue).toArray();
+                double[] pointsPerSqrKm = operatorRequest
+                        .getRandomPointsParams()
+                        .getPointsPerSquareKmList()
+                        .stream()
+                        .mapToDouble(Double::doubleValue).toArray();
+
                 long seed = operatorRequest.getRandomPointsParams().getSeed();
                 resultCursor = new OperatorRandomPointsCursor(
                         leftCursor,
@@ -576,18 +592,18 @@ public class GeometryOperatorsUtil {
         }
 
         if (srGroup.resultSR != null && !srGroup.resultSR.equals(srGroup.operatorSR)) {
-            ProjectionTransformation projectionTransformation = new ProjectionTransformation(srGroup.operatorSR, srGroup.resultSR);
-            resultCursor = OperatorProject.local().execute(resultCursor, projectionTransformation, null);
+            ProjectionTransformation projTransformation = new ProjectionTransformation(srGroup.operatorSR, srGroup.resultSR);
+            resultCursor = OperatorProject.local().execute(resultCursor, projTransformation, null);
         }
 
         return resultCursor;
     }
 
-    public static OperatorResult initExecuteOperatorEx(OperatorRequest operatorRequest) throws IOException {
+    public static OperatorResultsIterator buildResultsIterable(OperatorRequest operatorRequest,
+                                                               GeometryCursor leftCursor) throws IOException {
         Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
         GeometryEncodingType encodingType = GeometryEncodingType.unknown;
         GeometryCursor resultCursor = null;
-        OperatorResult.Builder operatorResultBuilder = OperatorResult.newBuilder();
         switch (operatorType) {
             // results
             case Proximity2D:
@@ -603,7 +619,7 @@ public class GeometryOperatorsUtil {
             case Distance:
             case GeodeticLength:
             case GeodeticArea:
-                return nonCursorFromRequest(operatorRequest, null, null);
+                return new OperatorResultsIterator(nonCursorFromRequest(operatorRequest, leftCursor, null));
 
             // cursors
             case Project:
@@ -629,7 +645,7 @@ public class GeometryOperatorsUtil {
             case Boundary:
             case RandomPoints:
             case EnclosingCircle:
-                resultCursor = cursorFromRequest(operatorRequest, null, null);
+                resultCursor = cursorFromRequest(operatorRequest, leftCursor, null);
                 break;
             case ExportToESRIShape:
                 encodingType = GeometryEncodingType.esrishape;
@@ -656,8 +672,8 @@ public class GeometryOperatorsUtil {
                 resultCursor = __createGeometryCursor(operatorRequest.getGeometryBag());
             }
         }
-        operatorResultBuilder.setGeometryBag(__encodeGeometry(resultCursor, operatorRequest, encodingType));
-        return operatorResultBuilder.build();
+
+        return new OperatorResultsIterator(resultCursor, operatorRequest, encodingType, true);
     }
 
 
@@ -740,7 +756,10 @@ public class GeometryOperatorsUtil {
         } else if (geometryBag.getGeojsonCount() > 0) {
             stringArrayDeque = new ArrayDeque<>(geometryBag.getGeojsonList());
             simpleStringCursor = new SimpleStringCursor(stringArrayDeque, idsDeque);
-            MapGeometryCursor mapGeometryCursor = new OperatorImportFromGeoJsonCursor(GeoJsonImportFlags.geoJsonImportSkipCRS, simpleStringCursor, null);
+            MapGeometryCursor mapGeometryCursor = new OperatorImportFromGeoJsonCursor(
+                    GeoJsonImportFlags.geoJsonImportSkipCRS,
+                    simpleStringCursor,
+                    null);
             geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
         } else if (geometryBag.getEsriJsonCount() > 0) {
             JsonFactory factory = new JsonFactory();
@@ -758,14 +777,13 @@ public class GeometryOperatorsUtil {
     private static boolean _requestPreservesIDs(OperatorRequest geometryRequest) {
         if (geometryRequest.hasRightGeometryBag() || geometryRequest.hasRightGeometryRequest()) {
             return false;
-        }
-        if (geometryRequest.hasLeftGeometryBag() || geometryRequest.hasGeometryBag()) {
+        } else if (geometryRequest.hasLeftGeometryBag() || geometryRequest.hasGeometryBag()) {
             return true;
-        }
-        if (geometryRequest.hasLeftGeometryRequest()) {
+        } else if (geometryRequest.hasLeftGeometryRequest()) {
             return _requestPreservesIDs(geometryRequest.getLeftGeometryRequest());
-        } else {
+        } else if (geometryRequest.hasGeometryRequest()) {
             return _requestPreservesIDs(geometryRequest.getGeometryRequest());
         }
+        return false;
     }
 }

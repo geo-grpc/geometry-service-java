@@ -33,10 +33,10 @@ import io.grpc.stub.ClientCallStreamObserver;
 import io.grpc.stub.ClientResponseObserver;
 import io.grpc.util.RoundRobinLoadBalancerFactory;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayDeque;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -149,6 +149,93 @@ public class GeometryOperatorsClient {
         this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBagBuilder);
     }
 
+    public ArrayDeque<String> shapefileChunked(File inFile) throws FileNotFoundException, InterruptedException {
+        CountDownLatch done = new CountDownLatch(1);
+        ArrayDeque<String> arrayDeque = new ArrayDeque<>();
+        InputStream inputStream = new FileInputStream(inFile);
+        int offsetSize = 4194304 / 1028;
+        byte[] bytes = new byte[offsetSize];
+        int offset = 0;
+
+        OperatorRequest project = OperatorRequest
+                .newBuilder()
+                .setOperationSpatialReference(SpatialReferenceData.newBuilder().setWkid(4326))
+                .setResultSpatialReference(SpatialReferenceData.newBuilder().setWkid(3857))
+                .setResultsEncodingType(GeometryEncodingType.geojson).build();
+
+        OperatorRequest buffer = OperatorRequest
+                .newBuilder()
+                .setGeometryRequest(project)
+                .setOperatorType(ServiceOperatorType.Buffer)
+                .setBufferParams(BufferParams.newBuilder().addDistances(45))
+                .setResultsEncodingType(GeometryEncodingType.geojson).build();
+
+
+
+        GeometryOperatorsStub geometryOperatorsStub = asyncStub.withMaxInboundMessageSize(2147483647);
+
+        ClientResponseObserver<FileChunk, OperatorResult> clientResponseObserver =
+                new ClientResponseObserver<FileChunk, OperatorResult>() {
+                    ClientCallStreamObserver<FileChunk> requestStream;
+                    @Override
+                    public void beforeStart(ClientCallStreamObserver<FileChunk> requestStream) {
+                        this.requestStream = requestStream;
+                        requestStream.disableAutoInboundFlowControl();
+                        requestStream.setOnReadyHandler(() -> {
+                            while (requestStream.isReady()) {
+                                try {
+                                    inputStream.read(bytes, offset, offsetSize);
+
+                                    FileChunk fileChunk = FileChunk
+                                            .newBuilder()
+                                            .setSize(offsetSize)
+                                            .setData(ByteString.copyFrom(bytes))
+                                            .setNestedRequest(buffer)
+                                            .build();
+
+                                    requestStream.onNext(fileChunk);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onNext(OperatorResult value) {
+                        long id = value.getGeometryBag().getGeometryIds(0);
+                        if (id % 1000 == 0) {
+                            for (String geojson : value.getGeometryBag().getGeojsonList()) {
+                                logger.info("Geometry number " + geojson);
+                            }
+
+                        }
+                        // Signal the sender to send one message.
+                        requestStream.request(1);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        t.printStackTrace();
+                        done.countDown();
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        logger.info("All Done");
+                        done.countDown();
+                    }
+                };
+
+        geometryOperatorsStub.streamFileOperations(clientResponseObserver);
+
+        done.await();
+
+        channel.shutdown();
+        channel.awaitTermination(1, TimeUnit.SECONDS);
+
+        return arrayDeque;
+    }
     /**
      * https://github.com/ReactiveX/RxJava/wiki/Backpressure
      *
@@ -194,7 +281,7 @@ public class GeometryOperatorsClient {
                             while (requestStream.isReady()) {
                                 if (shapefileByteReader.hasNext()) {
                                     byte[] data = shapefileByteReader.next();
-                                    int id = shapefileByteReader.getGeometryID();
+                                    long id = shapefileByteReader.getGeometryID();
                                     ByteString byteString = ByteString.copyFrom(data);
 //                                    logger.info("bytes length -->" + data.length);
 
@@ -309,9 +396,12 @@ public class GeometryOperatorsClient {
             } else {
                 filePath = "/data/Parcels/PARCELS.shp";
             }
-
             long startTime = System.nanoTime();
-            geometryOperatorsClient.testWRSShapefile(filePath);
+
+
+            geometryOperatorsClient.shapefileChunked(new File(filePath));
+//            geometryOperatorsClient.testWRSShapefile(filePath);
+
 //            geometryOperatorsClient.shapefileThrottled(filePath);
             long endTime = System.nanoTime();
             long duration = (endTime - startTime) / 1000000;

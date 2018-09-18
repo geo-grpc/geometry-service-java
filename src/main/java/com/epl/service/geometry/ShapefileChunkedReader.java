@@ -1,29 +1,35 @@
 package com.epl.service.geometry;
 
-import com.esri.core.geometry.Envelope2D;
-import com.esri.core.geometry.Geometry;
+import com.esri.core.geometry.*;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Stream;
 
-public class ShapefileChunkedReader {
+public class ShapefileChunkedReader extends GeometryCursor {
     private final List<MixedEndianDataInputStream> inputStreamList;
+    private ArrayDeque<ByteBuffer> m_byteBufferDeque;
+    private SimpleByteBufferCursor m_byteBufferCursor;
+    private OperatorImportFromESRIShapeCursor m_operatorImport;
     private long fileLengthBytes;
     private final Envelope2D envelope2D;
     private int position; //keeps track of where inputstream is
     private int recordNumber;
-    private int recordRemainingBytes;
+    private int recordVertexCount;
+    private int partsPerVertex;
     private final Geometry.Type geomType;
 
     ShapefileChunkedReader(InputStream in, int chunk_size) throws IOException {
         if (chunk_size < 108) {
             throw new IllegalArgumentException("An InputStream must have more than 100 bytes to initialize ShapefileChunkedReader");
         }
-
+        m_byteBufferDeque = new ArrayDeque<>();
+        m_byteBufferCursor = new SimpleByteBufferCursor(m_byteBufferDeque, null);
+        m_operatorImport = new OperatorImportFromESRIShapeCursor(0, 0, m_byteBufferCursor);
         position = 0;
         inputStreamList = Collections.synchronizedList(new ArrayList<MixedEndianDataInputStream>());
         synchronized (inputStreamList) {
@@ -47,38 +53,44 @@ public class ShapefileChunkedReader {
              */
             mixedEndianDataInputStream.skipBytes(20);
 
+            /* Byte 24 File Length File Length Integer Big */
+            // TODO what is the times 2 here? is it the number of doubles? the number of xy coordinates? would this be * 3 if we had zs?
             fileLengthBytes = mixedEndianDataInputStream.readInt() * 2;
 
+            /* Byte 28 Version 1000 Integer Little */
             int v = mixedEndianDataInputStream.readLittleEndianInt();
 
             if (v != 1000) {
                 throw new IOException("version " + v + " is not supported.");
             }
 
+            /* Byte 32 Shape Type Shape Type Integer Little */
             int shpTypeId = mixedEndianDataInputStream.readLittleEndianInt();
             geomType = geometryTypeFromShpType(shpTypeId);
 
-            /*
-            Byte 24 File Length File Length Integer Big
-            Byte 28 Version 1000 Integer Little
-            Byte 32 Shape Type Shape Type Integer Little
-            Byte 36 Bounding Box Xmin Double Little
-            Byte 44 Bounding Box Ymin Double Little
-            Byte 52 Bounding Box Xmax Double Little
-            Byte 60 Bounding Box Ymax Double Little
-            Byte 68* Bounding Box Zmin Double Little
-            Byte 76* Bounding Box Zmax Double Little
-            Byte 84* Bounding Box Mmin Double Little
-            Byte 92* Bounding Box Mmax Double Little
-            */
+            /* Byte 36 Bounding Box Xmin Double Little
+               Byte 44 Bounding Box Ymin Double Little
+               Byte 52 Bounding Box Xmax Double Little
+               Byte 60 Bounding Box Ymax Double Little */
             double xmin = mixedEndianDataInputStream.readLittleEndianDouble();
             double ymin = mixedEndianDataInputStream.readLittleEndianDouble();
             double xmax = mixedEndianDataInputStream.readLittleEndianDouble();
             double ymax = mixedEndianDataInputStream.readLittleEndianDouble();
+            partsPerVertex = 2;
+
+            /* Byte 68* Bounding Box Zmin Double Little
+               Byte 76* Bounding Box Zmax Double Little */
             double zmin = mixedEndianDataInputStream.readLittleEndianDouble();
             double zmax = mixedEndianDataInputStream.readLittleEndianDouble();
+            // if has z
+            // partsPerVertex += 1;
+
+            /* Byte 84* Bounding Box Mmin Double Little
+               Byte 92* Bounding Box Mmax Double Little */
             double mmin = mixedEndianDataInputStream.readLittleEndianDouble();
             double mmax = mixedEndianDataInputStream.readLittleEndianDouble();
+            // if has m
+            // partsPerVertex += 1;
 
             envelope2D = new Envelope2D(xmin, ymin, xmax, ymax);
             //  envelope3D = new Envelope3D(xmin, ymin, zmin, xmax, ymax, zmax);
@@ -87,7 +99,7 @@ public class ShapefileChunkedReader {
             mixedEndianDataInputStream.updateSize(2 * 50);
 
             recordNumber = mixedEndianDataInputStream.readInt();//1 based
-            recordRemainingBytes = mixedEndianDataInputStream.readInt();
+            recordVertexCount = mixedEndianDataInputStream.readInt();
             position += 8;
             mixedEndianDataInputStream.updateSize(8);
 
@@ -95,28 +107,35 @@ public class ShapefileChunkedReader {
         }
     }
 
-    public byte[] next() throws InterruptedException {
+    public Geometry next() {
         if (!hasNext()) {
             return null;
         }
         try {
-
             synchronized (inputStreamList) {
                 MixedEndianDataInputStream inputStream = inputStreamList.get(0);
 
-                int recordSizeBytes = (recordRemainingBytes * 2);
+                int recordSizeBytes = (recordVertexCount * partsPerVertex);
                 byte[] bytes = new byte[recordSizeBytes];
-                int read = inputStream.read(bytes);
+
+                int read = inputStream.read(bytes, 0, recordSizeBytes);
+
+                // SequenceInputStream is stupid
+                while (read < recordSizeBytes) {
+                    int len = recordSizeBytes - read;
+                    read += inputStream.read(bytes, read, len);
+                }
                 position += read;
                 inputStream.updateSize(read);
 
                 recordNumber = inputStream.readInt();//1 based
-                recordRemainingBytes = inputStream.readInt();
+                recordVertexCount = inputStream.readInt();
                 position += 8;
                 inputStream.updateSize(8);
 
                 inputStreamList.notify();
-                return bytes;
+                m_byteBufferDeque.push(ByteBuffer.wrap(bytes));
+                return m_operatorImport.next();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -171,7 +190,8 @@ public class ShapefileChunkedReader {
         }
     }
 
-    public int getGeometryID() {
+    @Override
+    public long getGeometryID() {
         return recordNumber;
     }
 
@@ -181,36 +201,61 @@ public class ShapefileChunkedReader {
 
     public Geometry.Type getGeometryType() { return geomType; }
 
-    public boolean hasNext() throws InterruptedException {
+    @Override
+    public boolean hasNext() {
         synchronized (inputStreamList) {
+            if (inputStreamList.size() == 0) {
+                return false;
+            }
+
             int count = 0;
 
             long value = inputStreamList.stream().mapToInt(i -> i.getSize()).sum();
-            while (count++ < 5 && position < fileLengthBytes && value < recordRemainingBytes) {
-                inputStreamList.wait(1000);
+            while (count++ < 2 && position < fileLengthBytes && value < recordVertexCount) {
+                try {
+                    inputStreamList.wait(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 value = inputStreamList.stream().mapToInt(i -> i.getSize()).sum();
             }
 
-            if (position < fileLengthBytes && value < recordRemainingBytes) {
-                throw new InterruptedException("failed to collected enough bytes to proceed");
+            if (position < fileLengthBytes && value < recordVertexCount) {
+                return false;
+//                try {
+//                    throw new InterruptedException("failed to collected enough bytes to proceed");
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
             }
 
             // plus 8 is
-            long bytesRequired = recordRemainingBytes + 8;
-            if (recordRemainingBytes == fileLengthBytes - position) {
-                bytesRequired = recordRemainingBytes;
+            //int recordSizeBytes = (recordVertexCount * partsPerVertex)
+            long bytesRequired = recordVertexCount * partsPerVertex + 8;
+            if (recordVertexCount == fileLengthBytes - position) {
+                bytesRequired = recordVertexCount;
             }
 
-            while (bytesRequired > inputStreamList.get(0).getSize()) {
-                MixedEndianDataInputStream input1 = inputStreamList.remove(0);
-                MixedEndianDataInputStream input2 = inputStreamList.remove(0);
-                InputStream merged = new java.io.SequenceInputStream(input1, input2);
-                MixedEndianDataInputStream mixedEndianDataInputStream = new MixedEndianDataInputStream(merged, input1.getSize() + input2.getSize());
-                inputStreamList.set(0, mixedEndianDataInputStream);
+            while (bytesRequired > inputStreamList.get(0).getSize() && inputStreamList.size() > 1) {
+                if (inputStreamList.size() > 1) {
+                    MixedEndianDataInputStream input1 = inputStreamList.remove(0);
+                    int remaining_bytes_1 = input1.getSize();
+
+                    MixedEndianDataInputStream input2 = inputStreamList.remove(0);
+                    int remaining_bytes_2 = input2.getSize();
+
+                    InputStream merged = new java.io.SequenceInputStream(input1, input2);
+                    MixedEndianDataInputStream mixedEndianDataInputStream = new MixedEndianDataInputStream(merged, input1.getSize() + input2.getSize());
+                    inputStreamList.add(0, mixedEndianDataInputStream);
+//                    inputStreamList.set(0, mixedEndianDataInputStream);
+                }
+            }
+
+            if (bytesRequired > inputStreamList.get(0).getSize()) {
+                return false;
             }
 
             return position < fileLengthBytes;
         }
     }
-
 }
