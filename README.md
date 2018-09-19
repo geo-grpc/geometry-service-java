@@ -45,6 +45,11 @@ The latest debian 8 jre image
 ```bash
 docker build --build-arg JRE_TAG=8-jre-slim -t echoparklabs/geometry-service-java:8-jre-slim .
 ```
+
+The case for using jdk/jre 10 is laid out here and it's pretty persuasive:
+https://developers.redhat.com/blog/2017/03/14/java-inside-docker/
+https://bugs.openjdk.java.net/browse/JDK-8146115
+
 To build the latest debian 10 jdk:
 ```bash
 docker build --build-arg JDK_TAG=10-jdk-slim -t echoparklabs/geometry-service-java:10-jdk-slim .
