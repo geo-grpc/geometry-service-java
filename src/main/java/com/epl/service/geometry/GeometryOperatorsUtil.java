@@ -357,7 +357,14 @@ public class GeometryOperatorsUtil {
             case Crosses:
             case Touches:
             case Overlaps:
-                HashMap<Long, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal.getInstance().getOperator(operatorType)).execute(leftCursor.next(), rightCursor, srGroup.operatorSR, null);
+                HashMap<Long, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal
+                        .getInstance()
+                        .getOperator(operatorType)).execute(
+                                leftCursor.next(),
+                                rightCursor,
+                                srGroup.operatorSR,
+                                null);
+
                 if (result_map.size() == 1) {
                     operatorResultBuilder.setSpatialRelationship(result_map.get(0L));
                     operatorResultBuilder.putAllRelateMap(result_map);
@@ -600,7 +607,8 @@ public class GeometryOperatorsUtil {
     }
 
     public static OperatorResultsIterator buildResultsIterable(OperatorRequest operatorRequest,
-                                                               GeometryCursor leftCursor) throws IOException {
+                                                               GeometryCursor leftCursor,
+                                                               boolean bForceCompact) throws IOException {
         Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
         GeometryEncodingType encodingType = GeometryEncodingType.unknown;
         GeometryCursor resultCursor = null;
@@ -673,7 +681,7 @@ public class GeometryOperatorsUtil {
             }
         }
 
-        return new OperatorResultsIterator(resultCursor, operatorRequest, encodingType, true);
+        return new OperatorResultsIterator(resultCursor, operatorRequest, encodingType, bForceCompact);
     }
 
 

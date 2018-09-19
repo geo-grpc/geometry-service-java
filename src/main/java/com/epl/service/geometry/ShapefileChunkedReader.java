@@ -18,7 +18,8 @@ public class ShapefileChunkedReader extends GeometryCursor {
     private long fileLengthBytes;
     private final Envelope2D envelope2D;
     private int position; //keeps track of where inputstream is
-    private int recordNumber;
+    private int currentRecordNumber;
+    private int nextRecordNumber;
     private int recordVertexCount;
     private int partsPerVertex;
     private final Geometry.Type geomType;
@@ -98,7 +99,7 @@ public class ShapefileChunkedReader extends GeometryCursor {
             position = 2 * 50; //header is always 50 words long
             mixedEndianDataInputStream.updateSize(2 * 50);
 
-            recordNumber = mixedEndianDataInputStream.readInt();//1 based
+            nextRecordNumber = mixedEndianDataInputStream.readInt();//1 based
             recordVertexCount = mixedEndianDataInputStream.readInt();
             position += 8;
             mixedEndianDataInputStream.updateSize(8);
@@ -117,7 +118,6 @@ public class ShapefileChunkedReader extends GeometryCursor {
 
                 int recordSizeBytes = (recordVertexCount * partsPerVertex);
                 byte[] bytes = new byte[recordSizeBytes];
-
                 int read = inputStream.read(bytes, 0, recordSizeBytes);
 
                 // SequenceInputStream is stupid
@@ -127,11 +127,18 @@ public class ShapefileChunkedReader extends GeometryCursor {
                 }
                 position += read;
                 inputStream.updateSize(read);
+                currentRecordNumber = nextRecordNumber;
 
-                recordNumber = inputStream.readInt();//1 based
-                recordVertexCount = inputStream.readInt();
-                position += 8;
-                inputStream.updateSize(8);
+                if (position < fileLengthBytes) {
+                    nextRecordNumber = inputStream.readInt();//1 based
+                    recordVertexCount = inputStream.readInt();
+                    position += 8;
+
+                    inputStream.updateSize(8);
+                } else {
+                    inputStream.close();
+                    inputStreamList.remove(0);
+                }
 
                 inputStreamList.notify();
                 m_byteBufferDeque.push(ByteBuffer.wrap(bytes));
@@ -192,7 +199,7 @@ public class ShapefileChunkedReader extends GeometryCursor {
 
     @Override
     public long getGeometryID() {
-        return recordNumber;
+        return currentRecordNumber;
     }
 
     public Envelope2D getEnvelope2D() {
@@ -204,29 +211,24 @@ public class ShapefileChunkedReader extends GeometryCursor {
     @Override
     public boolean hasNext() {
         synchronized (inputStreamList) {
-            if (inputStreamList.size() == 0) {
+            if (inputStreamList.size() == 0 || position >= fileLengthBytes) {
                 return false;
             }
 
             int count = 0;
 
-            long value = inputStreamList.stream().mapToInt(i -> i.getSize()).sum();
+            long value = inputStreamList.stream().mapToInt(MixedEndianDataInputStream::getSize).sum();
             while (count++ < 2 && position < fileLengthBytes && value < recordVertexCount) {
                 try {
                     inputStreamList.wait(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                value = inputStreamList.stream().mapToInt(i -> i.getSize()).sum();
+                value = inputStreamList.stream().mapToInt(MixedEndianDataInputStream::getSize).sum();
             }
 
             if (position < fileLengthBytes && value < recordVertexCount) {
                 return false;
-//                try {
-//                    throw new InterruptedException("failed to collected enough bytes to proceed");
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
             }
 
             // plus 8 is
@@ -247,7 +249,15 @@ public class ShapefileChunkedReader extends GeometryCursor {
                     InputStream merged = new java.io.SequenceInputStream(input1, input2);
                     MixedEndianDataInputStream mixedEndianDataInputStream = new MixedEndianDataInputStream(merged, input1.getSize() + input2.getSize());
                     inputStreamList.add(0, mixedEndianDataInputStream);
-//                    inputStreamList.set(0, mixedEndianDataInputStream);
+
+//                    try {
+//                        input1.close();
+//                        input2.close();
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+
+
                 }
             }
 

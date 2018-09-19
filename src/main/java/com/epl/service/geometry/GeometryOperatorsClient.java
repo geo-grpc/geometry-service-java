@@ -36,7 +36,6 @@ import io.grpc.util.RoundRobinLoadBalancerFactory;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayDeque;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -95,7 +94,7 @@ public class GeometryOperatorsClient {
 
     public void testWRSShapefile(String pathFile) throws IOException, InterruptedException {
         File inFile = new File(pathFile);
-        SpatialReferenceData operatorSpatialReference = SpatialReferenceData.newBuilder().setWkid(3857).build();
+        SpatialReferenceData operatorSpatialReference = SpatialReferenceData.newBuilder().setWkid(54016).build();
         SpatialReferenceData inputSpatialReference = SpatialReferenceData.newBuilder().setWkid(4326).build();
         SpatialReferenceData outputSpatialReference = inputSpatialReference;
 
@@ -105,9 +104,10 @@ public class GeometryOperatorsClient {
                 .setSpatialReference(inputSpatialReference);
 
         OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
-                .setOperatorType(ServiceOperatorType.ConvexHull)
+                .setOperatorType(ServiceOperatorType.Buffer)
+                .setBufferParams(BufferParams.newBuilder().addDistances(45))
                 .getLeftGeometryRequestBuilder()
-                .setResultsEncodingType(GeometryEncodingType.wkt)
+                .setResultsEncodingType(GeometryEncodingType.geojson)
                 .setOperationSpatialReference(operatorSpatialReference)
                 .setResultSpatialReference(outputSpatialReference);
 //        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
@@ -149,18 +149,16 @@ public class GeometryOperatorsClient {
         this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBagBuilder);
     }
 
-    public ArrayDeque<String> shapefileChunked(File inFile) throws FileNotFoundException, InterruptedException {
+    public void shapefileChunked(File inFile) throws FileNotFoundException, InterruptedException {
         CountDownLatch done = new CountDownLatch(1);
-        ArrayDeque<String> arrayDeque = new ArrayDeque<>();
         InputStream inputStream = new FileInputStream(inFile);
-        int offsetSize = 4194304 / 1028;
+        int offsetSize = 262144;
         byte[] bytes = new byte[offsetSize];
-        int offset = 0;
 
         OperatorRequest project = OperatorRequest
                 .newBuilder()
                 .setOperationSpatialReference(SpatialReferenceData.newBuilder().setWkid(4326))
-                .setResultSpatialReference(SpatialReferenceData.newBuilder().setWkid(3857))
+                .setResultSpatialReference(SpatialReferenceData.newBuilder().setWkid(54016))
                 .setResultsEncodingType(GeometryEncodingType.geojson).build();
 
         OperatorRequest buffer = OperatorRequest
@@ -170,7 +168,10 @@ public class GeometryOperatorsClient {
                 .setBufferParams(BufferParams.newBuilder().addDistances(45))
                 .setResultsEncodingType(GeometryEncodingType.geojson).build();
 
-
+        FileChunk.Builder fileChunkBuilder = FileChunk
+                .newBuilder()
+                .setData(ByteString.copyFromUtf8(""))
+                .setNestedRequest(buffer);
 
         GeometryOperatorsStub geometryOperatorsStub = asyncStub.withMaxInboundMessageSize(2147483647);
 
@@ -184,18 +185,26 @@ public class GeometryOperatorsClient {
                         requestStream.setOnReadyHandler(() -> {
                             while (requestStream.isReady()) {
                                 try {
-                                    inputStream.read(bytes, offset, offsetSize);
-
-                                    FileChunk fileChunk = FileChunk
-                                            .newBuilder()
-                                            .setSize(offsetSize)
-                                            .setData(ByteString.copyFrom(bytes))
-                                            .setNestedRequest(buffer)
-                                            .build();
-
-                                    requestStream.onNext(fileChunk);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
+                                    int resultSize = inputStream.read(bytes, 0, offsetSize);
+                                    if (resultSize < offsetSize) {
+                                        requestStream.onCompleted();
+                                        inputStream.close();
+                                        break;
+                                    }
+                                    fileChunkBuilder.setSize(resultSize).setData(ByteString.copyFrom(bytes, 0, resultSize));
+                                    requestStream.onNext(fileChunkBuilder.build());
+                                } catch (EOFException e2) {
+                                    requestStream.onCompleted();
+                                    try {
+                                        // this is stupid
+                                        inputStream.close();
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                    break;
+                                } catch (IOException eio) {
+                                    logger.severe(eio.getLocalizedMessage());
+                                    break;
                                 }
                             }
                         });
@@ -205,10 +214,7 @@ public class GeometryOperatorsClient {
                     public void onNext(OperatorResult value) {
                         long id = value.getGeometryBag().getGeometryIds(0);
                         if (id % 1000 == 0) {
-                            for (String geojson : value.getGeometryBag().getGeojsonList()) {
-                                logger.info("Geometry number " + geojson);
-                            }
-
+                            logger.info("Geometry number " + id);
                         }
                         // Signal the sender to send one message.
                         requestStream.request(1);
@@ -231,11 +237,11 @@ public class GeometryOperatorsClient {
 
         done.await();
 
-        channel.shutdown();
-        channel.awaitTermination(1, TimeUnit.SECONDS);
-
-        return arrayDeque;
+//        channel.shutdown();
+//        channel.awaitTermination(1, TimeUnit.SECONDS);
     }
+
+
     /**
      * https://github.com/ReactiveX/RxJava/wiki/Backpressure
      *
@@ -246,7 +252,7 @@ public class GeometryOperatorsClient {
     public void shapefileThrottled(File inFile,
                                    OperatorRequest.Builder operatorRequestBuilder,
                                    GeometryBagData.Builder geometryBagBuilder) throws IOException, InterruptedException {
-        CountDownLatch done = new CountDownLatch(4);
+        CountDownLatch done = new CountDownLatch(1);
         ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
 
         GeometryOperatorsStub geometryOperatorsStub = asyncStub
@@ -293,19 +299,21 @@ public class GeometryOperatorsClient {
                                             .setLeftGeometryBag(geometryBag).build();
                                     requestStream.onNext(operatorRequest);
                                 } else {
+                                    requestStream.onCompleted();
                                     break;
                                 }
                             }
+
                         });
                     }
 
                     @Override
                     public void onNext(OperatorResult operatorResult) {
                         long id = operatorResult.getGeometryBag().getGeometryIds(0);
-//                        logger.info(operatorResult.getGeometryBag().getGeometryStrings(0));
+
                         if (id % 1000 == 0) {
                             logger.info("Geometry number " + id);
-                            logger.info(operatorResult.getGeometryBag().getWkt(0));
+//                            logger.info(operatorResult.getGeometryBag().getGeojson(0));
                         }
                         // Signal the sender to send one message.
                         requestStream.request(1);
@@ -328,7 +336,7 @@ public class GeometryOperatorsClient {
 
         done.await();
 
-        channel.shutdown();
+//        channel.shutdown();
         channel.awaitTermination(1, TimeUnit.SECONDS);
     }
 
@@ -400,7 +408,8 @@ public class GeometryOperatorsClient {
 
 
             geometryOperatorsClient.shapefileChunked(new File(filePath));
-//            geometryOperatorsClient.testWRSShapefile(filePath);
+            geometryOperatorsClient.testWRSShapefile(filePath);
+
 
 //            geometryOperatorsClient.shapefileThrottled(filePath);
             long endTime = System.nanoTime();

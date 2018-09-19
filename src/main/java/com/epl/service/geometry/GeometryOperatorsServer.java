@@ -144,7 +144,7 @@ public class GeometryOperatorsServer {
                 @Override
                 public void onNext(OperatorRequest value) {
                     try {
-                        OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value, null);
+                        OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value, null, false);
                         while (operatorResultsIterator.hasNext()) {
                             responseObserver.onNext(operatorResultsIterator.next());
                         }
@@ -200,7 +200,7 @@ public class GeometryOperatorsServer {
                     // Process the request and send a response or an error.
                     try {
                         // Accept and enqueue the request.
-                        OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value, null);
+                        OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value, null, false);
                         while (operatorResultsIterator.hasNext()) {
                             responseObserver.onNext(operatorResultsIterator.next());
                         }
@@ -268,7 +268,6 @@ public class GeometryOperatorsServer {
             });
 
             return new StreamObserver<FileChunk>() {
-                ArrayList<FileChunk> fileChunks = new ArrayList<>();
                 ShapefileChunkedReader shapefileChunkedReader = null;
                 @Override
                 public void onNext(FileChunk value) {
@@ -283,7 +282,7 @@ public class GeometryOperatorsServer {
                         }
 
                         if (shapefileChunkedReader.hasNext()) {
-                            OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value.getNestedRequest(), shapefileChunkedReader);
+                            OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value.getNestedRequest(), shapefileChunkedReader, true);
                             while (operatorResultsIterator.hasNext()) {
                                 responseObserver.onNext(operatorResultsIterator.next());
                             }
@@ -369,7 +368,7 @@ public class GeometryOperatorsServer {
             try {
                 // logger.info("server name" + System.getenv("MY_NODE_NAME"));
                 // System.out.println("Start process");
-                OperatorResultsIterator operatorResults = GeometryOperatorsUtil.buildResultsIterable(request, null);
+                OperatorResultsIterator operatorResults = GeometryOperatorsUtil.buildResultsIterable(request, null, true);
                 while (operatorResults.hasNext()) {
                     responseObserver.onNext(operatorResults.next());
                 }
