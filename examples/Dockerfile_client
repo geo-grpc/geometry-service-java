@@ -1,4 +1,4 @@
-FROM us.gcr.io/echoparklabs/geometry-service-java:latest
+FROM echoparklabs/geometry-service-java:latest
 
 RUN apt-get update
 RUN apt-get install -y curl
