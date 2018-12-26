@@ -25,7 +25,7 @@ option java_package = "com.epl.service.geometry";
 option java_outer_classname = "GeometryOperatorsProto";
 option objc_class_prefix = "RTG";
 
-package epl.grpc.geometry;
+package epl.geometry;
 
 /*
  gRPC Interfaces for working with geometry operators
@@ -51,11 +51,12 @@ enum GeometryEncodingType {
     wkb = 1; // well-known binary
     wkt = 2; // well-known text
     geojson = 3; // geojson
-    // TODO review esri encoding typename (this is for the esri shape binary format)
     esrishape = 4; // esri shape binary
-    esrijson = 5;
 }
 
+/*
+  Enums for different operator types
+*/
 enum ServiceOperatorType {
     Project = 0; // project geometry from one spatial reference to another
 
@@ -122,23 +123,8 @@ enum OffsetJoinType {
     Square =3;
 }
 
-//message GeometryData {
-//    int64 geometry_id = 1;
-//    string wkt = 3;
-//    string geojson = 4;
-//    bytes wkb = 5;
-//    bytes esri_shape = 6;
-//
-//    SpatialReferenceData spatial_reference = 7;
-//
-//    repeated string esri_json = 8;
-//}
 
-//message ServiceGeometryBag {
 message GeometryBagData {
-    // id is usually associated with position in file format or database
-    //    repeated int64 geometry_ids = 1;
-
     // oneof block start
     repeated int64 geometry_ids = 1;
     repeated string feature_ids = 9;

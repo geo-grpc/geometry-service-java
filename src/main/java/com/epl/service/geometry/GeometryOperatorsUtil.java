@@ -213,8 +213,6 @@ class OperatorResultsIterator implements Iterator<OperatorResult> {
             case esrishape:
                 m_byteBufferCursor = new OperatorExportToESRIShapeCursor(0, geometryCursor);
                 break;
-            case esrijson:
-                break;
             case UNRECOGNIZED:
                 break;
         }
@@ -666,9 +664,6 @@ public class GeometryOperatorsUtil {
                 break;
             case ExportToGeoJson:
                 encodingType = GeometryEncodingType.geojson;
-                break;
-            case ExportToJson:
-                encodingType = GeometryEncodingType.esrijson;
                 break;
         }
         // If the only operation used by the user is to export to one of the formats then enter this if statement and
