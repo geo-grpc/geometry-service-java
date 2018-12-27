@@ -13,7 +13,7 @@
  */
 
 
-package com.epl.service.geometry;
+package com.epl.geometry;
 
 import java.io.DataInputStream;
 import java.io.EOFException;

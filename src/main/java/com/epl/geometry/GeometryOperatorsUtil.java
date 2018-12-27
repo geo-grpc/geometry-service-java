@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.service.geometry;
+package com.epl.geometry;
 
 import com.esri.core.geometry.*;
 import com.fasterxml.jackson.core.JsonFactory;

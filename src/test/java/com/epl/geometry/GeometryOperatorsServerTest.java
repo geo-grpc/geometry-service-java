@@ -18,24 +18,21 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.service.geometry;
+package com.epl.geometry;
 
+import com.epl.geometry.GeometryOperatorsServer;
 import com.esri.core.geometry.*;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import junit.framework.TestCase;
-import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import java.io.FileReader;
-import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;

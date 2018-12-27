@@ -18,16 +18,16 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.service.geometry;
+package com.epl.geometry;
 
-import com.epl.service.geometry.GeometryOperatorsClient.TestHelper;
+import com.epl.geometry.GeometryOperatorsClient;
+import com.epl.geometry.GeometryOperatorsClient.TestHelper;
 import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.util.MutableHandlerRegistry;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;

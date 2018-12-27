@@ -21,7 +21,7 @@ email: info@echoparklabs.io
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "com.epl.service.geometry";
+option java_package = "com.epl.geometry";
 option java_outer_classname = "GeometryOperatorsProto";
 option objc_class_prefix = "RTG";
 
@@ -55,7 +55,7 @@ enum GeometryEncodingType {
 }
 
 /*
-  Enums for different operator types
+  type of geometry operators
 */
 enum ServiceOperatorType {
     Project = 0; // project geometry from one spatial reference to another
@@ -123,8 +123,10 @@ enum OffsetJoinType {
     Square =3;
 }
 
-
 message GeometryBagData {
+    // id is usually associated with position in file format or database
+    //    repeated int64 geometry_ids = 1;
+
     // oneof block start
     repeated int64 geometry_ids = 1;
     repeated string feature_ids = 9;

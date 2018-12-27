@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.service.geometry;
+package com.epl.geometry;
 
 import io.grpc.*;
 import io.grpc.netty.NettyServerBuilder;
@@ -26,7 +26,6 @@ import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;

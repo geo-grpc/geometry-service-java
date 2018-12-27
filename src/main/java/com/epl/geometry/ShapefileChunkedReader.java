@@ -1,4 +1,4 @@
-package com.epl.service.geometry;
+package com.epl.geometry;
 
 import com.esri.core.geometry.*;
 
