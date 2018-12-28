@@ -44,7 +44,7 @@ service GeometryOperators {
 }
 
 /*
-  Type of geometry encoding
+  type of geometry operators
 */
 enum GeometryEncodingType {
     unknown = 0;
@@ -294,3 +294,4 @@ message EnvelopeData {
     double ymax = 4;
     SpatialReferenceData spatial_reference = 5;
 }
+
