@@ -33,15 +33,16 @@ docker tag $2:$6-build-$1 $2:$6
 echo docker push $2:$6
 docker push $2:$6
 
-echo docker tag $2:$6 $3/$4:$6
-docker tag $2:$6 $3/$4:$6
-
-echo docker push $3/$4:$6
-docker push $3/$4:$6
-
-
-echo docker rmi $3/$4:$6
-docker rmi $3/$4:$6
+## push to echoparklabs docker hub
+#echo docker tag $2:$6 $3/$4:$6
+#docker tag $2:$6 $3/$4:$6
+#
+#echo docker push $3/$4:$6
+#docker push $3/$4:$6
+#
+#echo docker rmi $3/$4:$6
+#docker rmi $3/$4:$6
+## push to echoparklabs docker hub
 
 echo docker rmi $2:$6
 docker rmi $2:$6
