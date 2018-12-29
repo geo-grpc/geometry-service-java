@@ -124,9 +124,6 @@ enum OffsetJoinType {
 }
 
 message GeometryBagData {
-    // id is usually associated with position in file format or database
-    //    repeated int64 geometry_ids = 1;
-
     // oneof block start
     repeated int64 geometry_ids = 1;
     repeated string feature_ids = 9;
@@ -143,7 +140,6 @@ message GeometryBagData {
     SpatialReferenceData spatial_reference = 7;
 
     repeated string esri_json = 8;
-
 }
 
 message SpatialReferenceData {

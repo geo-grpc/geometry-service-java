@@ -1,4 +1,4 @@
-ARG JDK_TAG=8-jdk-slim
+ARG JDK_TAG=11-jdk-slim
 ARG JRE_TAG=${JDK_TAG}
 
 FROM echoparklabs/geometry-api-java:${JDK_TAG} as builder

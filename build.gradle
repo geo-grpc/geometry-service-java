@@ -10,8 +10,6 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // ASSUMES GRADLE 2.12 OR HIGHER. Use plugin version 0.7.5 with earlier
-        // gradle versions
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.5'
     }
 }
@@ -82,7 +80,7 @@ startScripts.enabled = false
 // help with defaultJvmOpts
 //https://docs.gradle.org/current/dsl/org.gradle.jvm.application.tasks.CreateStartScripts.html
 task geometryOperatorsServer(type: CreateStartScripts) {
-    mainClassName = 'com.epl.service.geometry.GeometryOperatorsServer'
+    mainClassName = 'com.epl.geometry.GeometryOperatorsServer'
     applicationName = 'geometry-operators-server'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = jar.outputs.files + project.configurations.runtime
@@ -90,7 +88,7 @@ task geometryOperatorsServer(type: CreateStartScripts) {
 }
 
 task geometryOperatorsClient(type: CreateStartScripts) {
-    mainClassName = 'com.epl.service.geometry.GeometryOperatorsClient'
+    mainClassName = 'com.epl.geometry.GeometryOperatorsClient'
     applicationName = 'geometry-operators-client'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = jar.outputs.files + project.configurations.runtime
