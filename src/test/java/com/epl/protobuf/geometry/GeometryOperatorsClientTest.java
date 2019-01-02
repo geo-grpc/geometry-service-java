@@ -18,10 +18,10 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.geometry;
+package com.epl.protobuf.geometry;
 
-import com.epl.geometry.GeometryOperatorsClient;
-import com.epl.geometry.GeometryOperatorsClient.TestHelper;
+import com.epl.protobuf.geometry.GeometryOperatorsClient;
+import com.epl.protobuf.geometry.GeometryOperatorsClient.TestHelper;
 import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;

@@ -1,4 +1,4 @@
-package com.epl.geometry;
+package com.epl.protobuf.geometry;
 
 import com.esri.core.geometry.*;
 

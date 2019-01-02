@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.geometry;
+package com.epl.protobuf.geometry;
 
 import io.grpc.*;
 import io.grpc.netty.NettyServerBuilder;

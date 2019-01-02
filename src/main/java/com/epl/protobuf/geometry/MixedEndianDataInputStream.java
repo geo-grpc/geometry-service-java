@@ -13,7 +13,7 @@
  */
 
 
-package com.epl.geometry;
+package com.epl.protobuf.geometry;
 
 import java.io.DataInputStream;
 import java.io.EOFException;

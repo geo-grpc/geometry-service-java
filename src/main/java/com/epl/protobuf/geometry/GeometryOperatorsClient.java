@@ -18,11 +18,11 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.geometry;
+package com.epl.protobuf.geometry;
 
 
-import com.epl.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
-import com.epl.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
+import com.epl.protobuf.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
+import com.epl.protobuf.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
 import com.esri.core.geometry.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;

@@ -10,6 +10,6 @@ examples/*.json
 doc/
 local_api_check.sh
 src/main/java/com/epl/core/
-
+.idea/
 libs/
 src/main/resources/com/fogmodel/
