@@ -51,8 +51,8 @@ cd $1/geometry-service-java
 #/usr/local/lib/node_modules/nodeunit/bin/nodeunit test/index.js
 
 echo test Go
-cp $1/geometry-service-java/src/main/proto/epl/grpc/geometry_operators.proto /Users/davidraleigh/go/src/geo-grpc/geometry-client-go/proto/geometry_operators.proto
-cd /Users/davidraleigh/go/src/geo-grpc/geometry-client-go
+cp $1/geometry-service-java/src/main/proto/epl/grpc/geometry_operators.proto $GOPATH/src/geo-grpc/geometry-client-go/proto/geometry_operators.proto
+cd $GOPATH/src/geo-grpc/geometry-client-go
 protoc -I proto/ proto/geometry_operators.proto --go_out=plugins=grpc:epl/protobuf
 go test test/geometry_test.go -v
 
