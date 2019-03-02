@@ -1,4 +1,4 @@
-package com.epl.geometry;
+package com.epl.protobuf.geometry;
 
 import io.fabric8.kubernetes.api.model.Endpoints;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;

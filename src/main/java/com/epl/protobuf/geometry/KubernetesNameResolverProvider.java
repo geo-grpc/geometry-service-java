@@ -1,4 +1,4 @@
-package com.epl.geometry;
+package com.epl.protobuf.geometry;
 
 import com.google.common.base.Preconditions;
 import io.grpc.Attributes;
