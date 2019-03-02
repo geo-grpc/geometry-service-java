@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-#cp ../protobuf/src/epl/protobuf/geometry_operators.proto ./src/main/proto/epl/grpc/
+cp $1/protobuf/src/epl/protobuf/geometry_operators.proto $1/geometry-service-java/src/main/proto/epl/grpc/
 #./gradlew clean
 #./gradlew build install
 #docker rm -f temp-cc
