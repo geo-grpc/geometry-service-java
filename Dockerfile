@@ -5,7 +5,7 @@ FROM echoparklabs/geometry-api-java:${JDK_TAG} as builder
 
 MAINTAINER David Raleigh <david@echoparklabs.io>
 
-RUN apt-get update
+#RUN apt-get update
 
 COPY ./ /opt/src/geometry-service-java
 
