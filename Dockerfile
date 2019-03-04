@@ -5,6 +5,7 @@ FROM echoparklabs/geometry-api-java:${JDK_TAG} as builder
 
 MAINTAINER David Raleigh <david@echoparklabs.io>
 
+# https://github.com/rocker-org/shiny/issues/19#issuecomment-308357402
 RUN apt-get update || apt-get update
 
 COPY ./ /opt/src/geometry-service-java
@@ -15,6 +16,8 @@ RUN ./gradlew build install
 
 
 FROM echoparklabs/geometry-api-java:${JRE_TAG}
+
+# https://github.com/rocker-org/shiny/issues/19#issuecomment-308357402
 RUN apt-get update || apt-get update
 
 WORKDIR /opt/src/geometry-service-java/build/install

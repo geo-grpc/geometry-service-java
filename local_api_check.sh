@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+#https://stackoverflow.com/a/195972/445372
 echo $1/geometry-service-java/src/main/proto/epl/protobuf/ \
      $1/geometry-client-cpp/proto/epl/protobuf/ \
      $1/geometry-client-python/proto/epl/protobuf/ \
@@ -10,11 +11,11 @@ echo $1/geometry-service-java/src/main/proto/epl/grpc/ \
      $1/geometry-client-python/proto/epl/grpc/ \
      $GOPATH/src/geo-grpc/geometry-client-go/proto/epl/grpc/ | xargs -n 1 cp $1/protobuf/src/epl/protobuf/geometry_operators.proto
 
-#./gradlew clean
-#./gradlew build install
-#docker rm -f temp-cc
-#docker build -t echoparklabs/geometry-service-java:11-jdk-slim .
-#docker run -d --name=temp-cc echoparklabs/geometry-service-java:11-jdk-slim
+./gradlew clean
+./gradlew build install
+docker rm -f temp-cc
+docker build -t echoparklabs/geometry-service-java:11-jdk-slim .
+docker run -d --name=temp-cc echoparklabs/geometry-service-java:11-jdk-slim
 
 echo test C++
 echo $1
@@ -22,12 +23,9 @@ rm -rf $1/geometry-client-cpp/build
 mkdir $1/geometry-client-cpp/build
 
 set -e
-cd $1/geometry-client-cpp/build
-cmake ..
-make
-cd ./geometry-test
-pwd
-./unitTest
+cmake -B $1/geometry-client-cpp/build $1/geometry-client-cpp/build/..
+make -C $1/geometry-client-cpp/build
+$1/geometry-client-cpp/build/geometry-test/unitTest
 echo end test C++
 
 echo test Python
