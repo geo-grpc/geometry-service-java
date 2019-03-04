@@ -5,7 +5,7 @@ FROM echoparklabs/geometry-api-java:${JDK_TAG} as builder
 
 MAINTAINER David Raleigh <david@echoparklabs.io>
 
-#RUN apt-get update
+RUN apt-get update || apt-get update
 
 COPY ./ /opt/src/geometry-service-java
 
@@ -15,7 +15,7 @@ RUN ./gradlew build install
 
 
 FROM echoparklabs/geometry-api-java:${JRE_TAG}
-RUN apt-get update
+RUN apt-get update || apt-get update
 
 WORKDIR /opt/src/geometry-service-java/build/install
 COPY --from=builder /opt/src/geometry-service-java/build/install .
