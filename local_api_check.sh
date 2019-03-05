@@ -49,3 +49,5 @@ protoc -I $GOPATH/src/github.com/geo-grpc/geometry-client-go/proto/ \
 
 go test $GOPATH/src/github.com/geo-grpc/geometry-client-go/test/geometry_test.go -v
 echo end test Go
+
+docker rm -f temp-cc
