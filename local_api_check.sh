@@ -39,13 +39,13 @@ deactivate
 echo end test Python
 
 echo test Go
-protoc -I $GOPATH/src/geo-grpc/geometry-client-go/proto/ \
-    $GOPATH/src/geo-grpc/geometry-client-go/proto/epl/protobuf/geometry.proto \
+protoc -I $GOPATH/src/github.com/geo-grpc/geometry-client-go/proto/ \
+    $GOPATH/src/github.com/geo-grpc/geometry-client-go/proto/epl/protobuf/geometry.proto \
     --go_out=$GOPATH/src
 
-protoc -I $GOPATH/src/geo-grpc/geometry-client-go/proto/ \
-    $GOPATH/src/geo-grpc/geometry-client-go/proto/epl/grpc/geometry_operators.proto \
+protoc -I $GOPATH/src/github.com/geo-grpc/geometry-client-go/proto/ \
+    $GOPATH/src/github.com/geo-grpc/geometry-client-go/proto/epl/grpc/geometry_operators.proto \
     --go_out=plugins=grpc:$GOPATH/src
 
-go test $GOPATH/src/geo-grpc/geometry-client-go/test/geometry_test.go -v
+go test $GOPATH/src/github.com/geo-grpc/geometry-client-go/test/geometry_test.go -v
 echo end test Go
