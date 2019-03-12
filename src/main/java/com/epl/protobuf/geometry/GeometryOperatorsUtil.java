@@ -690,13 +690,13 @@ public class GeometryOperatorsUtil {
                 .setGeometryEncodingType(geometryData.getGeometryEncodingType())
                 .addGeometryIds(geometryData.getGeometryId())
                 .addFeatureIds(geometryData.getFeatureId());
-        if (geometryData.hasEsriShape()) {
+        if (geometryData.getEsriShape().size() > 0) {
             ((GeometryBagData.Builder) geometryBagDataOrBuilder).addEsriShape(geometryData.getEsriShape());
-        } else if (geometryData.hasGeojson()) {
+        } else if (geometryData.getGeojson().length() > 0) {
             ((GeometryBagData.Builder) geometryBagDataOrBuilder).addGeojson(geometryData.getGeojson());
-        } else if (geometryData.hasWkb()) {
+        } else if (geometryData.getWkb().size() > 0) {
             ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkb(geometryData.getWkb());
-        } else if (geometryData.hasWkt()) {
+        } else if (geometryData.getWkt().length() > 0) {
             ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkt(geometryData.getWkt());
         }
 
