@@ -31,6 +31,11 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
+enum Side {
+    Left,
+    Right
+}
+
 /**
  * Common utilities for the GeometryOperators demo.
  */
@@ -128,6 +133,10 @@ class SpatialReferenceGroup {
             leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getLeftGeometryBag());
         } else if (operatorRequest.hasGeometryBag() && operatorRequest.getGeometryBag().hasSpatialReference()) {
             leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getGeometryBag());
+        } else if (operatorRequest.hasLeftGeometry() && operatorRequest.getLeftGeometry().hasSpatialReference()) {
+            leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getLeftGeometry());
+        } else if (operatorRequest.hasGeometry() && operatorRequest.getGeometry().hasSpatialReference()) {
+            leftSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getGeometry());
         } else if (operatorRequest.hasLeftGeometryRequest()) {
             leftSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getLeftGeometryRequest());
         } else {
@@ -137,6 +146,8 @@ class SpatialReferenceGroup {
 
         if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSpatialReference()) {
             rightSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getRightGeometryBag());
+        } else if (operatorRequest.hasRightGeometry() && operatorRequest.getRightGeometry().hasSpatialReference()) {
+            rightSR = GeometryOperatorsUtil.__extractSpatialReference(operatorRequest.getRightGeometry());
         } else if (operatorRequest.hasRightGeometryRequest()){
             rightSR = GeometryOperatorsUtil.__extractSpatialReferenceCursor(operatorRequest.getRightGeometryRequest());
         }
@@ -213,7 +224,7 @@ class OperatorResultsIterator implements Iterator<OperatorResult> {
             case esrishape:
                 m_byteBufferCursor = new OperatorExportToESRIShapeCursor(0, geometryCursor);
                 break;
-            case UNRECOGNIZED:
+            default:
                 break;
         }
     }
@@ -225,9 +236,7 @@ class OperatorResultsIterator implements Iterator<OperatorResult> {
             return true;
         }
 
-        if ((m_byteBufferCursor != null && m_byteBufferCursor.hasNext()) || (m_stringCursor != null && m_stringCursor.hasNext()))
-            return true;
-        return false;
+        return (m_byteBufferCursor != null && m_byteBufferCursor.hasNext()) || (m_stringCursor != null && m_stringCursor.hasNext());
     }
 
     @Override
@@ -263,7 +272,7 @@ class OperatorResultsIterator implements Iterator<OperatorResult> {
                     geometryBagBuilder.addEsriShape(ByteString.copyFrom(m_byteBufferCursor.next()));
                     geometryBagBuilder.addGeometryIds(m_byteBufferCursor.getByteBufferID());
                     break;
-                case UNRECOGNIZED:
+                default:
                     break;
             }
 
@@ -283,13 +292,10 @@ public class GeometryOperatorsUtil {
             GeometryCursor leftCursor,
             SpatialReferenceGroup srGroup) throws IOException {
         if (leftCursor == null) {
-            if (operatorRequest.hasLeftGeometryBag()) {
-                leftCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
-            } else if (operatorRequest.hasGeometryBag()) {
-                leftCursor = __createGeometryCursor(operatorRequest.getGeometryBag());
-            } else if (operatorRequest.hasLeftGeometryRequest()) {
+            leftCursor = __createGeometryCursor(operatorRequest, Side.Left);
+            if (leftCursor == null && operatorRequest.hasLeftGeometryRequest()) {
                 leftCursor = cursorFromRequest(operatorRequest.getLeftGeometryRequest(), null, null);
-            } else {
+            } else if (leftCursor == null && operatorRequest.hasGeometryRequest()) {
                 // assumes there is always a nested request if none of the above worked
                 leftCursor = cursorFromRequest(operatorRequest.getGeometryRequest(), null, null);
             }
@@ -299,6 +305,10 @@ public class GeometryOperatorsUtil {
             } else if (operatorRequest.hasGeometryRequest()) {
                 leftCursor = cursorFromRequest(operatorRequest.getGeometryRequest(), leftCursor, null);
             }
+        }
+
+        if (leftCursor == null){
+            throw new IOException("Geometry / operator request not defined for operation.");
         }
 
         // project left if needed
@@ -316,9 +326,8 @@ public class GeometryOperatorsUtil {
             GeometryCursor rightCursor,
             SpatialReferenceGroup srGroup) throws IOException {
         if (leftCursor != null && rightCursor == null) {
-            if (operatorRequest.hasRightGeometryBag()) {
-                rightCursor = __createGeometryCursor(operatorRequest.getRightGeometryBag());
-            } else if (operatorRequest.hasRightGeometryRequest()) {
+            rightCursor = __createGeometryCursor(operatorRequest, Side.Right);
+            if (rightCursor == null && operatorRequest.hasRightGeometryRequest()) {
                 rightCursor = cursorFromRequest(operatorRequest.getRightGeometryRequest(), null, null);
             }
         }
@@ -669,14 +678,52 @@ public class GeometryOperatorsUtil {
         // If the only operation used by the user is to export to one of the formats then enter this if statement and
         // assign the left cursor to the result cursor
         if (encodingType != GeometryEncodingType.unknown) {
-            if (operatorRequest.hasLeftGeometryBag()) {
-                resultCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
-            } else {
-                resultCursor = __createGeometryCursor(operatorRequest.getGeometryBag());
-            }
+            resultCursor = __createGeometryCursor(operatorRequest, Side.Left);
         }
 
         return new OperatorResultsIterator(resultCursor, operatorRequest, encodingType, bForceCompact);
+    }
+
+    private static GeometryBagData __bagFromData(GeometryData geometryData) {
+        GeometryBagDataOrBuilder geometryBagDataOrBuilder = GeometryBagData.newBuilder()
+                .setSpatialReference(geometryData.getSpatialReference())
+                .setGeometryEncodingType(geometryData.getGeometryEncodingType())
+                .addGeometryIds(geometryData.getGeometryId())
+                .addFeatureIds(geometryData.getFeatureId());
+        if (geometryData.hasEsriShape()) {
+            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addEsriShape(geometryData.getEsriShape());
+        } else if (geometryData.hasGeojson()) {
+            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addGeojson(geometryData.getGeojson());
+        } else if (geometryData.hasWkb()) {
+            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkb(geometryData.getWkb());
+        } else if (geometryData.hasWkt()) {
+            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkt(geometryData.getWkt());
+        }
+
+        return ((GeometryBagData.Builder) geometryBagDataOrBuilder).build();
+    }
+
+    private static GeometryCursor __createGeometryCursor(OperatorRequest operatorRequest, Side side) throws IOException {
+        GeometryCursor resultCursor = null;
+        if (side == Side.Left) {
+            if (operatorRequest.hasLeftGeometryBag()) {
+                resultCursor = __createGeometryCursor(operatorRequest.getLeftGeometryBag());
+            } else if (operatorRequest.hasGeometryBag()) {
+                resultCursor = __createGeometryCursor(operatorRequest.getGeometryBag());
+            } else if (operatorRequest.hasGeometry()) {
+                resultCursor = __createGeometryCursor(__bagFromData(operatorRequest.getGeometry()));
+            } else if (operatorRequest.hasLeftGeometry()) {
+                resultCursor = __createGeometryCursor(__bagFromData(operatorRequest.getLeftGeometry()));
+            }
+        } else if (side == Side.Right) {
+            if (operatorRequest.hasRightGeometryBag()) {
+                resultCursor = __createGeometryCursor(operatorRequest.getRightGeometryBag());
+            } else if (operatorRequest.hasRightGeometry()) {
+                resultCursor = __createGeometryCursor(__bagFromData(operatorRequest.getRightGeometry()));
+            }
+        }
+
+        return resultCursor;
     }
 
 
@@ -684,6 +731,9 @@ public class GeometryOperatorsUtil {
         return __extractGeometryCursor(geometryBag);
     }
 
+    static SpatialReference __extractSpatialReference(GeometryData geometryData) {
+        return geometryData.hasSpatialReference() ? __extractSpatialReference(geometryData.getSpatialReference()) : null;
+    }
 
     protected static SpatialReference __extractSpatialReference(GeometryBagData geometryBag) {
         return geometryBag.hasSpatialReference() ? __extractSpatialReference(geometryBag.getSpatialReference()) : null;

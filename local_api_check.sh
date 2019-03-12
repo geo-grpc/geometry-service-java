@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+PROTOPATH="/Users/davidraleigh/go/src/github.com/geo-grpc/api/proto"
+echo $2
 #https://stackoverflow.com/a/195972/445372
 echo $1/geometry-service-java/src/main/proto/epl/protobuf/ \
      $1/geometry-client-cpp/proto/epl/protobuf/ \
@@ -46,7 +48,9 @@ protoc -I $GOPATH/src/github.com/geo-grpc/geometry-client-go/proto/ \
     $GOPATH/src/github.com/geo-grpc/geometry-client-go/proto/epl/grpc/geometry_operators.proto \
     --go_out=plugins=grpc:$GOPATH/src
 echo test Go
-go test $GOPATH/src/github.com/geo-grpc/geometry-client-go/test/geometry_test.go -v
+cd ${GOPATH}/src/github.com/geo-grpc/geometry-client-go
+export GO111MODULE=on
+go test ${GOPATH}/src/github.com/geo-grpc/geometry-client-go/test/geometry_test.go -v
 echo end test Go
 
 docker rm -f temp-cc
