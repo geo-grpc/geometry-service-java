@@ -764,6 +764,8 @@ public class GeometryOperatorsUtil {
             return SpatialReference.create(serviceSpatialReference.getWkid());
         else if (serviceSpatialReference.getEsriWkt().length() > 0)
             return SpatialReference.create(serviceSpatialReference.getEsriWkt());
+        else if (serviceSpatialReference.getProj4().length() > 0)
+            return SpatialReference.createFromProj4(serviceSpatialReference.getProj4());
 
         return null;
     }

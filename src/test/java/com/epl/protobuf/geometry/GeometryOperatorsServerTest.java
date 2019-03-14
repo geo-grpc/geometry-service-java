@@ -981,4 +981,40 @@ public class GeometryOperatorsServerTest {
         }
         assertTrue(bFoundEmpty);
     }
+
+    @Test
+    public void testProj4() {
+        SpatialReferenceData spatialReferenceData = SpatialReferenceData
+                .newBuilder()
+                .setProj4("+init=epsg:4326")
+                .build();
+        SpatialReferenceData spatialReferenceDataWKID = SpatialReferenceData
+                .newBuilder()
+                .setWkid(4326)
+                .build();
+        GeometryData geometryData = GeometryData
+                .newBuilder()
+                .setWkt("MULTILINESTRING ((-120 -45, -100 -55, -90 -63, 0 0, 1 1, 100 25, 170 45, 175 65))")
+                .setSpatialReference(spatialReferenceData)
+                .build();
+
+        OperatorRequest operatorRequest = OperatorRequest
+                .newBuilder()
+                .setGeometry(geometryData)
+                .setOperatorType(ServiceOperatorType.Project)
+                .setResultsEncodingType(GeometryEncodingType.wkb)
+                .setResultSpatialReference(spatialReferenceDataWKID)
+                .build();
+
+        OperatorRequest operatorRequestEquals = OperatorRequest
+                .newBuilder()
+                .setLeftGeometryRequest(operatorRequest)
+                .setRightGeometry(geometryData)
+                .setOperatorType(ServiceOperatorType.Contains)
+                .build();
+
+        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+        OperatorResult operatorResult = stub.executeOperation(operatorRequestEquals);
+        assertTrue(operatorResult.getSpatialRelationship());
+    }
 }
