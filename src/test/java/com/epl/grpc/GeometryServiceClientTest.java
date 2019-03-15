@@ -18,10 +18,8 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.protobuf.geometry;
+package com.epl.grpc;
 
-import com.epl.protobuf.geometry.GeometryOperatorsClient;
-import com.epl.protobuf.geometry.GeometryOperatorsClient.TestHelper;
 import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
@@ -37,14 +35,14 @@ import java.util.Random;
 import static org.mockito.Mockito.mock;
 
 /**
- * Unit tests for {@link GeometryOperatorsClient}.
+ * Unit tests for {@link GeometryServiceClient}.
  * For demonstrating how to write gRPC unit test only.
  * Not intended to provide a high code coverage or to test every major usecase.
  */
 @RunWith(JUnit4.class)
-public class GeometryOperatorsClientTest {
+public class GeometryServiceClientTest {
     private final MutableHandlerRegistry serviceRegistry = new MutableHandlerRegistry();
-    private final TestHelper testHelper = mock(TestHelper.class);
+    private final GeometryServiceClient.TestHelper testHelper = mock(GeometryServiceClient.TestHelper.class);
     private final Random noRandomness =
             new Random() {
                 int index;
@@ -63,7 +61,7 @@ public class GeometryOperatorsClientTest {
                 }
             };
     private Server fakeServer;
-    private GeometryOperatorsClient client;
+    private GeometryServiceClient client;
 
     @Before
     public void setUp() throws Exception {
@@ -75,7 +73,7 @@ public class GeometryOperatorsClientTest {
                 .fallbackHandlerRegistry(serviceRegistry)
                 .directExecutor()
                 .build().start();
-        client = new GeometryOperatorsClient(InProcessChannelBuilder.forName(uniqueServerName).directExecutor());
+        client = new GeometryServiceClient(InProcessChannelBuilder.forName(uniqueServerName).directExecutor());
         client.setTestHelper(testHelper);
     }
 

@@ -18,8 +18,9 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.protobuf.geometry;
+package com.epl.grpc;
 
+import com.epl.protobuf.*;
 import com.esri.core.geometry.*;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
@@ -41,13 +42,13 @@ import static org.junit.Assert.assertTrue;
 
 
 /**
- * Unit tests for {@link GeometryOperatorsServer}.
+ * Unit tests for {@link GeometryServer}.
  * For demonstrating how to write gRPC unit test only.
  * Not intended to provide a high code coverage or to test every major usecase.
  */
 @RunWith(JUnit4.class)
-public class GeometryOperatorsServerTest {
-    private GeometryOperatorsServer server;
+public class GeometryServerTest {
+    private GeometryServer server;
     private ManagedChannel inProcessChannel;
 
     @Before
@@ -56,7 +57,7 @@ public class GeometryOperatorsServerTest {
         // use directExecutor for both InProcessServerBuilder and InProcessChannelBuilder can reduce the
         // usage timeouts and latches in test. But we still add timeout and latches where they would be
         // needed if no directExecutor were used, just for demo purpose.
-        server = new GeometryOperatorsServer(InProcessServerBuilder.forName(uniqueServerName).directExecutor(), 0);
+        server = new GeometryServer(InProcessServerBuilder.forName(uniqueServerName).directExecutor(), 0);
         server.start();
         inProcessChannel = InProcessChannelBuilder.forName(uniqueServerName).directExecutor().build();
     }
@@ -79,13 +80,13 @@ public class GeometryOperatorsServerTest {
 
         GeometryBagData geometryBag = GeometryBagData.newBuilder().addWkt(geom).build();
 
-        OperatorRequest requestOp = OperatorRequest.newBuilder()
+        GeometryRequest requestOp = GeometryRequest.newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.ExportToWkt)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(requestOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(requestOp);
 
         assertEquals(operatorResult.getGeometryBag().getWkt(0), geometryBag.getWkt(0));
     }
@@ -101,13 +102,13 @@ public class GeometryOperatorsServerTest {
 
         GeometryData geometryData = GeometryData.newBuilder().setWkt(geom).build();
 
-        OperatorRequest requestOp = OperatorRequest.newBuilder()
+        GeometryRequest requestOp = GeometryRequest.newBuilder()
                 .setLeftGeometry(geometryData)
                 .setOperatorType(ServiceOperatorType.ExportToWkt)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(requestOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(requestOp);
 
         assertEquals(operatorResult.getGeometryBag().getWkt(0), geometryData.getWkt());
     }
@@ -125,13 +126,13 @@ public class GeometryOperatorsServerTest {
                 .addWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
                 .build();
 
-        OperatorRequest requestOp = OperatorRequest.newBuilder()
+        GeometryRequest requestOp = GeometryRequest.newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.ExportToWkt)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(requestOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(requestOp);
 
         OperatorExportToWkt op2 = OperatorExportToWkt.local();
         String geom = op2.execute(0, polyline, null);
@@ -151,13 +152,13 @@ public class GeometryOperatorsServerTest {
                 .setWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
                 .build();
 
-        OperatorRequest requestOp = OperatorRequest.newBuilder()
+        GeometryRequest requestOp = GeometryRequest.newBuilder()
                 .setGeometry(geometryData)
                 .setOperatorType(ServiceOperatorType.ExportToWkt)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(requestOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(requestOp);
 
         OperatorExportToWkt op2 = OperatorExportToWkt.local();
         String geom = op2.execute(0, polyline, null);
@@ -180,14 +181,14 @@ public class GeometryOperatorsServerTest {
                 .addEsriShape(ByteString.copyFrom(op.execute(0, polyline)))
                 .build();
 
-        OperatorRequest serviceOp = OperatorRequest
+        GeometryRequest serviceOp = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
         Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getWkb(0).asReadOnlyByteBuffer(), null);
@@ -214,14 +215,14 @@ public class GeometryOperatorsServerTest {
                 .setEsriShape(ByteString.copyFrom(op.execute(0, polyline)))
                 .build();
 
-        OperatorRequest serviceOp = OperatorRequest
+        GeometryRequest serviceOp = GeometryRequest
                 .newBuilder()
                 .setGeometry(geometryData)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
         Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getWkb(0).asReadOnlyByteBuffer(), null);
@@ -255,15 +256,15 @@ public class GeometryOperatorsServerTest {
                 .build();
 
 
-        OperatorRequest serviceProjectOp = OperatorRequest
+        GeometryRequest serviceProjectOp = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(outputSpatialReference)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceProjectOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceProjectOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
         Polyline result = (Polyline) op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getWkb(0).asReadOnlyByteBuffer(), null);
@@ -304,15 +305,15 @@ public class GeometryOperatorsServerTest {
                 .build();
 
 
-        OperatorRequest serviceProjectOp = OperatorRequest
+        GeometryRequest serviceProjectOp = GeometryRequest
                 .newBuilder()
                 .setLeftGeometry(geometryData)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(outputSpatialReference)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceProjectOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceProjectOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
         Polyline result = (Polyline) op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getWkb(0).asReadOnlyByteBuffer(), null);
@@ -351,22 +352,22 @@ public class GeometryOperatorsServerTest {
                 .addWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
                 .build();
 
-        OperatorRequest serviceConvexOp = OperatorRequest
+        GeometryRequest serviceConvexOp = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .build();
 
 
-        OperatorRequest serviceOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceOp = GeometryRequest.newBuilder()
                 .setLeftGeometryRequest(serviceConvexOp)
                 .setBufferParams(BufferParams.newBuilder().addDistances(1).build())
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .build();
 
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
         Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getWkb(0).asReadOnlyByteBuffer(), null);
@@ -397,22 +398,22 @@ public class GeometryOperatorsServerTest {
                 .setWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
                 .build();
 
-        OperatorRequest serviceConvexOp = OperatorRequest
+        GeometryRequest serviceConvexOp = GeometryRequest
                 .newBuilder()
                 .setLeftGeometry(geometryBag)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .build();
 
 
-        OperatorRequest serviceOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceOp = GeometryRequest.newBuilder()
                 .setLeftGeometryRequest(serviceConvexOp)
                 .setBufferParams(BufferParams.newBuilder().addDistances(1).build())
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .build();
 
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceOp);
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
         Geometry result = op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometryBag().getWkb(0).asReadOnlyByteBuffer(), null);
@@ -444,14 +445,14 @@ public class GeometryOperatorsServerTest {
 
         BufferParams bufferParams = BufferParams.newBuilder().addDistances(2.5).setUnionResult(true).build();
 
-        OperatorRequest serviceBufferOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceBufferOp = GeometryRequest.newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .setBufferParams(bufferParams)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceBufferOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceBufferOp);
 
         List<ByteBuffer> byteBufferList = operatorResult.getGeometryBag().getWkbList().stream().map(com.google.protobuf.ByteString::asReadOnlyByteBuffer).collect(Collectors.toList());
         SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferList);
@@ -474,14 +475,14 @@ public class GeometryOperatorsServerTest {
 //    geometryBag.geometry_binary.extend([s.wkb for s in spots])
 //    geometryBag.geometry_encoding_type = GeometryEncodingType.Value('wkb')
 //
-//        # opRequestBuffer = OperatorRequest(left_geometry=geometryBag,
+//        # opRequestBuffer = GeometryRequest(left_geometry=geometryBag,
 //            #                                   operator_type=ServiceOperatorType.Value('Buffer'),
 //            #                                   buffer_distances=[2.5])
 //
-//    opRequestUnion = OperatorRequest(left_geometry=geometryBag,
+//    opRequestUnion = GeometryRequest(left_geometry=geometryBag,
 //            operator_type=ServiceOperatorType.Value('Union'))
 //
-//    response = stub.ExecuteOperation(opRequestUnion)
+//    response = stub.geometryOperationUnary(opRequestUnion)
 //    unioned_result = wkbloads(response.geometry.geometry_binary[0])
 //    epl_end = datetime.datetime.now()
 //    epl_delta = epl_end - epl_start
@@ -519,7 +520,7 @@ public class GeometryOperatorsServerTest {
 
         BufferParams bufferParams = BufferParams.newBuilder().addDistances(.5).build();
 
-        OperatorRequest serviceOpLeft = OperatorRequest
+        GeometryRequest serviceOpLeft = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryBag(geometryBagLeft)
                 .setOperatorType(ServiceOperatorType.Buffer)
@@ -527,7 +528,7 @@ public class GeometryOperatorsServerTest {
 
                 .setResultSpatialReference(spatialReferenceWGS)
                 .build();
-        OperatorRequest nestedLeft = OperatorRequest
+        GeometryRequest nestedLeft = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(serviceOpLeft)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
@@ -539,21 +540,21 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceNAD)
                 .build();
 
-        OperatorRequest serviceOpRight = OperatorRequest
+        GeometryRequest serviceOpRight = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryBag(geometryBagRight)
                 .setOperatorType(ServiceOperatorType.GeodesicBuffer)
                 .setBufferParams(BufferParams.newBuilder().addDistances(1000).setUnionResult(false).build())
                 .setOperationSpatialReference(spatialReferenceWGS)
                 .build();
-        OperatorRequest nestedRight = OperatorRequest
+        GeometryRequest nestedRight = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(serviceOpRight)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .setResultSpatialReference(spatialReferenceGall)
                 .build();
 
-        OperatorRequest operatorRequestContains = OperatorRequest
+        GeometryRequest operatorRequestContains = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(nestedLeft)
                 .setRightGeometryRequest(nestedRight)
@@ -561,8 +562,8 @@ public class GeometryOperatorsServerTest {
                 .setOperationSpatialReference(spatialReferenceMerc)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(operatorRequestContains);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(operatorRequestContains);
         Map<Long, Boolean> map = operatorResult.getRelateMapMap();
 
         assertTrue(map.get(0L));
@@ -596,7 +597,7 @@ public class GeometryOperatorsServerTest {
 
         BufferParams bufferParams = BufferParams.newBuilder().addDistances(.5).build();
 
-        OperatorRequest serviceOpLeft = OperatorRequest
+        GeometryRequest serviceOpLeft = GeometryRequest
                 .newBuilder()
                 .setLeftGeometry(geometryLeft)
                 .setOperatorType(ServiceOperatorType.Buffer)
@@ -604,7 +605,7 @@ public class GeometryOperatorsServerTest {
 
                 .setResultSpatialReference(spatialReferenceWGS)
                 .build();
-        OperatorRequest nestedLeft = OperatorRequest
+        GeometryRequest nestedLeft = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(serviceOpLeft)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
@@ -616,21 +617,21 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceNAD)
                 .build();
 
-        OperatorRequest serviceOpRight = OperatorRequest
+        GeometryRequest serviceOpRight = GeometryRequest
                 .newBuilder()
                 .setLeftGeometry(geometryBagRight)
                 .setOperatorType(ServiceOperatorType.GeodesicBuffer)
                 .setBufferParams(BufferParams.newBuilder().addDistances(1000).setUnionResult(false).build())
                 .setOperationSpatialReference(spatialReferenceWGS)
                 .build();
-        OperatorRequest nestedRight = OperatorRequest
+        GeometryRequest nestedRight = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(serviceOpRight)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
                 .setResultSpatialReference(spatialReferenceGall)
                 .build();
 
-        OperatorRequest operatorRequestContains = OperatorRequest
+        GeometryRequest operatorRequestContains = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(nestedLeft)
                 .setRightGeometryRequest(nestedRight)
@@ -638,8 +639,8 @@ public class GeometryOperatorsServerTest {
                 .setOperationSpatialReference(spatialReferenceMerc)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(operatorRequestContains);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(operatorRequestContains);
         Map<Long, Boolean> map = operatorResult.getRelateMapMap();
 
         assertTrue(map.get(0L));
@@ -666,7 +667,7 @@ public class GeometryOperatorsServerTest {
         SpatialReferenceData spatialReferenceWGS = SpatialReferenceData.newBuilder().setWkid(4326).build();
         SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(54016).build();
         //TODO why does esri shape fail
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
 
 
         GeometryBagData geometryBagLeft = GeometryBagData.newBuilder()
@@ -674,7 +675,7 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceNAD)
                 .build();
 
-        OperatorRequest serviceOpLeft = OperatorRequest
+        GeometryRequest serviceOpLeft = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryBag(geometryBagLeft)
                 .setOperatorType(ServiceOperatorType.Buffer)
@@ -684,12 +685,12 @@ public class GeometryOperatorsServerTest {
 
         Geometry bufferedLeft = GeometryEngine.buffer(polyline, SpatialReference.create(4269), .5);
         Geometry projectedBuffered = GeometryEngine.project(bufferedLeft, SpatialReference.create(4269), SpatialReference.create(4326));
-        OperatorResult operatorResultLeft = stub.executeOperation(serviceOpLeft);
+        GeometryResponse operatorResultLeft = stub.geometryOperationUnary(serviceOpLeft);
         SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeft.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(projectedBuffered, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4326)));
 
 
-        OperatorRequest nestedLeft = OperatorRequest
+        GeometryRequest nestedLeft = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(serviceOpLeft)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
@@ -697,7 +698,7 @@ public class GeometryOperatorsServerTest {
                 .build();
         Geometry projectedBufferedConvex = GeometryEngine.convexHull(projectedBuffered);
         Geometry reProjectedBufferedConvexHull = GeometryEngine.project(projectedBufferedConvex, SpatialReference.create(4326), SpatialReference.create(54016));
-        OperatorResult operatorResultLeftNested = stub.executeOperation(nestedLeft);
+        GeometryResponse operatorResultLeftNested = stub.geometryOperationUnary(nestedLeft);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeftNested.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(reProjectedBufferedConvexHull, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
 
@@ -706,7 +707,7 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceNAD)
                 .build();
 
-        OperatorRequest serviceOpRight = OperatorRequest
+        GeometryRequest serviceOpRight = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryBag(geometryBagRight)
                 .setOperatorType(ServiceOperatorType.GeodesicBuffer)
@@ -719,11 +720,11 @@ public class GeometryOperatorsServerTest {
 
         Geometry projectedRight = GeometryEngine.project(polyline, SpatialReference.create(4269), SpatialReference.create(4326));
         Geometry projectedBufferedRight = GeometryEngine.geodesicBuffer(projectedRight, SpatialReference.create(4326), 1000);
-        OperatorResult operatorResultRight = stub.executeOperation(serviceOpRight);
+        GeometryResponse operatorResultRight = stub.geometryOperationUnary(serviceOpRight);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRight.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(projectedBufferedRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4326)));
 
-        OperatorRequest nestedRight = OperatorRequest
+        GeometryRequest nestedRight = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(serviceOpRight)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
@@ -732,11 +733,11 @@ public class GeometryOperatorsServerTest {
 
         Geometry projectedBufferedConvexRight = GeometryEngine.convexHull(projectedBufferedRight);
         Geometry reProjectedBufferedConvexHullRight = GeometryEngine.project(projectedBufferedConvexRight, SpatialReference.create(4326), SpatialReference.create(54016));
-        OperatorResult operatorResultRightNested = stub.executeOperation(nestedRight);
+        GeometryResponse operatorResultRightNested = stub.geometryOperationUnary(nestedRight);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRightNested.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(reProjectedBufferedConvexHullRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
 
-        OperatorRequest operatorRequestSymDifference = OperatorRequest
+        GeometryRequest operatorRequestSymDifference = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(nestedLeft)
                 .setRightGeometryRequest(nestedRight)
@@ -751,7 +752,7 @@ public class GeometryOperatorsServerTest {
         Geometry difference = GeometryEngine.symmetricDifference(leftFinal, rightFinal, SpatialReference.create(3857));
         Geometry differenceProjected = GeometryEngine.project(difference, SpatialReference.create(3857), SpatialReference.create(4269));
 
-        OperatorResult operatorResult = stub.executeOperation(operatorRequestSymDifference);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(operatorRequestSymDifference);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResult.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(differenceProjected, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4269)));
 
@@ -776,7 +777,7 @@ public class GeometryOperatorsServerTest {
         SpatialReferenceData spatialReferenceWGS = SpatialReferenceData.newBuilder().setWkid(4326).build();
         SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(54016).build();
         //TODO why does esri shape fail
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
 
 
         GeometryData geometryBagLeft = GeometryData.newBuilder()
@@ -784,7 +785,7 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceNAD)
                 .build();
 
-        OperatorRequest serviceOpLeft = OperatorRequest
+        GeometryRequest serviceOpLeft = GeometryRequest
                 .newBuilder()
                 .setLeftGeometry(geometryBagLeft)
                 .setOperatorType(ServiceOperatorType.Buffer)
@@ -794,12 +795,12 @@ public class GeometryOperatorsServerTest {
 
         Geometry bufferedLeft = GeometryEngine.buffer(polyline, SpatialReference.create(4269), .5);
         Geometry projectedBuffered = GeometryEngine.project(bufferedLeft, SpatialReference.create(4269), SpatialReference.create(4326));
-        OperatorResult operatorResultLeft = stub.executeOperation(serviceOpLeft);
+        GeometryResponse operatorResultLeft = stub.geometryOperationUnary(serviceOpLeft);
         SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeft.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(projectedBuffered, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4326)));
 
 
-        OperatorRequest nestedLeft = OperatorRequest
+        GeometryRequest nestedLeft = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(serviceOpLeft)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
@@ -807,7 +808,7 @@ public class GeometryOperatorsServerTest {
                 .build();
         Geometry projectedBufferedConvex = GeometryEngine.convexHull(projectedBuffered);
         Geometry reProjectedBufferedConvexHull = GeometryEngine.project(projectedBufferedConvex, SpatialReference.create(4326), SpatialReference.create(54016));
-        OperatorResult operatorResultLeftNested = stub.executeOperation(nestedLeft);
+        GeometryResponse operatorResultLeftNested = stub.geometryOperationUnary(nestedLeft);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeftNested.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(reProjectedBufferedConvexHull, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
 
@@ -816,7 +817,7 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceNAD)
                 .build();
 
-        OperatorRequest serviceOpRight = OperatorRequest
+        GeometryRequest serviceOpRight = GeometryRequest
                 .newBuilder()
                 .setLeftGeometry(geometryBagRight)
                 .setOperatorType(ServiceOperatorType.GeodesicBuffer)
@@ -829,11 +830,11 @@ public class GeometryOperatorsServerTest {
 
         Geometry projectedRight = GeometryEngine.project(polyline, SpatialReference.create(4269), SpatialReference.create(4326));
         Geometry projectedBufferedRight = GeometryEngine.geodesicBuffer(projectedRight, SpatialReference.create(4326), 1000);
-        OperatorResult operatorResultRight = stub.executeOperation(serviceOpRight);
+        GeometryResponse operatorResultRight = stub.geometryOperationUnary(serviceOpRight);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRight.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(projectedBufferedRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4326)));
 
-        OperatorRequest nestedRight = OperatorRequest
+        GeometryRequest nestedRight = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(serviceOpRight)
                 .setOperatorType(ServiceOperatorType.ConvexHull)
@@ -842,11 +843,11 @@ public class GeometryOperatorsServerTest {
 
         Geometry projectedBufferedConvexRight = GeometryEngine.convexHull(projectedBufferedRight);
         Geometry reProjectedBufferedConvexHullRight = GeometryEngine.project(projectedBufferedConvexRight, SpatialReference.create(4326), SpatialReference.create(54016));
-        OperatorResult operatorResultRightNested = stub.executeOperation(nestedRight);
+        GeometryResponse operatorResultRightNested = stub.geometryOperationUnary(nestedRight);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRightNested.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(reProjectedBufferedConvexHullRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
 
-        OperatorRequest operatorRequestSymDifference = OperatorRequest
+        GeometryRequest operatorRequestSymDifference = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(nestedLeft)
                 .setRightGeometryRequest(nestedRight)
@@ -861,7 +862,7 @@ public class GeometryOperatorsServerTest {
         Geometry difference = GeometryEngine.symmetricDifference(leftFinal, rightFinal, SpatialReference.create(3857));
         Geometry differenceProjected = GeometryEngine.project(difference, SpatialReference.create(3857), SpatialReference.create(4269));
 
-        OperatorResult operatorResult = stub.executeOperation(operatorRequestSymDifference);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(operatorRequestSymDifference);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResult.getGeometryBag().getWkb(0).asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(differenceProjected, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4269)));
 
@@ -884,21 +885,21 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceWGS)
                 .build();
 
-        OperatorRequest serviceProjectOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceProjectOp = GeometryRequest.newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(spatialReferenceGall)
                 .build();
 
-        OperatorRequest serviceReProjectOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceReProjectOp = GeometryRequest.newBuilder()
                 .setLeftGeometryRequest(serviceProjectOp)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(spatialReferenceWGS)
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceReProjectOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceReProjectOp);
     }
 
 
@@ -919,21 +920,21 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceWGS)
                 .build();
 
-        OperatorRequest serviceProjectOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceProjectOp = GeometryRequest.newBuilder()
                 .setLeftGeometry(geometryBag)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(spatialReferenceGall)
                 .build();
 
-        OperatorRequest serviceReProjectOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceReProjectOp = GeometryRequest.newBuilder()
                 .setLeftGeometryRequest(serviceProjectOp)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(spatialReferenceWGS)
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceReProjectOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceReProjectOp);
 
     }
 
@@ -956,21 +957,21 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(serviceSpatialReference)
                 .build();
 
-        OperatorRequest serviceProjectOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceProjectOp = GeometryRequest.newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(outputSpatialReference)
                 .build();
 
-        OperatorRequest serviceReProjectOp = OperatorRequest.newBuilder()
+        GeometryRequest serviceReProjectOp = GeometryRequest.newBuilder()
                 .setLeftGeometryRequest(serviceProjectOp)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(serviceSpatialReference)
                 .setResultsEncodingType(GeometryEncodingType.wkt)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(serviceReProjectOp);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(serviceReProjectOp);
         SimpleStringCursor simpleByteBufferCursor = new SimpleStringCursor(operatorResult.getGeometryBag().getWktList());
         boolean bFoundEmpty = false;
         while (simpleByteBufferCursor.hasNext()) {
@@ -998,7 +999,7 @@ public class GeometryOperatorsServerTest {
                 .setSpatialReference(spatialReferenceData)
                 .build();
 
-        OperatorRequest operatorRequest = OperatorRequest
+        GeometryRequest operatorRequest = GeometryRequest
                 .newBuilder()
                 .setGeometry(geometryData)
                 .setOperatorType(ServiceOperatorType.Project)
@@ -1006,15 +1007,15 @@ public class GeometryOperatorsServerTest {
                 .setResultSpatialReference(spatialReferenceDataWKID)
                 .build();
 
-        OperatorRequest operatorRequestEquals = OperatorRequest
+        GeometryRequest operatorRequestEquals = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryRequest(operatorRequest)
                 .setRightGeometry(geometryData)
                 .setOperatorType(ServiceOperatorType.Contains)
                 .build();
 
-        GeometryOperatorsGrpc.GeometryOperatorsBlockingStub stub = GeometryOperatorsGrpc.newBlockingStub(inProcessChannel);
-        OperatorResult operatorResult = stub.executeOperation(operatorRequestEquals);
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(operatorRequestEquals);
         assertTrue(operatorResult.getSpatialRelationship());
     }
 }

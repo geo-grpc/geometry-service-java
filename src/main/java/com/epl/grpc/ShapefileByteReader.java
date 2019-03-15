@@ -1,4 +1,4 @@
-package com.epl.protobuf.geometry;
+package com.epl.grpc;
 
 /*
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -158,7 +158,7 @@ public class ShapefileByteReader {
      * @param shpTypeId shape type id from shapfile
      * @return the geom type
      */
-    private Geometry.Type geometryTypeFromShpType(int shpTypeId) {
+    public static Geometry.Type geometryTypeFromShpType(int shpTypeId) {
         int shpType = shpTypeId % 10;
 
         switch (shpType) {

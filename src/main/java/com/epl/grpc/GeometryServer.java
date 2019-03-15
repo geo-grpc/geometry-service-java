@@ -18,8 +18,11 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.protobuf.geometry;
+package com.epl.grpc;
 
+import com.epl.protobuf.FileRequestChunk;
+import com.epl.protobuf.GeometryRequest;
+import com.epl.protobuf.GeometryResponse;
 import io.grpc.*;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.ServerCallStreamObserver;
@@ -35,8 +38,8 @@ import java.util.logging.Logger;
 /**
  * Created by davidraleigh on 4/9/17.
  */
-public class GeometryOperatorsServer {
-    private static final Logger logger = Logger.getLogger(GeometryOperatorsServer.class.getName());
+public class GeometryServer {
+    private static final Logger logger = Logger.getLogger(GeometryServer.class.getName());
 
     private final int port;
 
@@ -46,9 +49,9 @@ public class GeometryOperatorsServer {
     private final LinkedList<ManagedChannel> fakeOobChannels = new LinkedList<ManagedChannel>();
 
     /**
-     * Create a GeometryOperators server listening on {@code port} using {@code featureFile} database.
+     * Create a GeometryService server listening on {@code port} using {@code featureFile} database.
      */
-    public GeometryOperatorsServer(int port) throws IOException {
+    public GeometryServer(int port) throws IOException {
         // changed max message size to match tensorflow
         // https://github.com/tensorflow/serving/issues/288
         // https://github.com/tensorflow/tensorflow/blob/d0d975f8c3330b5402263b2356b038bc8af919a2/tensorflow/core/platform/types.h#L52
@@ -62,9 +65,9 @@ public class GeometryOperatorsServer {
     }
 
     /**
-     * Create a GeometryOperators server using serverBuilder as a base and features as data.
+     * Create a GeometryService server using serverBuilder as a base and features as data.
      */
-    public GeometryOperatorsServer(ServerBuilder<?> serverBuilder, int port) {
+    public GeometryServer(ServerBuilder<?> serverBuilder, int port) {
         this.port = port;
 
         // try adding security
@@ -79,7 +82,7 @@ public class GeometryOperatorsServer {
             }
         }
 
-        server = serverBuilder.addService(new GeometryOperatorsService()).build();
+        server = serverBuilder.addService(new GeometryService()).build();
     }
 
     /**
@@ -95,7 +98,7 @@ public class GeometryOperatorsServer {
             public void run() {
                 // Use stderr here since the logger may has been reset by its JVM shutdown hook.
                 System.err.println("*** shutting down gRPC server since JVM is shutting down");
-                GeometryOperatorsServer.this.stop();
+                GeometryServer.this.stop();
                 System.err.println("*** server shut down");
             }
         });
@@ -123,27 +126,25 @@ public class GeometryOperatorsServer {
      * Main method.  This comment makes the linter happy.
      */
     public static void main(String[] args) throws Exception {
-        GeometryOperatorsServer server = new GeometryOperatorsServer(8980);
+        GeometryServer server = new GeometryServer(8980);
         server.start();
         server.blockUntilShutdown();
     }
 
     /**
-     * Our implementation of GeometryOperators service.
-     * <p>
-     * <p>See route_guide.proto for details of the methods.
+     * Our implementation of GeometryService service.
      */
-    private static class GeometryOperatorsService extends GeometryOperatorsGrpc.GeometryOperatorsImplBase {
+    private static class GeometryService extends GeometryServiceGrpc.GeometryServiceImplBase {
 
 
         @Override
-        public StreamObserver<OperatorRequest> streamOperationsEx(StreamObserver<OperatorResult> responseObserver) {
+        public StreamObserver<GeometryRequest> geometryOperationBiStream(StreamObserver<GeometryResponse> responseObserver) {
 
-            return new StreamObserver<OperatorRequest>() {
+            return new StreamObserver<GeometryRequest>() {
                 @Override
-                public void onNext(OperatorRequest value) {
+                public void onNext(GeometryRequest value) {
                     try {
-                        OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value, null, false);
+                        GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(value, null, false);
                         while (operatorResultsIterator.hasNext()) {
                             responseObserver.onNext(operatorResultsIterator.next());
                         }
@@ -170,11 +171,11 @@ public class GeometryOperatorsServer {
 
         @SuppressWarnings("Duplicates")
         @Override
-        public StreamObserver<OperatorRequest> streamOperations(StreamObserver<OperatorResult> responseObserver) {
+        public StreamObserver<GeometryRequest> geometryOperationBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
             // Set up manual flow control for the request stream. It feels backwards to configure the request
             // stream's flow control using the response stream's observer, but this is the way it is.
-            final ServerCallStreamObserver<OperatorResult> serverCallStreamObserver =
-                    (ServerCallStreamObserver<OperatorResult>) responseObserver;
+            final ServerCallStreamObserver<GeometryResponse> serverCallStreamObserver =
+                    (ServerCallStreamObserver<GeometryResponse>) responseObserver;
             serverCallStreamObserver.disableAutoInboundFlowControl();
 
             // Guard against spurious onReady() calls caused by a race between onNext() and onReady(). If the transport
@@ -185,7 +186,7 @@ public class GeometryOperatorsServer {
 
             serverCallStreamObserver.setOnReadyHandler(() -> {
                 if (serverCallStreamObserver.isReady() && wasReady.compareAndSet(false, true)) {
-//                    logger.info("READY");
+                    // logger.info("READY");
                     // Signal the request sender to send one message. This happens when isReady() turns true, signaling that
                     // the receive buffer has enough free space to receive more messages. Calling request() serves to prime
                     // the message pump.
@@ -193,13 +194,13 @@ public class GeometryOperatorsServer {
                 }
             });
 
-            return new StreamObserver<OperatorRequest>() {
+            return new StreamObserver<GeometryRequest>() {
                 @Override
-                public void onNext(OperatorRequest value) {
+                public void onNext(GeometryRequest value) {
                     // Process the request and send a response or an error.
                     try {
                         // Accept and enqueue the request.
-                        OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value, null, false);
+                        GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(value, null, false);
                         while (operatorResultsIterator.hasNext()) {
                             responseObserver.onNext(operatorResultsIterator.next());
                         }
@@ -243,11 +244,11 @@ public class GeometryOperatorsServer {
 
         @SuppressWarnings("Duplicates")
         @Override
-        public StreamObserver<FileChunk> streamFileOperations(StreamObserver<OperatorResult> responseObserver) {
+        public StreamObserver<FileRequestChunk> fileOperationBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
             // Set up manual flow control for the request stream. It feels backwards to configure the request
             // stream's flow control using the response stream's observer, but this is the way it is.
-            final ServerCallStreamObserver<OperatorResult> serverCallStreamObserver =
-                    (ServerCallStreamObserver<OperatorResult>) responseObserver;
+            final ServerCallStreamObserver<GeometryResponse> serverCallStreamObserver =
+                    (ServerCallStreamObserver<GeometryResponse>) responseObserver;
             serverCallStreamObserver.disableAutoInboundFlowControl();
 
             // Guard against spurious onReady() calls caused by a race between onNext() and onReady(). If the transport
@@ -266,10 +267,10 @@ public class GeometryOperatorsServer {
                 }
             });
 
-            return new StreamObserver<FileChunk>() {
+            return new StreamObserver<FileRequestChunk>() {
                 ShapefileChunkedReader shapefileChunkedReader = null;
                 @Override
-                public void onNext(FileChunk value) {
+                public void onNext(FileRequestChunk value) {
                     InputStream inputStream = value.getData().newInput();
                     // Process the request and send a response or an error.
                     try {
@@ -281,7 +282,7 @@ public class GeometryOperatorsServer {
                         }
 
                         if (shapefileChunkedReader.hasNext()) {
-                            OperatorResultsIterator operatorResultsIterator = GeometryOperatorsUtil.buildResultsIterable(value.getNestedRequest(), shapefileChunkedReader, true);
+                            GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(value.getNestedRequest(), shapefileChunkedReader, true);
                             while (operatorResultsIterator.hasNext()) {
                                 responseObserver.onNext(operatorResultsIterator.next());
                             }
@@ -324,11 +325,11 @@ public class GeometryOperatorsServer {
             };
         }
 
-//            return new StreamObserver<FileChunk>() {
-//                ArrayList<FileChunk> fileChunks = new ArrayList<>();
+//            return new StreamObserver<FileRequestChunk>() {
+//                ArrayList<FileRequestChunk> fileChunks = new ArrayList<>();
 //                ShapefileChunkedReader shapefileChunkedReader = null;
 //                @Override
-//                public void onNext(FileChunk value) {
+//                public void onNext(FileRequestChunk value) {
 //                    InputStream inputStream = value.getData().newInput();
 //                    try {
 //                        if (shapefileChunkedReader == null) {
@@ -338,7 +339,7 @@ public class GeometryOperatorsServer {
 //                        }
 //
 //                        if (shapefileChunkedReader.hasNext()) {
-//                            resultStreamObserver.onNext(GeometryOperatorsUtil.buildCursor(value.getNestedRequest(), shapefileChunkedReader));
+//                            resultStreamObserver.onNext(GeometryServiceUtil.buildCursor(value.getNestedRequest(), shapefileChunkedReader));
 //                        }
 //                    } catch (IOException e) {
 //                        e.printStackTrace();
@@ -370,11 +371,11 @@ public class GeometryOperatorsServer {
         }
 
         @Override
-        public void executeOperation(OperatorRequest request, StreamObserver<OperatorResult> responseObserver) {
+        public void geometryOperationUnary(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver) {
             try {
                 // logger.info("server name" + System.getenv("MY_NODE_NAME"));
                 // System.out.println("Start process");
-                OperatorResultsIterator operatorResults = GeometryOperatorsUtil.buildResultsIterable(request, null, true);
+                GeometryResponsesIterator operatorResults = GeometryServiceUtil.buildResultsIterable(request, null, true);
                 while (operatorResults.hasNext()) {
                     responseObserver.onNext(operatorResults.next());
                 }

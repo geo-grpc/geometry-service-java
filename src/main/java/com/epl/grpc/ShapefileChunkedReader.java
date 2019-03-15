@@ -1,4 +1,4 @@
-package com.epl.protobuf.geometry;
+package com.epl.grpc;
 
 import com.esri.core.geometry.*;
 
@@ -9,6 +9,8 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import static com.epl.grpc.ShapefileByteReader.geometryTypeFromShpType;
 
 public class ShapefileChunkedReader extends GeometryCursor {
     private final List<MixedEndianDataInputStream> inputStreamList;
@@ -156,44 +158,6 @@ public class ShapefileChunkedReader extends GeometryCursor {
             MixedEndianDataInputStream mixedEndianDataInputStream = new MixedEndianDataInputStream(in, chunk_size);
             inputStreamList.add(mixedEndianDataInputStream);
             inputStreamList.notify();
-        }
-    }
-
-    /**
-     * from esri spec:
-     * 0 Null Shape
-     * 1 Point
-     * 3 PolyLine
-     * 5 Polygon
-     * 8 MultiPoint
-     * 11 PointZ
-     * 13 PolyLineZ
-     * 15 PolygonZ
-     * 18 MultiPointZ
-     * 21 PointM
-     * 23 PolyLineM
-     * 25 PolygonM
-     * 28 MultiPointM
-     * 31 MultiPatch
-     * therefore final digit suffices to determine type (PolyLine, PolyLineM, PolylineZ are 1, 13 and 23 respectively).
-     *
-     * @param shpTypeId shape type id from shapfile
-     * @return the geom type
-     */
-    private Geometry.Type geometryTypeFromShpType(int shpTypeId) {
-        int shpType = shpTypeId % 10;
-
-        switch (shpType) {
-            case 1: //Point
-                return Geometry.Type.Point;
-            case 3: //Polyline
-                return Geometry.Type.Polyline;
-            case 5: //Polygon
-                return Geometry.Type.Polygon;
-            case 8: //Multipoint
-                return Geometry.Type.MultiPoint;
-            default:
-                return Geometry.Type.Unknown;
         }
     }
 

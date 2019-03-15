@@ -18,10 +18,11 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.protobuf.geometry;
+package com.epl.grpc;
 
-import com.epl.protobuf.geometry.GeometryOperatorsGrpc.GeometryOperatorsBlockingStub;
-import com.epl.protobuf.geometry.GeometryOperatorsGrpc.GeometryOperatorsStub;
+import com.epl.protobuf.*;
+import com.epl.grpc.GeometryServiceGrpc.GeometryServiceBlockingStub;
+import com.epl.grpc.GeometryServiceGrpc.GeometryServiceStub;
 import com.esri.core.geometry.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
@@ -47,13 +48,13 @@ import java.util.logging.Logger;
 /**
  * Sample client code that makes gRPC calls to the server.
  */
-public class GeometryOperatorsClient {
-    private static final Logger logger = Logger.getLogger(GeometryOperatorsClient.class.getName());
+public class GeometryServiceClient {
+    private static final Logger logger = Logger.getLogger(GeometryServiceClient.class.getName());
 
 
     private final ManagedChannel channel;
-    private final GeometryOperatorsBlockingStub blockingStub;
-    private final GeometryOperatorsStub asyncStub;
+    private final GeometryServiceBlockingStub blockingStub;
+    private final GeometryServiceStub asyncStub;
 
 
     private Random random = new Random();
@@ -61,15 +62,15 @@ public class GeometryOperatorsClient {
 
 
     /**
-     * Construct client for accessing GeometryOperators server at {@code host:port}.
+     * Construct client for accessing GeometryService server at {@code host:port}.
      */
-    public GeometryOperatorsClient(String host, int port) {
+    public GeometryServiceClient(String host, int port) {
         this(ManagedChannelBuilder
                 .forAddress(host, port)
                 .usePlaintext(true));
     }
 
-    public GeometryOperatorsClient(String serviceTarget) {
+    public GeometryServiceClient(String serviceTarget) {
         this(ManagedChannelBuilder
                 .forTarget(serviceTarget)
                 .nameResolverFactory(new KubernetesNameResolverProvider())
@@ -79,12 +80,12 @@ public class GeometryOperatorsClient {
     }
 
     /**
-     * Construct client for accessing GeometryOperators server using the existing channel.
+     * Construct client for accessing GeometryService server using the existing channel.
      */
-    public GeometryOperatorsClient(ManagedChannelBuilder<?> channelBuilder) {
+    public GeometryServiceClient(ManagedChannelBuilder<?> channelBuilder) {
         channel = channelBuilder.build();
-        blockingStub = GeometryOperatorsGrpc.newBlockingStub(channel);
-        asyncStub = GeometryOperatorsGrpc.newStub(channel);
+        blockingStub = GeometryServiceGrpc.newBlockingStub(channel);
+        asyncStub = GeometryServiceGrpc.newStub(channel);
     }
 
     public void shutdown() throws InterruptedException {
@@ -102,14 +103,14 @@ public class GeometryOperatorsClient {
                 .addGeometryIds(0)
                 .setSpatialReference(inputSpatialReference);
 
-        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
+        GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .setBufferParams(BufferParams.newBuilder().addDistances(45))
                 .getLeftGeometryRequestBuilder()
                 .setResultsEncodingType(GeometryEncodingType.geojson)
                 .setOperationSpatialReference(operatorSpatialReference)
                 .setResultSpatialReference(outputSpatialReference);
-//        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
+//        GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
 //                .setOperatorType(ServiceOperatorType.Buffer)
 //                .addBufferDistances(2.5)
 //                .setMaxVerticesInFullCircle(66)
@@ -138,7 +139,7 @@ public class GeometryOperatorsClient {
 
         BufferParams bufferParams = BufferParams.newBuilder().addDistances(2.5).build();
 
-        OperatorRequest.Builder operatorRequestBuilder = OperatorRequest.newBuilder()
+        GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .setBufferParams(bufferParams)
 //                .addBufferDistances(2.5)
@@ -154,31 +155,31 @@ public class GeometryOperatorsClient {
         int offsetSize = 262144;
         byte[] bytes = new byte[offsetSize];
 
-        OperatorRequest project = OperatorRequest
+        GeometryRequest project = GeometryRequest
                 .newBuilder()
                 .setOperationSpatialReference(SpatialReferenceData.newBuilder().setWkid(4326))
                 .setResultSpatialReference(SpatialReferenceData.newBuilder().setWkid(54016))
                 .setResultsEncodingType(GeometryEncodingType.geojson).build();
 
-        OperatorRequest buffer = OperatorRequest
+        GeometryRequest buffer = GeometryRequest
                 .newBuilder()
                 .setGeometryRequest(project)
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .setBufferParams(BufferParams.newBuilder().addDistances(45))
                 .setResultsEncodingType(GeometryEncodingType.geojson).build();
 
-        FileChunk.Builder fileChunkBuilder = FileChunk
+        FileRequestChunk.Builder fileChunkBuilder = FileRequestChunk
                 .newBuilder()
                 .setData(ByteString.copyFromUtf8(""))
                 .setNestedRequest(buffer);
 
-        GeometryOperatorsStub geometryOperatorsStub = asyncStub.withMaxInboundMessageSize(2147483647);
+        GeometryServiceStub geometryServiceStub = asyncStub.withMaxInboundMessageSize(2147483647);
 
-        ClientResponseObserver<FileChunk, OperatorResult> clientResponseObserver =
-                new ClientResponseObserver<FileChunk, OperatorResult>() {
-                    ClientCallStreamObserver<FileChunk> requestStream;
+        ClientResponseObserver<FileRequestChunk, GeometryResponse> clientResponseObserver =
+                new ClientResponseObserver<FileRequestChunk, GeometryResponse>() {
+                    ClientCallStreamObserver<FileRequestChunk> requestStream;
                     @Override
-                    public void beforeStart(ClientCallStreamObserver<FileChunk> requestStream) {
+                    public void beforeStart(ClientCallStreamObserver<FileRequestChunk> requestStream) {
                         this.requestStream = requestStream;
                         requestStream.disableAutoInboundFlowControl();
                         requestStream.setOnReadyHandler(() -> {
@@ -210,7 +211,7 @@ public class GeometryOperatorsClient {
                     }
 
                     @Override
-                    public void onNext(OperatorResult value) {
+                    public void onNext(GeometryResponse value) {
                         long id = value.getGeometryBag().getGeometryIds(0);
                         if (id % 1000 == 0) {
                             logger.info("Geometry number " + id);
@@ -232,7 +233,7 @@ public class GeometryOperatorsClient {
                     }
                 };
 
-        geometryOperatorsStub.streamFileOperations(clientResponseObserver);
+        geometryServiceStub.fileOperationBiStreamFlow(clientResponseObserver);
 
         done.await();
 
@@ -249,23 +250,23 @@ public class GeometryOperatorsClient {
      * @throws InterruptedException
      */
     public void shapefileThrottled(File inFile,
-                                   OperatorRequest.Builder operatorRequestBuilder,
+                                   GeometryRequest.Builder operatorRequestBuilder,
                                    GeometryBagData.Builder geometryBagBuilder) throws IOException, InterruptedException {
         CountDownLatch done = new CountDownLatch(1);
         ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
 
-        GeometryOperatorsStub geometryOperatorsStub = asyncStub
+        GeometryServiceStub geometryServiceStub = asyncStub
                 .withMaxInboundMessageSize(2147483647)
                 .withMaxOutboundMessageSize(2147483647);
 
         // When using manual flow-control and back-pressure on the client, the ClientResponseObserver handles both
         // request and response streams.
-        ClientResponseObserver<OperatorRequest, OperatorResult> clientResponseObserver =
-                new ClientResponseObserver<OperatorRequest, OperatorResult>() {
-                    ClientCallStreamObserver<OperatorRequest> requestStream;
+        ClientResponseObserver<GeometryRequest, GeometryResponse> clientResponseObserver =
+                new ClientResponseObserver<GeometryRequest, GeometryResponse>() {
+                    ClientCallStreamObserver<GeometryRequest> requestStream;
 
                     @Override
-                    public void beforeStart(ClientCallStreamObserver<OperatorRequest> requestStream) {
+                    public void beforeStart(ClientCallStreamObserver<GeometryRequest> requestStream) {
                         this.requestStream = requestStream;
                         // Set up manual flow control for the response stream. It feels backwards to configure the response
                         // stream's flow control using the request stream's observer, but this is the way it is.
@@ -294,7 +295,7 @@ public class GeometryOperatorsClient {
                                             .setEsriShape(0, byteString)
                                             .setGeometryIds(0, id)
                                             .build();
-                                    OperatorRequest operatorRequest = operatorRequestBuilder
+                                    GeometryRequest operatorRequest = operatorRequestBuilder
                                             .setLeftGeometryBag(geometryBag).build();
                                     requestStream.onNext(operatorRequest);
                                 } else {
@@ -307,7 +308,7 @@ public class GeometryOperatorsClient {
                     }
 
                     @Override
-                    public void onNext(OperatorResult operatorResult) {
+                    public void onNext(GeometryResponse operatorResult) {
                         long id = operatorResult.getGeometryBag().getGeometryIds(0);
 
                         if (id % 1000 == 0) {
@@ -331,7 +332,8 @@ public class GeometryOperatorsClient {
                     }
                 };
         // Note: clientResponseObserver is handling both request and response stream processing.
-        geometryOperatorsStub.streamOperations(clientResponseObserver);
+        geometryServiceStub.geometryOperationBiStream(clientResponseObserver);
+
 
         done.await();
 
@@ -360,7 +362,7 @@ public class GeometryOperatorsClient {
                 .build();
 
 
-        OperatorRequest serviceProjectOp = OperatorRequest
+        GeometryRequest serviceProjectOp = GeometryRequest
                 .newBuilder()
                 .setLeftGeometryBag(geometryBag)
                 .setOperatorType(ServiceOperatorType.Project)
@@ -368,7 +370,7 @@ public class GeometryOperatorsClient {
                 .build();
 
         System.out.println("executing request");
-        OperatorResult operatorResult = blockingStub.executeOperation(serviceProjectOp);
+        GeometryResponse operatorResult = blockingStub.geometryOperationUnary(serviceProjectOp);
         System.out.println("finished request");
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
@@ -388,12 +390,12 @@ public class GeometryOperatorsClient {
      * Issues several different requests and then exits.
      */
     public static void main(String[] args) throws InterruptedException {
-        GeometryOperatorsClient geometryOperatorsClient = null;
+        GeometryServiceClient geometryServiceClient = null;
         String target = System.getenv("GEOMETRY_SERVICE_TARGET");
         if (target != null)
-            geometryOperatorsClient = new GeometryOperatorsClient(target);
+            geometryServiceClient = new GeometryServiceClient(target);
         else
-            geometryOperatorsClient = new GeometryOperatorsClient(args[0], 8980);
+            geometryServiceClient = new GeometryServiceClient(args[0], 8980);
 
         System.out.println("Starting main");
         try {
@@ -406,11 +408,11 @@ public class GeometryOperatorsClient {
             long startTime = System.nanoTime();
 
 
-            geometryOperatorsClient.shapefileChunked(new File(filePath));
-            geometryOperatorsClient.testWRSShapefile(filePath);
+            geometryServiceClient.shapefileChunked(new File(filePath));
+            geometryServiceClient.testWRSShapefile(filePath);
 
 
-//            geometryOperatorsClient.shapefileThrottled(filePath);
+//            geometryServiceClient.shapefileThrottled(filePath);
             long endTime = System.nanoTime();
             long duration = (endTime - startTime) / 1000000;
             System.out.println("Test duration");
@@ -418,7 +420,7 @@ public class GeometryOperatorsClient {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            geometryOperatorsClient.shutdown();
+            geometryServiceClient.shutdown();
         }
     }
 
