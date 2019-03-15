@@ -367,7 +367,7 @@ public class GeometryServer {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
             e.printStackTrace(pw);
-            return String.format("executeOperation error : %s\n\ncallstack%s", e.getLocalizedMessage(), sw.toString());
+            return String.format("geometryOperationUnary error : %s\n\ncallstack%s", e.getLocalizedMessage(), sw.toString());
         }
 
         @Override
