@@ -46,7 +46,7 @@ class SpatialReferenceGroup {
     SpatialReference resultSR;
     SpatialReference operatorSR;
 
-    static SpatialReference spatialFromGeometry(GeometryBagData geometryBagData,
+    static SpatialReference spatialFromGeometry(GeometryData geometryBagData,
                                                 GeometryRequest geometryRequest) {
         if (geometryBagData.hasSpatialReference()) {
             return GeometryServiceUtil.extractSpatialReference(geometryBagData);
@@ -57,7 +57,7 @@ class SpatialReferenceGroup {
 
     SpatialReferenceGroup(GeometryRequest operatorRequest1,
                           SpatialReferenceData paramsSR,
-                          GeometryBagData geometryBagData,
+                          GeometryData geometryBagData,
                           GeometryRequest geometryRequest) {
         // optional: this is the spatial reference for performing the geometric operation
         operatorSR = GeometryServiceUtil.extractSpatialReference(paramsSR);
@@ -85,9 +85,9 @@ class SpatialReferenceGroup {
 
     SpatialReferenceGroup(GeometryRequest operatorRequest1,
                           SpatialReferenceData paramsSR,
-                          GeometryBagData leftGeometryBagData,
+                          GeometryData leftGeometryBagData,
                           GeometryRequest leftGeometryRequest,
-                          GeometryBagData rightGeometryBagData,
+                          GeometryData rightGeometryBagData,
                           GeometryRequest rightGeometryRequest) {
         // optional: this is the spatial reference for performing the geometric operation
         operatorSR = GeometryServiceUtil.extractSpatialReference(paramsSR);
@@ -130,11 +130,11 @@ class SpatialReferenceGroup {
         // optionalish: this is the final spatial reference for the resultSR (project after operatorSR)
         resultSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getResultSpatialReference());
 
-        if (operatorRequest.hasLeftGeometryBag() && operatorRequest.getLeftGeometryBag().hasSpatialReference()) {
-            leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getLeftGeometryBag());
-        } else if (operatorRequest.hasGeometryBag() && operatorRequest.getGeometryBag().hasSpatialReference()) {
-            leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getGeometryBag());
-        } else if (operatorRequest.hasLeftGeometry() && operatorRequest.getLeftGeometry().hasSpatialReference()) {
+//        if (operatorRequest.hasLeftGeometryBag() && operatorRequest.getLeftGeometryBag().hasSpatialReference()) {
+//            leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getLeftGeometryBag());
+//        } else if (operatorRequest.hasGeometryBag() && operatorRequest.getGeometryBag().hasSpatialReference()) {
+//            leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getGeometryBag());
+        if (operatorRequest.hasLeftGeometry() && operatorRequest.getLeftGeometry().hasSpatialReference()) {
             leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getLeftGeometry());
         } else if (operatorRequest.hasGeometry() && operatorRequest.getGeometry().hasSpatialReference()) {
             leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getGeometry());
@@ -145,9 +145,9 @@ class SpatialReferenceGroup {
             leftSR = GeometryServiceUtil.extractSpatialReferenceCursor(operatorRequest.getGeometryRequest());
         }
 
-        if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSpatialReference()) {
-            rightSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getRightGeometryBag());
-        } else if (operatorRequest.hasRightGeometry() && operatorRequest.getRightGeometry().hasSpatialReference()) {
+//        if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSpatialReference()) {
+//            rightSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getRightGeometryBag());
+        if (operatorRequest.hasRightGeometry() && operatorRequest.getRightGeometry().hasSpatialReference()) {
             rightSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getRightGeometry());
         } else if (operatorRequest.hasRightGeometryRequest()){
             rightSR = GeometryServiceUtil.extractSpatialReferenceCursor(operatorRequest.getRightGeometryRequest());
@@ -162,13 +162,13 @@ class SpatialReferenceGroup {
 
         if (leftSR == null) {
             leftSR = operatorSR;
-            if (rightSR == null && (operatorRequest.hasRightGeometryBag() || operatorRequest.hasRightGeometryRequest())) {
+            if (rightSR == null && (operatorRequest.hasRightGeometry() || operatorRequest.hasRightGeometryRequest())) {
                 rightSR = operatorSR;
             }
         }
 
         // TODO improve geometry to work with local spatial references. This is super ugly as it stands
-        if ((operatorRequest.hasRightGeometryRequest() || operatorRequest.hasRightGeometryBag()) &&
+        if ((operatorRequest.hasRightGeometryRequest() || operatorRequest.hasRightGeometry()) &&
                 ((leftSR != null && rightSR == null) ||
                         (leftSR == null && rightSR != null))) {
             throw new IllegalArgumentException("either both spatial references are local or neither");
@@ -249,7 +249,7 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
             return tempResults;
         }
 
-        GeometryBagData.Builder geometryBagBuilder = GeometryBagData
+        GeometryData.Builder geometryBuilder = GeometryData
                 .newBuilder()
                 .setGeometryEncodingType(m_encodingType)
                 .setSpatialReference(m_spatialReferenceData);
@@ -258,20 +258,24 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
             switch (m_encodingType) {
                 case unknown:
                 case wkb:
-                    geometryBagBuilder.addWkb(ByteString.copyFrom(m_byteBufferCursor.next()));
-                    geometryBagBuilder.addGeometryIds(m_byteBufferCursor.getByteBufferID());
+                    geometryBuilder.setWkb(ByteString.copyFrom(m_byteBufferCursor.next()));
+                    geometryBuilder.setGeometryId(m_byteBufferCursor.getByteBufferID());
+                    //        TODO add feature IDs
                     break;
                 case wkt:
-                    geometryBagBuilder.addWkt(m_stringCursor.next());
-                    geometryBagBuilder.addGeometryIds(m_stringCursor.getID());
+                    geometryBuilder.setWkt(m_stringCursor.next());
+                    geometryBuilder.setGeometryId(m_stringCursor.getID());
+                    //        TODO add feature IDs
                     break;
                 case geojson:
-                    geometryBagBuilder.addGeojson(m_stringCursor.next());
-                    geometryBagBuilder.addGeometryIds(m_stringCursor.getID());
+                    geometryBuilder.setGeojson(m_stringCursor.next());
+                    geometryBuilder.setGeometryId(m_stringCursor.getID());
+                    //        TODO add feature IDs
                     break;
                 case esrishape:
-                    geometryBagBuilder.addEsriShape(ByteString.copyFrom(m_byteBufferCursor.next()));
-                    geometryBagBuilder.addGeometryIds(m_byteBufferCursor.getByteBufferID());
+                    geometryBuilder.setEsriShape(ByteString.copyFrom(m_byteBufferCursor.next()));
+                    geometryBuilder.setGeometryId(m_byteBufferCursor.getByteBufferID());
+                    //        TODO add feature IDs
                     break;
                 default:
                     break;
@@ -283,7 +287,7 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
             }
         }
 
-        return GeometryResponse.newBuilder().setGeometryBag(geometryBagBuilder).build();
+        return GeometryResponse.newBuilder().setGeometry(geometryBuilder).build();
     }
 }
 
@@ -685,42 +689,42 @@ public class GeometryServiceUtil {
         return new GeometryResponsesIterator(resultCursor, operatorRequest, encodingType, bForceCompact);
     }
 
-    private static GeometryBagData __bagFromData(GeometryData geometryData) {
-        GeometryBagDataOrBuilder geometryBagDataOrBuilder = GeometryBagData.newBuilder()
-                .setSpatialReference(geometryData.getSpatialReference())
-                .setGeometryEncodingType(geometryData.getGeometryEncodingType())
-                .addGeometryIds(geometryData.getGeometryId())
-                .addFeatureIds(geometryData.getFeatureId());
-        if (geometryData.getEsriShape().size() > 0) {
-            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addEsriShape(geometryData.getEsriShape());
-        } else if (geometryData.getGeojson().length() > 0) {
-            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addGeojson(geometryData.getGeojson());
-        } else if (geometryData.getWkb().size() > 0) {
-            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkb(geometryData.getWkb());
-        } else if (geometryData.getWkt().length() > 0) {
-            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkt(geometryData.getWkt());
-        }
-
-        return ((GeometryBagData.Builder) geometryBagDataOrBuilder).build();
-    }
+//    private static GeometryBagData __bagFromData(GeometryData geometryData) {
+//        GeometryBagDataOrBuilder geometryBagDataOrBuilder = GeometryBagData.newBuilder()
+//                .setSpatialReference(geometryData.getSpatialReference())
+//                .setGeometryEncodingType(geometryData.getGeometryEncodingType())
+//                .addGeometryIds(geometryData.getGeometryId())
+//                .addFeatureIds(geometryData.getFeatureId());
+//        if (geometryData.getEsriShape().size() > 0) {
+//            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addEsriShape(geometryData.getEsriShape());
+//        } else if (geometryData.getGeojson().length() > 0) {
+//            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addGeojson(geometryData.getGeojson());
+//        } else if (geometryData.getWkb().size() > 0) {
+//            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkb(geometryData.getWkb());
+//        } else if (geometryData.getWkt().length() > 0) {
+//            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkt(geometryData.getWkt());
+//        }
+//
+//        return ((GeometryBagData.Builder) geometryBagDataOrBuilder).build();
+//    }
 
     private static GeometryCursor createGeometryCursor(GeometryRequest operatorRequest, Side side) throws IOException {
         GeometryCursor resultCursor = null;
         if (side == Side.Left) {
-            if (operatorRequest.hasLeftGeometryBag()) {
-                resultCursor = createGeometryCursor(operatorRequest.getLeftGeometryBag());
-            } else if (operatorRequest.hasGeometryBag()) {
-                resultCursor = createGeometryCursor(operatorRequest.getGeometryBag());
-            } else if (operatorRequest.hasGeometry()) {
-                resultCursor = createGeometryCursor(__bagFromData(operatorRequest.getGeometry()));
+//            if (operatorRequest.hasLeftGeometryBag()) {
+//                resultCursor = createGeometryCursor(operatorRequest.getLeftGeometryBag());
+//            } else if (operatorRequest.hasGeometryBag()) {
+//                resultCursor = createGeometryCursor(operatorRequest.getGeometryBag());
+            if (operatorRequest.hasGeometry()) {
+                resultCursor = createGeometryCursor(operatorRequest.getGeometry());
             } else if (operatorRequest.hasLeftGeometry()) {
-                resultCursor = createGeometryCursor(__bagFromData(operatorRequest.getLeftGeometry()));
+                resultCursor = createGeometryCursor(operatorRequest.getLeftGeometry());
             }
         } else if (side == Side.Right) {
-            if (operatorRequest.hasRightGeometryBag()) {
-                resultCursor = createGeometryCursor(operatorRequest.getRightGeometryBag());
-            } else if (operatorRequest.hasRightGeometry()) {
-                resultCursor = createGeometryCursor(__bagFromData(operatorRequest.getRightGeometry()));
+//            if (operatorRequest.hasRightGeometryBag()) {
+//                resultCursor = createGeometryCursor(operatorRequest.getRightGeometryBag());
+            if (operatorRequest.hasRightGeometry()) {
+                resultCursor = createGeometryCursor(operatorRequest.getRightGeometry());
             }
         }
 
@@ -728,16 +732,12 @@ public class GeometryServiceUtil {
     }
 
 
-    private static GeometryCursor createGeometryCursor(GeometryBagData geometryBag) throws IOException {
-        return extractGeometryCursor(geometryBag);
+    private static GeometryCursor createGeometryCursor(GeometryData geometryData) throws IOException {
+        return extractGeometryCursor(geometryData);
     }
 
     static SpatialReference extractSpatialReference(GeometryData geometryData) {
         return geometryData.hasSpatialReference() ? extractSpatialReference(geometryData.getSpatialReference()) : null;
-    }
-
-    protected static SpatialReference extractSpatialReference(GeometryBagData geometryBag) {
-        return geometryBag.hasSpatialReference() ? extractSpatialReference(geometryBag.getSpatialReference()) : null;
     }
 
 
@@ -748,12 +748,12 @@ public class GeometryServiceUtil {
             return extractSpatialReference(operatorRequestCursor.getOperationSpatialReference());
         } else if (operatorRequestCursor.hasLeftGeometryRequest()) {
             return extractSpatialReferenceCursor(operatorRequestCursor.getLeftGeometryRequest());
-        } else if (operatorRequestCursor.hasLeftGeometryBag()) {
-            return extractSpatialReference(operatorRequestCursor.getLeftGeometryBag().getSpatialReference());
+        } else if (operatorRequestCursor.hasLeftGeometry()) {
+            return extractSpatialReference(operatorRequestCursor.getLeftGeometry().getSpatialReference());
         } else if (operatorRequestCursor.hasGeometryRequest()) {
             return extractSpatialReferenceCursor(operatorRequestCursor.getGeometryRequest());
-        } else if (operatorRequestCursor.hasGeometryBag()) {
-            return extractSpatialReference(operatorRequestCursor.getGeometryBag().getSpatialReference());
+        } else if (operatorRequestCursor.hasRightGeometry()) {
+            return extractSpatialReference(operatorRequestCursor.getRightGeometry().getSpatialReference());
         }
         return null;
     }
@@ -777,63 +777,35 @@ public class GeometryServiceUtil {
     }
 
 
-    private static GeometryCursor extractGeometryCursor(GeometryBagData geometryBag) throws IOException {
+    private static GeometryCursor extractGeometryCursor(GeometryData geometryData) throws IOException {
         GeometryCursor geometryCursor = null;
 
-        ArrayDeque<ByteBuffer> byteBufferArrayDeque = null;
-        ArrayDeque<String> stringArrayDeque = null;
-        ArrayDeque<Long> idsDeque = null;
-        if (geometryBag.getGeometryIdsList().size() > 0) {
-            idsDeque = new ArrayDeque<>(geometryBag.getGeometryIdsList());
-        }
-        SimpleByteBufferCursor simpleByteBufferCursor = null;
-        SimpleStringCursor simpleStringCursor = null;
-        if (geometryBag.getWkbCount() > 0) {
-            byteBufferArrayDeque = geometryBag
-                    .getWkbList()
-                    .stream()
-                    .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
-                    .collect(Collectors.toCollection(ArrayDeque::new));
-
-            simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque, idsDeque);
+        if (geometryData.getWkb().size() > 0) {
+            SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(geometryData.getWkb().asReadOnlyByteBuffer(), geometryData.getGeometryId()); //simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque, idsDeque);
             geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
-        } else if (geometryBag.getEsriShapeCount() > 0) {
-            byteBufferArrayDeque = geometryBag
-                    .getEsriShapeList()
-                    .stream()
-                    .map(com.google.protobuf.ByteString::asReadOnlyByteBuffer)
-                    .collect(Collectors.toCollection(ArrayDeque::new));
-            simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque, idsDeque);
+        } else if (geometryData.getEsriShape().size() > 0) {
+            SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(geometryData.getEsriShape().asReadOnlyByteBuffer(), geometryData.getGeometryId());
             geometryCursor = new OperatorImportFromESRIShapeCursor(0, 0, simpleByteBufferCursor);
-        } else if (geometryBag.getWktCount() > 0) {
-            stringArrayDeque = new ArrayDeque<>(geometryBag.getWktList());
-            simpleStringCursor = new SimpleStringCursor(stringArrayDeque, idsDeque);
+        } else if (geometryData.getWkt().length() > 0) {
+            SimpleStringCursor simpleStringCursor = new SimpleStringCursor(geometryData.getWkt(), geometryData.getGeometryId());
             geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
-        } else if (geometryBag.getGeojsonCount() > 0) {
-            stringArrayDeque = new ArrayDeque<>(geometryBag.getGeojsonList());
-            simpleStringCursor = new SimpleStringCursor(stringArrayDeque, idsDeque);
+        } else if (geometryData.getGeojson().length() > 0) {
+            SimpleStringCursor simpleStringCursor = new SimpleStringCursor(geometryData.getGeojson(), geometryData.getGeometryId());
             MapGeometryCursor mapGeometryCursor = new OperatorImportFromGeoJsonCursor(
                     GeoJsonImportFlags.geoJsonImportSkipCRS,
                     simpleStringCursor,
                     null);
             geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
-        } else if (geometryBag.getEsriJsonCount() > 0) {
-            JsonFactory factory = new JsonFactory();
-            String jsonString = geometryBag.getEsriJson(0);
-            // TODO no idea whats going on here
-            JsonParser jsonParser = factory.createJsonParser(jsonString);
-            JsonParserReader jsonParserReader = new JsonParserReader(jsonParser);
-            SimpleJsonReaderCursor simpleJsonParserCursor = new SimpleJsonReaderCursor(jsonParserReader);
-            MapGeometryCursor mapGeometryCursor = new OperatorImportFromJsonCursor(0, simpleJsonParserCursor);
-            geometryCursor = new SimpleGeometryCursor(mapGeometryCursor);
+        } else {
+            throw new GeometryException("No geometry data found");
         }
         return geometryCursor;
     }
 
     private static boolean requestPreservesIDs(GeometryRequest geometryRequest) {
-        if (geometryRequest.hasRightGeometryBag() || geometryRequest.hasRightGeometryRequest()) {
+        if (geometryRequest.hasRightGeometry() || geometryRequest.hasRightGeometryRequest()) {
             return false;
-        } else if (geometryRequest.hasLeftGeometryBag() || geometryRequest.hasGeometryBag()) {
+        } else if (geometryRequest.hasLeftGeometry() || geometryRequest.hasGeometry()) {
             return true;
         } else if (geometryRequest.hasLeftGeometryRequest()) {
             return requestPreservesIDs(geometryRequest.getLeftGeometryRequest());
