@@ -98,14 +98,14 @@ public class GeometryServiceClient {
         SpatialReferenceData inputSpatialReference = SpatialReferenceData.newBuilder().setWkid(4326).build();
         SpatialReferenceData outputSpatialReference = inputSpatialReference;
 
-        GeometryBagData.Builder geometryBagBuilder = GeometryBagData.newBuilder()
-                .addEsriShape(ByteString.copyFromUtf8(""))
-                .addGeometryIds(0)
+        GeometryData.Builder geometryBuilder = GeometryData.newBuilder()
+                .setEsriShape(ByteString.copyFromUtf8(""))
+                .setGeometryId(0)
                 .setSpatialReference(inputSpatialReference);
 
         GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
-                .setBufferParams(BufferParams.newBuilder().addDistances(45))
+                .setBufferParams(BufferParams.newBuilder().setDistance(45))
                 .getLeftGeometryRequestBuilder()
                 .setResultsEncodingType(GeometryEncodingType.geojson)
                 .setOperationSpatialReference(operatorSpatialReference)
@@ -118,7 +118,7 @@ public class GeometryServiceClient {
 //                .setOperationSpatialReference(operatorSpatialReference)
 //                .setResultSpatialReference(outputSpatialReference);
 
-        this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBagBuilder);
+        this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBuilder);
     }
 
     public void testParcelsFile(String pathFile) throws IOException, InterruptedException {
@@ -132,12 +132,12 @@ public class GeometryServiceClient {
         SpatialReferenceData wgs84SpatiralReference = SpatialReferenceData.newBuilder()
                 .setWkid(4326).build();
 
-        GeometryBagData.Builder geometryBagBuilder = GeometryBagData.newBuilder()
-                .addEsriShape(ByteString.copyFromUtf8(""))
-                .addGeometryIds(0)
+        GeometryData.Builder geometryBagBuilder = GeometryData.newBuilder()
+                .setEsriShape(ByteString.copyFromUtf8(""))
+                .setGeometryId(0)
                 .setSpatialReference(serviceSpatialReference);
 
-        BufferParams bufferParams = BufferParams.newBuilder().addDistances(2.5).build();
+        BufferParams bufferParams = BufferParams.newBuilder().setDistance(2.5).build();
 
         GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
@@ -165,7 +165,7 @@ public class GeometryServiceClient {
                 .newBuilder()
                 .setGeometryRequest(project)
                 .setOperatorType(ServiceOperatorType.Buffer)
-                .setBufferParams(BufferParams.newBuilder().addDistances(45))
+                .setBufferParams(BufferParams.newBuilder().setDistance(45))
                 .setResultsEncodingType(GeometryEncodingType.geojson).build();
 
         FileRequestChunk.Builder fileChunkBuilder = FileRequestChunk
@@ -212,7 +212,7 @@ public class GeometryServiceClient {
 
                     @Override
                     public void onNext(GeometryResponse value) {
-                        long id = value.getGeometryBag().getGeometryIds(0);
+                        long id = value.getGeometry().getGeometryId();
                         if (id % 1000 == 0) {
                             logger.info("Geometry number " + id);
                         }
@@ -251,7 +251,7 @@ public class GeometryServiceClient {
      */
     public void shapefileThrottled(File inFile,
                                    GeometryRequest.Builder operatorRequestBuilder,
-                                   GeometryBagData.Builder geometryBagBuilder) throws IOException, InterruptedException {
+                                   GeometryData.Builder geometryBuilder) throws IOException, InterruptedException {
         CountDownLatch done = new CountDownLatch(1);
         ShapefileByteReader shapefileByteReader = new ShapefileByteReader(inFile);
 
@@ -291,12 +291,12 @@ public class GeometryServiceClient {
                                     ByteString byteString = ByteString.copyFrom(data);
 //                                    logger.info("bytes length -->" + data.length);
 
-                                    GeometryBagData geometryBag = geometryBagBuilder
-                                            .setEsriShape(0, byteString)
-                                            .setGeometryIds(0, id)
+                                    GeometryData geometryData = geometryBuilder
+                                            .setEsriShape(byteString)
+                                            .setGeometryId(id)
                                             .build();
                                     GeometryRequest operatorRequest = operatorRequestBuilder
-                                            .setLeftGeometryBag(geometryBag).build();
+                                            .setLeftGeometry(geometryData).build();
                                     requestStream.onNext(operatorRequest);
                                 } else {
                                     requestStream.onCompleted();
@@ -309,7 +309,7 @@ public class GeometryServiceClient {
 
                     @Override
                     public void onNext(GeometryResponse operatorResult) {
-                        long id = operatorResult.getGeometryBag().getGeometryIds(0);
+                        long id = operatorResult.getGeometry().getGeometryId();
 
                         if (id % 1000 == 0) {
                             logger.info("Geometry number " + id);
@@ -352,9 +352,9 @@ public class GeometryServiceClient {
                 .setWkid(32632)
                 .build();
 
-        GeometryBagData geometryBag = GeometryBagData.newBuilder()
+        GeometryData geometryData = GeometryData.newBuilder()
                 .setSpatialReference(inputSpatialReference)
-                .addWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
+                .setWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
                 .build();
 
         SpatialReferenceData outputSpatialReference = SpatialReferenceData.newBuilder()
@@ -364,7 +364,7 @@ public class GeometryServiceClient {
 
         GeometryRequest serviceProjectOp = GeometryRequest
                 .newBuilder()
-                .setLeftGeometryBag(geometryBag)
+                .setGeometry(geometryData)
                 .setOperatorType(ServiceOperatorType.Project)
                 .setOperationSpatialReference(outputSpatialReference)
                 .build();
@@ -379,8 +379,8 @@ public class GeometryServiceClient {
                 0,
                 Geometry.Type.Unknown,
                 operatorResult
-                        .getGeometryBag()
-                        .getWkb(0)
+                        .getGeometry()
+                        .getWkb()
                         .asReadOnlyByteBuffer(),
                 null);
         System.out.println(GeometryEngine.geometryToWkt(result, 0));

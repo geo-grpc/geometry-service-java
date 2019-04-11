@@ -242,6 +242,34 @@ public class GeometryServer {
             };
         }
 
+//        @Override
+//        public StreamObserver<GeometryRequest> geometryOperationClientStream(StreamObserver<GeometryResponse> responseStreamObserver) {
+//            try {
+//                // logger.info("server name" + System.getenv("MY_NODE_NAME"));
+//                // System.out.println("Start process");
+//                GeometryResponsesIterator operatorResults = GeometryServiceUtil.buildResultsIterable(request, null, true);
+//                while (operatorResults.hasNext()) {
+//                    responseStreamObserver.onNext(operatorResults.next());
+//                }
+//                responseStreamObserver.onCompleted();
+//                // System.out.println("End process");
+//            } catch (StatusRuntimeException sre) {
+//                logger.log(Level.WARNING, "executeOperation error : ".concat(sre.getMessage()));
+//                StatusRuntimeException s = new StatusRuntimeException(Status.fromThrowable(sre));
+//                responseStreamObserver.onError(s
+//                        .getStatus()
+//                        .withDescription(exceptionDetails(sre))
+//                        .asRuntimeException());
+//            } catch (Throwable t) {
+//                logger.log(Level.WARNING, "executeOperation error : ".concat(t.toString()));
+//                StatusRuntimeException s = new StatusRuntimeException(Status.fromThrowable(t));
+//                responseStreamObserver.onError(s
+//                        .getStatus()
+//                        .withDescription(exceptionDetails(t))
+//                        .asRuntimeException());
+//            }
+//        }
+
         @SuppressWarnings("Duplicates")
         @Override
         public StreamObserver<FileRequestChunk> fileOperationBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
