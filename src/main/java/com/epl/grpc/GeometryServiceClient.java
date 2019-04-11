@@ -105,7 +105,7 @@ public class GeometryServiceClient {
 
         GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
-                .setBufferParams(BufferParams.newBuilder().addDistances(45))
+                .setBufferParams(BufferParams.newBuilder().setDistance(45))
                 .getLeftGeometryRequestBuilder()
                 .setResultsEncodingType(GeometryEncodingType.geojson)
                 .setOperationSpatialReference(operatorSpatialReference)
@@ -137,7 +137,7 @@ public class GeometryServiceClient {
                 .setGeometryId(0)
                 .setSpatialReference(serviceSpatialReference);
 
-        BufferParams bufferParams = BufferParams.newBuilder().addDistances(2.5).build();
+        BufferParams bufferParams = BufferParams.newBuilder().setDistance(2.5).build();
 
         GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
                 .setOperatorType(ServiceOperatorType.Buffer)
@@ -165,7 +165,7 @@ public class GeometryServiceClient {
                 .newBuilder()
                 .setGeometryRequest(project)
                 .setOperatorType(ServiceOperatorType.Buffer)
-                .setBufferParams(BufferParams.newBuilder().addDistances(45))
+                .setBufferParams(BufferParams.newBuilder().setDistance(45))
                 .setResultsEncodingType(GeometryEncodingType.geojson).build();
 
         FileRequestChunk.Builder fileChunkBuilder = FileRequestChunk

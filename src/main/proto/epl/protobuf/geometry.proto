@@ -37,6 +37,7 @@ enum GeometryEncodingType {
     wkt = 2; // well-known text
     geojson = 3; // geojson
     esrishape = 4; // esri shape binary
+    envelope = 5;
 }
 
 /*
@@ -118,6 +119,7 @@ message GeometryData {
     bytes wkb = 5;
     bytes esri_shape = 6;
     // oneof block
+
     SpatialReferenceData spatial_reference = 7;
 }
 
@@ -140,6 +142,7 @@ message GeometryResponse {
     double measure = 3;
 
     map<int64, bool> relate_map = 4;
+    EnvelopeData envelope = 5;
     // oneof
 }
 

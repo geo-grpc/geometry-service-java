@@ -184,6 +184,7 @@ class SpatialReferenceGroup {
 class GeometryResponsesIterator implements Iterator<GeometryResponse> {
     private StringCursor m_stringCursor = null;
     private ByteBufferCursor m_byteBufferCursor = null;
+    private GeometryCursor m_geometryCursor = null;
     private GeometryEncodingType m_encodingType = GeometryEncodingType.wkb;
     private SpatialReferenceData m_spatialReferenceData;
     private boolean m_bForceCompact;
@@ -225,6 +226,8 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
             case esrishape:
                 m_byteBufferCursor = new OperatorExportToESRIShapeCursor(0, geometryCursor);
                 break;
+            case envelope:
+                m_geometryCursor = geometryCursor;
             default:
                 break;
         }
@@ -237,7 +240,7 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
             return true;
         }
 
-        return (m_byteBufferCursor != null && m_byteBufferCursor.hasNext()) || (m_stringCursor != null && m_stringCursor.hasNext());
+        return (m_byteBufferCursor != null && m_byteBufferCursor.hasNext()) || (m_stringCursor != null && m_stringCursor.hasNext()) || (m_geometryCursor != null && m_geometryCursor.hasNext());
     }
 
     @Override
@@ -251,7 +254,6 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
 
         GeometryData.Builder geometryBuilder = GeometryData
                 .newBuilder()
-                .setGeometryEncodingType(m_encodingType)
                 .setSpatialReference(m_spatialReferenceData);
 
         while (hasNext()) {
@@ -277,6 +279,17 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
                     geometryBuilder.setGeometryId(m_byteBufferCursor.getByteBufferID());
                     //        TODO add feature IDs
                     break;
+                case envelope:
+                    Envelope2D envelope2D = new Envelope2D();
+                    m_geometryCursor.next().queryEnvelope2D(envelope2D);
+                    EnvelopeData.Builder envBuilder = EnvelopeData
+                            .newBuilder()
+                            .setXmin(envelope2D.xmin)
+                            .setYmin(envelope2D.ymin)
+                            .setXmax(envelope2D.xmax)
+                            .setYmax(envelope2D.ymax)
+                            .setSpatialReference(m_spatialReferenceData);
+                    return GeometryResponse.newBuilder().setEnvelope(envBuilder).build();
                 default:
                     break;
             }
@@ -413,17 +426,18 @@ public class GeometryServiceUtil {
             case LabelPoint:
                 break;
             case GeodesicBuffer:
-                List<Double> doubleList = operatorRequest.getBufferParams().getDistancesList();
-                double maxDeviations = Double.NaN;
-                if (operatorRequest.getBufferParams().getMaxDeviationsCount() > 0) {
-                    maxDeviations = operatorRequest.getBufferParams().getMaxDeviations(0);
+                // TODO this should recycled or a member variable
+                var doubleList = new double[] {operatorRequest.getBufferParams().getDistance()};
+                double maxDeviation = Double.NaN;
+                if (operatorRequest.getBufferParams().getMaxDeviation() > 0) {
+                    maxDeviation = operatorRequest.getBufferParams().getMaxDeviation();
                 }
                 resultCursor = OperatorGeodesicBuffer.local().execute(
                         leftCursor,
                         srGroup.operatorSR,
                         0,
-                        doubleList.stream().mapToDouble(Double::doubleValue).toArray(),
-                        maxDeviations,
+                        doubleList,
+                        maxDeviation,
                         false,
                         operatorRequest.getBufferParams().getUnionResult(),
                         null);
@@ -493,12 +507,7 @@ public class GeometryServiceUtil {
                     maxverticesFullCircle = 96;
                 }
 
-                double[] d = operatorRequest
-                        .getBufferParams()
-                        .getDistancesList()
-                        .stream()
-                        .mapToDouble(Double::doubleValue)
-                        .toArray();
+                double[] d = new double[] {operatorRequest.getBufferParams().getDistance()};
 
                 resultCursor = OperatorBuffer.local().execute(leftCursor,
                                                               srGroup.operatorSR,
@@ -591,11 +600,9 @@ public class GeometryServiceUtil {
                 resultCursor = new OperatorEnclosingCircleCursor(leftCursor, srGroup.operatorSR, null);
                 break;
             case RandomPoints:
-                double[] pointsPerSqrKm = operatorRequest
+                double[] pointsPerSqrKm = new double [] {operatorRequest
                         .getRandomPointsParams()
-                        .getPointsPerSquareKmList()
-                        .stream()
-                        .mapToDouble(Double::doubleValue).toArray();
+                        .getPointsPerSquareKm()};
 
                 long seed = operatorRequest.getRandomPointsParams().getSeed();
                 resultCursor = new OperatorRandomPointsCursor(
@@ -711,18 +718,12 @@ public class GeometryServiceUtil {
     private static GeometryCursor createGeometryCursor(GeometryRequest operatorRequest, Side side) throws IOException {
         GeometryCursor resultCursor = null;
         if (side == Side.Left) {
-//            if (operatorRequest.hasLeftGeometryBag()) {
-//                resultCursor = createGeometryCursor(operatorRequest.getLeftGeometryBag());
-//            } else if (operatorRequest.hasGeometryBag()) {
-//                resultCursor = createGeometryCursor(operatorRequest.getGeometryBag());
             if (operatorRequest.hasGeometry()) {
                 resultCursor = createGeometryCursor(operatorRequest.getGeometry());
             } else if (operatorRequest.hasLeftGeometry()) {
                 resultCursor = createGeometryCursor(operatorRequest.getLeftGeometry());
             }
         } else if (side == Side.Right) {
-//            if (operatorRequest.hasRightGeometryBag()) {
-//                resultCursor = createGeometryCursor(operatorRequest.getRightGeometryBag());
             if (operatorRequest.hasRightGeometry()) {
                 resultCursor = createGeometryCursor(operatorRequest.getRightGeometry());
             }
