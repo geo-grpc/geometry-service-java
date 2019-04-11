@@ -377,7 +377,7 @@ public class GeometryServerTest {
 
         assertTrue(bContains);
 
-        serviceOp.setResultsEncodingType(GeometryEncodingType.envelope);
+        serviceOp.setResultsEncodingType(GeometryEncodingType.envelope_type);
         GeometryResponse operatorResult2 = stub.geometryOperationUnary(serviceOp.build());
 
         assertEquals(-1, operatorResult2.getEnvelope().getXmin(), 0.0);

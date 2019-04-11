@@ -37,7 +37,7 @@ enum GeometryEncodingType {
     wkt = 2; // well-known text
     geojson = 3; // geojson
     esrishape = 4; // esri shape binary
-    envelope = 5;
+    envelope_type = 5;
 }
 
 /*

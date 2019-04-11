@@ -226,7 +226,7 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
             case esrishape:
                 m_byteBufferCursor = new OperatorExportToESRIShapeCursor(0, geometryCursor);
                 break;
-            case envelope:
+            case envelope_type:
                 m_geometryCursor = geometryCursor;
             default:
                 break;
@@ -279,7 +279,7 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
                     geometryBuilder.setGeometryId(m_byteBufferCursor.getByteBufferID());
                     //        TODO add feature IDs
                     break;
-                case envelope:
+                case envelope_type:
                     Envelope2D envelope2D = new Envelope2D();
                     m_geometryCursor.next().queryEnvelope2D(envelope2D);
                     EnvelopeData.Builder envBuilder = EnvelopeData
