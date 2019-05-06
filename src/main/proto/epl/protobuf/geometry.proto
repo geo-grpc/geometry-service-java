@@ -244,7 +244,7 @@ message GeometryRequest {
 
     ServiceOperatorType operator_type = 7;
 
-    GeometryEncodingType results_encoding_type = 8;
+    GeometryEncodingType result_encoding_type = 8;
 
     SpatialReferenceData operation_spatial_reference = 9;
 

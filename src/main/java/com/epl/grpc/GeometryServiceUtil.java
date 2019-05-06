@@ -22,15 +22,11 @@ package com.epl.grpc;
 
 import com.epl.protobuf.*;
 import com.esri.core.geometry.*;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
 
 import com.google.protobuf.ByteString;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.stream.Collectors;
 
 enum Side {
     Left,
@@ -179,6 +175,28 @@ class SpatialReferenceGroup {
             resultSR = operatorSR;
         }
     }
+
+    static SpatialReferenceData createSpatialReferenceData(SpatialReference spatialReference) {
+        if (spatialReference.getID() != 0) {
+            return SpatialReferenceData.newBuilder().setWkid(spatialReference.getID()).build();
+        } else if (spatialReference.getProj4().length() > 0) {
+            return SpatialReferenceData.newBuilder().setProj4(spatialReference.getProj4()).build();
+        } else if (spatialReference.getText().length() > 0) {
+            return SpatialReferenceData.newBuilder().setEsriWkt(spatialReference.getText()).build();
+        }
+        return null;
+    }
+
+    public SpatialReferenceData getFinalSpatialRef() {
+        if (resultSR != null) {
+            return createSpatialReferenceData(resultSR);
+        } else if (operatorSR != null) {
+            return createSpatialReferenceData(operatorSR);
+        } else if (leftSR != null) {
+            return createSpatialReferenceData(leftSR);
+        }
+        return null;
+    }
 }
 
 class GeometryResponsesIterator implements Iterator<GeometryResponse> {
@@ -202,13 +220,14 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
                             boolean bForceCompact) {
         m_bForceCompact = bForceCompact;
         m_encodingType = geometryEncodingType;
-        m_spatialReferenceData = operatorRequest.getResultSpatialReference();
+        SpatialReferenceGroup spatialRefGroup = new SpatialReferenceGroup(operatorRequest);
+        m_spatialReferenceData = spatialRefGroup.getFinalSpatialRef();
 
         if (m_encodingType == null || m_encodingType == GeometryEncodingType.unknown) {
-            if (operatorRequest.getResultsEncodingType() == GeometryEncodingType.unknown) {
+            if (operatorRequest.getResultEncodingType() == GeometryEncodingType.unknown) {
                 m_encodingType = GeometryEncodingType.wkb;
             } else {
-                m_encodingType = operatorRequest.getResultsEncodingType();
+                m_encodingType = operatorRequest.getResultEncodingType();
             }
         }
 
@@ -696,24 +715,6 @@ public class GeometryServiceUtil {
         return new GeometryResponsesIterator(resultCursor, operatorRequest, encodingType, bForceCompact);
     }
 
-//    private static GeometryBagData __bagFromData(GeometryData geometryData) {
-//        GeometryBagDataOrBuilder geometryBagDataOrBuilder = GeometryBagData.newBuilder()
-//                .setSpatialReference(geometryData.getSpatialReference())
-//                .setGeometryEncodingType(geometryData.getGeometryEncodingType())
-//                .addGeometryIds(geometryData.getGeometryId())
-//                .addFeatureIds(geometryData.getFeatureId());
-//        if (geometryData.getEsriShape().size() > 0) {
-//            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addEsriShape(geometryData.getEsriShape());
-//        } else if (geometryData.getGeojson().length() > 0) {
-//            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addGeojson(geometryData.getGeojson());
-//        } else if (geometryData.getWkb().size() > 0) {
-//            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkb(geometryData.getWkb());
-//        } else if (geometryData.getWkt().length() > 0) {
-//            ((GeometryBagData.Builder) geometryBagDataOrBuilder).addWkt(geometryData.getWkt());
-//        }
-//
-//        return ((GeometryBagData.Builder) geometryBagDataOrBuilder).build();
-//    }
 
     private static GeometryCursor createGeometryCursor(GeometryRequest operatorRequest, Side side) throws IOException {
         GeometryCursor resultCursor = null;

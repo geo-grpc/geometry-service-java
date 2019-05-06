@@ -107,7 +107,7 @@ public class GeometryServiceClient {
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .setBufferParams(BufferParams.newBuilder().setDistance(45))
                 .getLeftGeometryRequestBuilder()
-                .setResultsEncodingType(GeometryEncodingType.geojson)
+                .setResultEncodingType(GeometryEncodingType.geojson)
                 .setOperationSpatialReference(operatorSpatialReference)
                 .setResultSpatialReference(outputSpatialReference);
 //        GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
@@ -143,7 +143,7 @@ public class GeometryServiceClient {
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .setBufferParams(bufferParams)
 //                .addBufferDistances(2.5)
-                .setResultsEncodingType(GeometryEncodingType.wkt)
+                .setResultEncodingType(GeometryEncodingType.wkt)
                 .setResultSpatialReference(wgs84SpatiralReference);
 
         this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBagBuilder);
@@ -159,14 +159,14 @@ public class GeometryServiceClient {
                 .newBuilder()
                 .setOperationSpatialReference(SpatialReferenceData.newBuilder().setWkid(4326))
                 .setResultSpatialReference(SpatialReferenceData.newBuilder().setWkid(54016))
-                .setResultsEncodingType(GeometryEncodingType.geojson).build();
+                .setResultEncodingType(GeometryEncodingType.geojson).build();
 
         GeometryRequest buffer = GeometryRequest
                 .newBuilder()
                 .setGeometryRequest(project)
                 .setOperatorType(ServiceOperatorType.Buffer)
                 .setBufferParams(BufferParams.newBuilder().setDistance(45))
-                .setResultsEncodingType(GeometryEncodingType.geojson).build();
+                .setResultEncodingType(GeometryEncodingType.geojson).build();
 
         FileRequestChunk.Builder fileChunkBuilder = FileRequestChunk
                 .newBuilder()
