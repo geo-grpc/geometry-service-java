@@ -271,9 +271,13 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
             return tempResults;
         }
 
+
         GeometryData.Builder geometryBuilder = GeometryData
-                .newBuilder()
-                .setSpatialReference(m_spatialReferenceData);
+                .newBuilder();
+        if (m_spatialReferenceData != null) {
+            geometryBuilder.setSpatialReference(m_spatialReferenceData);
+        }
+
 
         while (hasNext()) {
             switch (m_encodingType) {
@@ -306,8 +310,11 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
                             .setXmin(envelope2D.xmin)
                             .setYmin(envelope2D.ymin)
                             .setXmax(envelope2D.xmax)
-                            .setYmax(envelope2D.ymax)
-                            .setSpatialReference(m_spatialReferenceData);
+                            .setYmax(envelope2D.ymax);
+                    if (m_spatialReferenceData != null) {
+                        envBuilder.setSpatialReference(m_spatialReferenceData);
+                    }
+
                     return GeometryResponse.newBuilder().setEnvelope(envBuilder).build();
                 default:
                     break;

@@ -1,7 +1,7 @@
 ARG JDK_TAG=11-jdk-slim
 ARG JRE_TAG=${JDK_TAG}
-
-FROM echoparklabs/geometry-api-java:${JDK_TAG} as builder
+ARG IMAGE=echoparklabs/geometry-api-java
+FROM ${IMAGE}:${JDK_TAG} as builder
 
 MAINTAINER David Raleigh <david@echoparklabs.io>
 
@@ -15,7 +15,7 @@ WORKDIR /opt/src/geometry-service-java
 RUN ./gradlew build install
 
 
-FROM echoparklabs/geometry-api-java:${JRE_TAG}
+FROM ${IMAGE}:${JRE_TAG}
 
 # https://github.com/rocker-org/shiny/issues/19#issuecomment-308357402
 RUN apt-get update || apt-get update
