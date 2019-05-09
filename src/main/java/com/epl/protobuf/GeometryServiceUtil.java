@@ -202,7 +202,7 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
     private StringCursor m_stringCursor = null;
     private ByteBufferCursor m_byteBufferCursor = null;
     private GeometryCursor m_geometryCursor = null;
-    private GeometryData.Encoding m_encodingType = GeometryData.Encoding.WKB;
+    private Encoding m_encodingType = Encoding.WKB;
     private SpatialReferenceData m_spatialReferenceData;
     private boolean m_bForceCompact;
 
@@ -215,16 +215,16 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
 
     GeometryResponsesIterator(GeometryCursor geometryCursor,
                               GeometryRequest operatorRequest,
-                              GeometryData.Encoding geometryEncodingType,
+                              Encoding geometryEncodingType,
                               boolean bForceCompact) {
         m_bForceCompact = bForceCompact;
         m_encodingType = geometryEncodingType;
         SpatialReferenceGroup spatialRefGroup = new SpatialReferenceGroup(operatorRequest);
         m_spatialReferenceData = spatialRefGroup.getFinalSpatialRef();
 
-        if (m_encodingType == null || m_encodingType == GeometryData.Encoding.UNKNOWN_ENCODING) {
-            if (operatorRequest.getResultEncoding() == GeometryData.Encoding.UNKNOWN_ENCODING) {
-                m_encodingType = GeometryData.Encoding.WKB;
+        if (m_encodingType == null || m_encodingType == Encoding.UNKNOWN_ENCODING) {
+            if (operatorRequest.getResultEncoding() == Encoding.UNKNOWN_ENCODING) {
+                m_encodingType = Encoding.WKB;
             } else {
                 m_encodingType = operatorRequest.getResultEncoding();
             }
@@ -330,6 +330,23 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
 }
 
 public class GeometryServiceUtil {
+
+    private static final Map<String, Operator.Type> m_operatorTypeMap = new HashMap<String, Operator.Type>();
+    static {
+        for (Operator.Type type : Operator.Type.values()) {
+            m_operatorTypeMap.put(type.name().toLowerCase(), type);
+        }
+    }
+
+    private static Operator.Type getOp(GeometryRequest operatorRequest) {
+        String key = operatorRequest.getOperator().toString().toLowerCase().replaceAll("[_]", "");
+        Operator.Type opType = m_operatorTypeMap.get(key);
+        if (opType == null) {
+            return Operator.Type.Project;
+        }
+        return  opType;
+    }
+
     private static GeometryCursor getLeftGeometryRequestFromRequest(
             GeometryRequest operatorRequest,
             GeometryCursor leftCursor,
@@ -391,7 +408,7 @@ public class GeometryServiceUtil {
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryResponse.Builder operatorResultBuilder = GeometryResponse.newBuilder();
-        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperator().toString());
+        Operator.Type operatorType = getOp(operatorRequest);// m_operatorTypeMap.get(operatorRequest.getOperator().toString().toLowerCase());
         switch (operatorType) {
             case Proximity2D:
                 break;
@@ -444,7 +461,8 @@ public class GeometryServiceUtil {
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryCursor resultCursor = null;
-        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperator().toString());
+//        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperator().toString());
+        Operator.Type operatorType = getOp(operatorRequest);// m_operatorTypeMap.get(operatorRequest.getOperator().toString().toLowerCase());
         switch (operatorType) {
             case DensifyByAngle:
                 break;
@@ -653,8 +671,8 @@ public class GeometryServiceUtil {
     public static GeometryResponsesIterator buildResultsIterable(GeometryRequest operatorRequest,
                                                                GeometryCursor leftCursor,
                                                                boolean bForceCompact) throws IOException {
-        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperator().toString());
-        GeometryData.Encoding encodingType = GeometryData.Encoding.UNKNOWN_ENCODING;
+        Operator.Type operatorType = getOp(operatorRequest);// m_operatorTypeMap.get(operatorRequest.getOperator().toString().toLowerCase().replaceAll("[_]", ""));
+        Encoding encodingType = Encoding.UNKNOWN_ENCODING;
         GeometryCursor resultCursor = null;
         switch (operatorType) {
             // results
@@ -700,21 +718,21 @@ public class GeometryServiceUtil {
                 resultCursor = cursorFromRequest(operatorRequest, leftCursor, null);
                 break;
             case ExportToESRIShape:
-                encodingType = GeometryData.Encoding.ESRI_SHAPE;
+                encodingType = Encoding.ESRI_SHAPE;
                 break;
             case ExportToWkb:
-                encodingType = GeometryData.Encoding.WKB;
+                encodingType = Encoding.WKB;
                 break;
             case ExportToWkt:
-                encodingType = GeometryData.Encoding.WKT;
+                encodingType = Encoding.WKT;
                 break;
             case ExportToGeoJson:
-                encodingType = GeometryData.Encoding.GEOJSON;
+                encodingType = Encoding.GEOJSON;
                 break;
         }
         // If the only operation used by the user is to export to one of the formats then enter this if statement and
         // assign the left cursor to the result cursor
-        if (encodingType != GeometryData.Encoding.UNKNOWN_ENCODING) {
+        if (encodingType != Encoding.UNKNOWN_ENCODING) {
             resultCursor = createGeometryCursor(operatorRequest, Side.Left);
         }
 

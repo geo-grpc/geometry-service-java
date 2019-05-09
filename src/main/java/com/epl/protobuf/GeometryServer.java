@@ -410,7 +410,7 @@ public class GeometryServer {
         @Override
         public void geometryOperationUnary(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver) {
             try {
-                if (request.getOperator() == GeometryRequest.Operator.Cut) {
+                if (request.getOperator() == OperatorType.CUT) {
                     // TODO, you need to search the whole request chain for a cut
                     responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Cut is Not a Unary Operation").asException());
                 }

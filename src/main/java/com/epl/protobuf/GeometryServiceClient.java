@@ -103,14 +103,14 @@ public class GeometryServiceClient {
                 .setSr(inputSpatialReference);
 
         GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
-                .setOperator(GeometryRequest.Operator.Buffer)
+                .setOperator(OperatorType.BUFFER)
                 .setBufferParams(GeometryRequest.BufferParams.newBuilder().setDistance(45))
                 .getLeftGeometryRequestBuilder()
-                .setResultEncoding(GeometryData.Encoding.GEOJSON)
+                .setResultEncoding(Encoding.GEOJSON)
                 .setOperationSr(operatorSpatialReference)
                 .setResultSr(outputSpatialReference);
 //        GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
-//                .setOperatorType(ServiceOperatorType.Buffer)
+//                .setOperatorType(ServiceOperatorType.BUFFER)
 //                .addBufferDistances(2.5)
 //                .setMaxVerticesInFullCircle(66)
 //                .setResultsEncodingType(GeometryEncodingType.wkb)
@@ -139,10 +139,10 @@ public class GeometryServiceClient {
         GeometryRequest.BufferParams bufferParams = GeometryRequest.BufferParams.newBuilder().setDistance(2.5).build();
 
         GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
-                .setOperator(GeometryRequest.Operator.Buffer)
+                .setOperator(OperatorType.BUFFER)
                 .setBufferParams(bufferParams)
 //                .addBufferDistances(2.5)
-                .setResultEncoding(GeometryData.Encoding.WKT)
+                .setResultEncoding(Encoding.WKT)
                 .setResultSr(wgs84SpatiralReference);
 
         this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBagBuilder);
@@ -158,14 +158,14 @@ public class GeometryServiceClient {
                 .newBuilder()
                 .setOperationSr(SpatialReferenceData.newBuilder().setWkid(4326))
                 .setResultSr(SpatialReferenceData.newBuilder().setWkid(54016))
-                .setResultEncoding(GeometryData.Encoding.GEOJSON).build();
+                .setResultEncoding(Encoding.GEOJSON).build();
 
         GeometryRequest buffer = GeometryRequest
                 .newBuilder()
                 .setGeometryRequest(project)
-                .setOperator(GeometryRequest.Operator.Buffer)
+                .setOperator(OperatorType.BUFFER)
                 .setBufferParams(GeometryRequest.BufferParams.newBuilder().setDistance(45))
-                .setResultEncoding(GeometryData.Encoding.GEOJSON).build();
+                .setResultEncoding(Encoding.GEOJSON).build();
 
         FileRequestChunk.Builder fileChunkBuilder = FileRequestChunk
                 .newBuilder()
@@ -364,7 +364,7 @@ public class GeometryServiceClient {
         GeometryRequest serviceProjectOp = GeometryRequest
                 .newBuilder()
                 .setGeometry(geometryData)
-                .setOperator(GeometryRequest.Operator.Project)
+                .setOperator(OperatorType.PROJECT)
                 .setOperationSr(outputSpatialReference)
                 .build();
 
