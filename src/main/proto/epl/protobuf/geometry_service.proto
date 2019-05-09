@@ -45,7 +45,7 @@ service GeometryService {
     rpc GeometryOperationBiStreamFlow(stream epl.protobuf.GeometryRequest) returns (stream epl.protobuf.GeometryResponse) {}
 
     // Maybe a cut operation that returns a lot of different geometries? for now, this is not implemented.
-    // rpc GeometryOperationServerStream(epl.protobuf.GeometryRequest) returns (stream epl.protobuf.GeometryResponse) {}
+    rpc GeometryOperationServerStream(epl.protobuf.GeometryRequest) returns (stream epl.protobuf.GeometryResponse) {}
 
     // Maybe something like a union operation. for now, this is not implemented.
     // rpc GeometryOperationClientStream(stream epl.protobuf.GeometryRequest) returns (epl.protobuf.GeometryResponse) {}

@@ -133,6 +133,18 @@ public class GeometryServer {
      */
     private static class GeometryService extends GeometryServiceGrpc.GeometryServiceImplBase {
 
+        @Override
+        public void geometryOperationServerStream(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver)  {
+            try {
+                GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(request, null, false);
+                while (operatorResultsIterator.hasNext()) {
+                    responseObserver.onNext(operatorResultsIterator.next());
+                }
+                responseObserver.onCompleted();
+            } catch (Throwable throwable) {
+                responseObserver.onError(Status.UNKNOWN.withDescription("Error handling request").withCause(throwable).asException());
+            }
+        }
 
         @Override
         public StreamObserver<GeometryRequest> geometryOperationBiStream(StreamObserver<GeometryResponse> responseObserver) {
@@ -398,6 +410,11 @@ public class GeometryServer {
         @Override
         public void geometryOperationUnary(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver) {
             try {
+                if (request.getOperator() == GeometryRequest.Operator.Cut) {
+                    // TODO, you need to search the whole request chain for a cut
+                    responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Cut is Not a Unary Operation").asException());
+                }
+
                 // logger.info("server name" + System.getenv("MY_NODE_NAME"));
                 // System.out.println("Start process");
                 GeometryResponsesIterator operatorResults = GeometryServiceUtil.buildResultsIterable(request, null, true);

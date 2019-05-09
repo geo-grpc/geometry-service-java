@@ -6,10 +6,9 @@
 echo $1/geometry-service-java/src/main/proto/epl/protobuf/ \
      $1/geometry-client-cpp/proto/epl/protobuf/ \
      $1/geometry-client-python/proto/epl/protobuf/ | xargs -n 1 cp $GOPATH/src/github.com/geo-grpc/api/proto/epl/protobuf/geometry.proto
-
-echo $1/geometry-service-java/src/main/proto/epl/grpc/ \
-     $1/geometry-client-cpp/proto/epl/grpc/ \
-     $1/geometry-client-python/proto/epl/grpc/ | xargs -n 1 cp $GOPATH/src/github.com/geo-grpc/api/proto/epl/grpc/geometry_operators.proto
+echo $1/geometry-service-java/src/main/proto/epl/protobuf/ \
+     $1/geometry-client-cpp/proto/epl/protobuf/ \
+     $1/geometry-client-python/proto/epl/protobuf/ | xargs -n 1 cp $GOPATH/src/github.com/geo-grpc/api/proto/epl/protobuf/geometry_service.proto
 
 ./gradlew clean
 ./gradlew build install

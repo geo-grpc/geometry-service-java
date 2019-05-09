@@ -90,7 +90,7 @@ message GeometryRequest {
         ExportToESRIShape = 4; // export geometry to esrishape binary data
         ImportFromESRIShape = 5; // import from esrishape binary data
 
-        //Union = 6; // union two or more geometries
+        Union = 6; // union two or more geometries
         Difference = 7; // difference of two or more geometries
 
         Proximity2D = 8; // not yet exposed

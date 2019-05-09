@@ -25,6 +25,8 @@ import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
+import io.grpc.stub.ClientCallStreamObserver;
+import io.grpc.stub.ClientResponseObserver;
 import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Before;
@@ -33,9 +35,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 
 /**
@@ -1254,5 +1256,52 @@ public class GeometryServerTest {
         GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
         GeometryResponse operatorResult = stub.geometryOperationUnary(operatorRequestEquals);
         assertTrue(operatorResult.getSpatialRelationship());
+    }
+
+    @Test
+    public void testCut() {
+        GeometryData geometryDataPolygon = GeometryData.newBuilder().setWkt("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 45 20, 30 5, 10 10, 10 30, 20 35), (30 20, 20 25, 20 15, 30 20))) ").build();
+        GeometryData geometryDataCutter = GeometryData.newBuilder().setWkt("LINESTRING(0 0, 45 45)").build();
+        GeometryRequest geometryRequest = GeometryRequest.newBuilder()
+                .setLeftGeometry(geometryDataPolygon)
+                .setRightGeometry(geometryDataCutter)
+                .setOperator(GeometryRequest.Operator.Cut)
+                .setResultEncoding(GeometryData.Encoding.WKT)
+                .build();
+        CountDownLatch done = new CountDownLatch(1);
+        ClientResponseObserver<GeometryRequest, GeometryResponse> clientResponseObserver = new ClientResponseObserver<GeometryRequest, GeometryResponse>() {
+            int count = 0;
+            @Override
+            public void beforeStart(ClientCallStreamObserver<GeometryRequest> clientCallStreamObserver) {
+
+            }
+
+            @Override
+            public void onNext(GeometryResponse geometryResponse) {
+                count += 1;
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                assertFalse("threw exception", false);
+            }
+
+            @Override
+            public void onCompleted() {
+                assertEquals(2, count);
+                done.countDown();
+            }
+        };
+
+        GeometryServiceGrpc.GeometryServiceStub stub = GeometryServiceGrpc.newStub(inProcessChannel);
+        stub.geometryOperationServerStream(geometryRequest, clientResponseObserver);
+
+
+        try {
+            done.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
     }
 }
