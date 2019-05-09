@@ -1,4 +1,4 @@
-package com.epl.grpc;
+package com.epl.protobuf;
 
 import com.google.common.base.Preconditions;
 import io.grpc.Attributes;

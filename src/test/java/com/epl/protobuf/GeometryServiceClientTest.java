@@ -18,7 +18,7 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.grpc;
+package com.epl.protobuf;
 
 import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;

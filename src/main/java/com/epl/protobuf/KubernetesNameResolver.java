@@ -1,4 +1,4 @@
-package com.epl.grpc;
+package com.epl.protobuf;
 
 import io.fabric8.kubernetes.api.model.Endpoints;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;

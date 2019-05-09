@@ -18,11 +18,8 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.grpc;
+package com.epl.protobuf;
 
-import com.epl.protobuf.FileRequestChunk;
-import com.epl.protobuf.GeometryRequest;
-import com.epl.protobuf.GeometryResponse;
 import io.grpc.*;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.ServerCallStreamObserver;

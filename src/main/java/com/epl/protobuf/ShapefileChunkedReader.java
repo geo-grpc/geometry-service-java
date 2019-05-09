@@ -1,4 +1,4 @@
-package com.epl.grpc;
+package com.epl.protobuf;
 
 import com.esri.core.geometry.*;
 
@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static com.epl.grpc.ShapefileByteReader.geometryTypeFromShpType;
+import static com.epl.protobuf.ShapefileByteReader.geometryTypeFromShpType;
 
 public class ShapefileChunkedReader extends GeometryCursor {
     private final List<MixedEndianDataInputStream> inputStreamList;

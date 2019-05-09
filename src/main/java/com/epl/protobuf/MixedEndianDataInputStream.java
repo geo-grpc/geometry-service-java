@@ -13,7 +13,7 @@
  */
 
 
-package com.epl.grpc;
+package com.epl.protobuf;
 
 import java.io.DataInputStream;
 import java.io.EOFException;

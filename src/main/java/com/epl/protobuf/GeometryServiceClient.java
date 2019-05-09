@@ -18,11 +18,10 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.grpc;
+package com.epl.protobuf;
 
-import com.epl.protobuf.*;
-import com.epl.grpc.GeometryServiceGrpc.GeometryServiceBlockingStub;
-import com.epl.grpc.GeometryServiceGrpc.GeometryServiceStub;
+import com.epl.protobuf.GeometryServiceGrpc.GeometryServiceBlockingStub;
+import com.epl.protobuf.GeometryServiceGrpc.GeometryServiceStub;
 import com.esri.core.geometry.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;

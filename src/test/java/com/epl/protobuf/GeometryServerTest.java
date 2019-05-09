@@ -18,9 +18,8 @@ For additional information, contact:
 email: info@echoparklabs.io
 */
 
-package com.epl.grpc;
+package com.epl.protobuf;
 
-import com.epl.protobuf.*;
 import com.esri.core.geometry.*;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
