@@ -100,22 +100,22 @@ public class GeometryServiceClient {
         GeometryData.Builder geometryBuilder = GeometryData.newBuilder()
                 .setEsriShape(ByteString.copyFromUtf8(""))
                 .setGeometryId(0)
-                .setSpatialReference(inputSpatialReference);
+                .setSr(inputSpatialReference);
 
         GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
-                .setOperatorType(ServiceOperatorType.Buffer)
-                .setBufferParams(BufferParams.newBuilder().setDistance(45))
+                .setOperator(GeometryRequest.Operator.Buffer)
+                .setBufferParams(GeometryRequest.BufferParams.newBuilder().setDistance(45))
                 .getLeftGeometryRequestBuilder()
-                .setResultEncodingType(GeometryEncodingType.geojson)
-                .setOperationSpatialReference(operatorSpatialReference)
-                .setResultSpatialReference(outputSpatialReference);
+                .setResultEncoding(GeometryData.Encoding.GEOJSON)
+                .setOperationSr(operatorSpatialReference)
+                .setResultSr(outputSpatialReference);
 //        GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
 //                .setOperatorType(ServiceOperatorType.Buffer)
 //                .addBufferDistances(2.5)
 //                .setMaxVerticesInFullCircle(66)
 //                .setResultsEncodingType(GeometryEncodingType.wkb)
-//                .setOperationSpatialReference(operatorSpatialReference)
-//                .setResultSpatialReference(outputSpatialReference);
+//                .setOperationSr(operatorSpatialReference)
+//                .setResultSr(outputSpatialReference);
 
         this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBuilder);
     }
@@ -134,16 +134,16 @@ public class GeometryServiceClient {
         GeometryData.Builder geometryBagBuilder = GeometryData.newBuilder()
                 .setEsriShape(ByteString.copyFromUtf8(""))
                 .setGeometryId(0)
-                .setSpatialReference(serviceSpatialReference);
+                .setSr(serviceSpatialReference);
 
-        BufferParams bufferParams = BufferParams.newBuilder().setDistance(2.5).build();
+        GeometryRequest.BufferParams bufferParams = GeometryRequest.BufferParams.newBuilder().setDistance(2.5).build();
 
         GeometryRequest.Builder operatorRequestBuilder = GeometryRequest.newBuilder()
-                .setOperatorType(ServiceOperatorType.Buffer)
+                .setOperator(GeometryRequest.Operator.Buffer)
                 .setBufferParams(bufferParams)
 //                .addBufferDistances(2.5)
-                .setResultEncodingType(GeometryEncodingType.wkt)
-                .setResultSpatialReference(wgs84SpatiralReference);
+                .setResultEncoding(GeometryData.Encoding.WKT)
+                .setResultSr(wgs84SpatiralReference);
 
         this.shapefileThrottled(inFile, operatorRequestBuilder, geometryBagBuilder);
     }
@@ -156,16 +156,16 @@ public class GeometryServiceClient {
 
         GeometryRequest project = GeometryRequest
                 .newBuilder()
-                .setOperationSpatialReference(SpatialReferenceData.newBuilder().setWkid(4326))
-                .setResultSpatialReference(SpatialReferenceData.newBuilder().setWkid(54016))
-                .setResultEncodingType(GeometryEncodingType.geojson).build();
+                .setOperationSr(SpatialReferenceData.newBuilder().setWkid(4326))
+                .setResultSr(SpatialReferenceData.newBuilder().setWkid(54016))
+                .setResultEncoding(GeometryData.Encoding.GEOJSON).build();
 
         GeometryRequest buffer = GeometryRequest
                 .newBuilder()
                 .setGeometryRequest(project)
-                .setOperatorType(ServiceOperatorType.Buffer)
-                .setBufferParams(BufferParams.newBuilder().setDistance(45))
-                .setResultEncodingType(GeometryEncodingType.geojson).build();
+                .setOperator(GeometryRequest.Operator.Buffer)
+                .setBufferParams(GeometryRequest.BufferParams.newBuilder().setDistance(45))
+                .setResultEncoding(GeometryData.Encoding.GEOJSON).build();
 
         FileRequestChunk.Builder fileChunkBuilder = FileRequestChunk
                 .newBuilder()
@@ -352,7 +352,7 @@ public class GeometryServiceClient {
                 .build();
 
         GeometryData geometryData = GeometryData.newBuilder()
-                .setSpatialReference(inputSpatialReference)
+                .setSr(inputSpatialReference)
                 .setWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
                 .build();
 
@@ -364,8 +364,8 @@ public class GeometryServiceClient {
         GeometryRequest serviceProjectOp = GeometryRequest
                 .newBuilder()
                 .setGeometry(geometryData)
-                .setOperatorType(ServiceOperatorType.Project)
-                .setOperationSpatialReference(outputSpatialReference)
+                .setOperator(GeometryRequest.Operator.Project)
+                .setOperationSr(outputSpatialReference)
                 .build();
 
         System.out.println("executing request");

@@ -43,7 +43,7 @@ class SpatialReferenceGroup {
 
     static SpatialReference spatialFromGeometry(GeometryData geometryBagData,
                                                 GeometryRequest geometryRequest) {
-        if (geometryBagData.hasSpatialReference()) {
+        if (geometryBagData.hasSr()) {
             return GeometryServiceUtil.extractSpatialReference(geometryBagData);
         }
 
@@ -58,7 +58,7 @@ class SpatialReferenceGroup {
         operatorSR = GeometryServiceUtil.extractSpatialReference(paramsSR);
 
         // optionalish: this is the final spatial reference for the resultSR (project after operatorSR)
-        resultSR = GeometryServiceUtil.extractSpatialReference(operatorRequest1.getResultSpatialReference());
+        resultSR = GeometryServiceUtil.extractSpatialReference(operatorRequest1.getResultSr());
 
         leftSR = SpatialReferenceGroup.spatialFromGeometry(geometryBagData, geometryRequest);
 
@@ -88,7 +88,7 @@ class SpatialReferenceGroup {
         operatorSR = GeometryServiceUtil.extractSpatialReference(paramsSR);
 
         // optionalish: this is the final spatial reference for the resultSR (project after operatorSR)
-        resultSR = GeometryServiceUtil.extractSpatialReference(operatorRequest1.getResultSpatialReference());
+        resultSR = GeometryServiceUtil.extractSpatialReference(operatorRequest1.getResultSr());
 
         leftSR = SpatialReferenceGroup.spatialFromGeometry(leftGeometryBagData, leftGeometryRequest);
 
@@ -120,18 +120,18 @@ class SpatialReferenceGroup {
 
     SpatialReferenceGroup(GeometryRequest operatorRequest) {
         // optional: this is the spatial reference for performing the geometric operation
-        operatorSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getOperationSpatialReference());
+        operatorSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getOperationSr());
 
         // optionalish: this is the final spatial reference for the resultSR (project after operatorSR)
-        resultSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getResultSpatialReference());
+        resultSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getResultSr());
 
-//        if (operatorRequest.hasLeftGeometryBag() && operatorRequest.getLeftGeometryBag().hasSpatialReference()) {
+//        if (operatorRequest.hasLeftGeometryBag() && operatorRequest.getLeftGeometryBag().hasSr()) {
 //            leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getLeftGeometryBag());
-//        } else if (operatorRequest.hasGeometryBag() && operatorRequest.getGeometryBag().hasSpatialReference()) {
+//        } else if (operatorRequest.hasGeometryBag() && operatorRequest.getGeometryBag().hasSr()) {
 //            leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getGeometryBag());
-        if (operatorRequest.hasLeftGeometry() && operatorRequest.getLeftGeometry().hasSpatialReference()) {
+        if (operatorRequest.hasLeftGeometry() && operatorRequest.getLeftGeometry().hasSr()) {
             leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getLeftGeometry());
-        } else if (operatorRequest.hasGeometry() && operatorRequest.getGeometry().hasSpatialReference()) {
+        } else if (operatorRequest.hasGeometry() && operatorRequest.getGeometry().hasSr()) {
             leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getGeometry());
         } else if (operatorRequest.hasLeftGeometryRequest()) {
             leftSR = GeometryServiceUtil.extractSpatialReferenceCursor(operatorRequest.getLeftGeometryRequest());
@@ -140,9 +140,9 @@ class SpatialReferenceGroup {
             leftSR = GeometryServiceUtil.extractSpatialReferenceCursor(operatorRequest.getGeometryRequest());
         }
 
-//        if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSpatialReference()) {
+//        if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSr()) {
 //            rightSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getRightGeometryBag());
-        if (operatorRequest.hasRightGeometry() && operatorRequest.getRightGeometry().hasSpatialReference()) {
+        if (operatorRequest.hasRightGeometry() && operatorRequest.getRightGeometry().hasSr()) {
             rightSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getRightGeometry());
         } else if (operatorRequest.hasRightGeometryRequest()){
             rightSR = GeometryServiceUtil.extractSpatialReferenceCursor(operatorRequest.getRightGeometryRequest());
@@ -202,7 +202,7 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
     private StringCursor m_stringCursor = null;
     private ByteBufferCursor m_byteBufferCursor = null;
     private GeometryCursor m_geometryCursor = null;
-    private GeometryEncodingType m_encodingType = GeometryEncodingType.wkb;
+    private GeometryData.Encoding m_encodingType = GeometryData.Encoding.WKB;
     private SpatialReferenceData m_spatialReferenceData;
     private boolean m_bForceCompact;
 
@@ -214,37 +214,37 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
     }
 
     GeometryResponsesIterator(GeometryCursor geometryCursor,
-                            GeometryRequest operatorRequest,
-                            GeometryEncodingType geometryEncodingType,
-                            boolean bForceCompact) {
+                              GeometryRequest operatorRequest,
+                              GeometryData.Encoding geometryEncodingType,
+                              boolean bForceCompact) {
         m_bForceCompact = bForceCompact;
         m_encodingType = geometryEncodingType;
         SpatialReferenceGroup spatialRefGroup = new SpatialReferenceGroup(operatorRequest);
         m_spatialReferenceData = spatialRefGroup.getFinalSpatialRef();
 
-        if (m_encodingType == null || m_encodingType == GeometryEncodingType.unknown) {
-            if (operatorRequest.getResultEncodingType() == GeometryEncodingType.unknown) {
-                m_encodingType = GeometryEncodingType.wkb;
+        if (m_encodingType == null || m_encodingType == GeometryData.Encoding.UNKNOWN_ENCODING) {
+            if (operatorRequest.getResultEncoding() == GeometryData.Encoding.UNKNOWN_ENCODING) {
+                m_encodingType = GeometryData.Encoding.WKB;
             } else {
-                m_encodingType = operatorRequest.getResultEncodingType();
+                m_encodingType = operatorRequest.getResultEncoding();
             }
         }
 
         switch (m_encodingType) {
-            case unknown:
-            case wkb:
+            case UNKNOWN_ENCODING:
+            case WKB:
                 m_byteBufferCursor = new OperatorExportToWkbCursor(0, geometryCursor);
                 break;
-            case wkt:
+            case WKT:
                 m_stringCursor = new OperatorExportToWktCursor(0, geometryCursor, null);
                 break;
-            case geojson:
+            case GEOJSON:
                 m_stringCursor = new OperatorExportToGeoJsonCursor(GeoJsonExportFlags.geoJsonExportSkipCRS, null, geometryCursor);
                 break;
-            case esrishape:
+            case ESRI_SHAPE:
                 m_byteBufferCursor = new OperatorExportToESRIShapeCursor(0, geometryCursor);
                 break;
-            case envelope_type:
+            case ENVELOPE:
                 m_geometryCursor = geometryCursor;
             default:
                 break;
@@ -274,34 +274,34 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
         GeometryData.Builder geometryBuilder = GeometryData
                 .newBuilder();
         if (m_spatialReferenceData != null) {
-            geometryBuilder.setSpatialReference(m_spatialReferenceData);
+            geometryBuilder.setSr(m_spatialReferenceData);
         }
 
 
         while (hasNext()) {
             switch (m_encodingType) {
-                case unknown:
-                case wkb:
+                case UNKNOWN_ENCODING:
+                case WKB:
                     geometryBuilder.setWkb(ByteString.copyFrom(m_byteBufferCursor.next()));
                     geometryBuilder.setGeometryId(m_byteBufferCursor.getByteBufferID());
                     //        TODO add feature IDs
                     break;
-                case wkt:
+                case WKT:
                     geometryBuilder.setWkt(m_stringCursor.next());
                     geometryBuilder.setGeometryId(m_stringCursor.getID());
                     //        TODO add feature IDs
                     break;
-                case geojson:
+                case GEOJSON:
                     geometryBuilder.setGeojson(m_stringCursor.next());
                     geometryBuilder.setGeometryId(m_stringCursor.getID());
                     //        TODO add feature IDs
                     break;
-                case esrishape:
+                case ESRI_SHAPE:
                     geometryBuilder.setEsriShape(ByteString.copyFrom(m_byteBufferCursor.next()));
                     geometryBuilder.setGeometryId(m_byteBufferCursor.getByteBufferID());
                     //        TODO add feature IDs
                     break;
-                case envelope_type:
+                case ENVELOPE:
                     Envelope2D envelope2D = new Envelope2D();
                     m_geometryCursor.next().queryEnvelope2D(envelope2D);
                     EnvelopeData.Builder envBuilder = EnvelopeData
@@ -311,7 +311,7 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
                             .setXmax(envelope2D.xmax)
                             .setYmax(envelope2D.ymax);
                     if (m_spatialReferenceData != null) {
-                        envBuilder.setSpatialReference(m_spatialReferenceData);
+                        envBuilder.setSr(m_spatialReferenceData);
                     }
 
                     return GeometryResponse.newBuilder().setEnvelope(envBuilder).build();
@@ -391,7 +391,7 @@ public class GeometryServiceUtil {
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryResponse.Builder operatorResultBuilder = GeometryResponse.newBuilder();
-        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
+        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperator().toString());
         switch (operatorType) {
             case Proximity2D:
                 break;
@@ -444,7 +444,7 @@ public class GeometryServiceUtil {
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryCursor resultCursor = null;
-        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
+        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperator().toString());
         switch (operatorType) {
             case DensifyByAngle:
                 break;
@@ -478,7 +478,7 @@ public class GeometryServiceUtil {
             case ShapePreservingDensify:
                 break;
             case GeneralizeByArea:
-                GeneralizeByAreaParams generalizeByAreaParams = operatorRequest.getGeneralizeByAreaParams();
+                GeometryRequest.GeneralizeByAreaParams generalizeByAreaParams = operatorRequest.getGeneralizeByAreaParams();
                 if (generalizeByAreaParams.getPercentReduction() > 0) {
                     resultCursor = OperatorGeneralizeByArea.local().execute(
                             leftCursor,
@@ -653,8 +653,8 @@ public class GeometryServiceUtil {
     public static GeometryResponsesIterator buildResultsIterable(GeometryRequest operatorRequest,
                                                                GeometryCursor leftCursor,
                                                                boolean bForceCompact) throws IOException {
-        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperatorType().toString());
-        GeometryEncodingType encodingType = GeometryEncodingType.unknown;
+        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperator().toString());
+        GeometryData.Encoding encodingType = GeometryData.Encoding.UNKNOWN_ENCODING;
         GeometryCursor resultCursor = null;
         switch (operatorType) {
             // results
@@ -700,21 +700,21 @@ public class GeometryServiceUtil {
                 resultCursor = cursorFromRequest(operatorRequest, leftCursor, null);
                 break;
             case ExportToESRIShape:
-                encodingType = GeometryEncodingType.esrishape;
+                encodingType = GeometryData.Encoding.ESRI_SHAPE;
                 break;
             case ExportToWkb:
-                encodingType = GeometryEncodingType.wkb;
+                encodingType = GeometryData.Encoding.WKB;
                 break;
             case ExportToWkt:
-                encodingType = GeometryEncodingType.wkt;
+                encodingType = GeometryData.Encoding.WKT;
                 break;
             case ExportToGeoJson:
-                encodingType = GeometryEncodingType.geojson;
+                encodingType = GeometryData.Encoding.GEOJSON;
                 break;
         }
         // If the only operation used by the user is to export to one of the formats then enter this if statement and
         // assign the left cursor to the result cursor
-        if (encodingType != GeometryEncodingType.unknown) {
+        if (encodingType != GeometryData.Encoding.UNKNOWN_ENCODING) {
             resultCursor = createGeometryCursor(operatorRequest, Side.Left);
         }
 
@@ -745,23 +745,23 @@ public class GeometryServiceUtil {
     }
 
     static SpatialReference extractSpatialReference(GeometryData geometryData) {
-        return geometryData.hasSpatialReference() ? extractSpatialReference(geometryData.getSpatialReference()) : null;
+        return geometryData.hasSr() ? extractSpatialReference(geometryData.getSr()) : null;
     }
 
 
     protected static SpatialReference extractSpatialReferenceCursor(GeometryRequest operatorRequestCursor) {
-        if (operatorRequestCursor.hasResultSpatialReference()) {
-            return extractSpatialReference(operatorRequestCursor.getResultSpatialReference());
-        } else if (operatorRequestCursor.hasOperationSpatialReference()) {
-            return extractSpatialReference(operatorRequestCursor.getOperationSpatialReference());
+        if (operatorRequestCursor.hasResultSr()) {
+            return extractSpatialReference(operatorRequestCursor.getResultSr());
+        } else if (operatorRequestCursor.hasOperationSr()) {
+            return extractSpatialReference(operatorRequestCursor.getOperationSr());
         } else if (operatorRequestCursor.hasLeftGeometryRequest()) {
             return extractSpatialReferenceCursor(operatorRequestCursor.getLeftGeometryRequest());
         } else if (operatorRequestCursor.hasLeftGeometry()) {
-            return extractSpatialReference(operatorRequestCursor.getLeftGeometry().getSpatialReference());
+            return extractSpatialReference(operatorRequestCursor.getLeftGeometry().getSr());
         } else if (operatorRequestCursor.hasGeometryRequest()) {
             return extractSpatialReferenceCursor(operatorRequestCursor.getGeometryRequest());
         } else if (operatorRequestCursor.hasRightGeometry()) {
-            return extractSpatialReference(operatorRequestCursor.getRightGeometry().getSpatialReference());
+            return extractSpatialReference(operatorRequestCursor.getRightGeometry().getSr());
         }
         return null;
     }
