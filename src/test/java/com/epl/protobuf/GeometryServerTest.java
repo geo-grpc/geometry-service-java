@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
@@ -1302,6 +1303,42 @@ public class GeometryServerTest {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
 
+    @Test
+    public void testGeodeticArea() {
+        SpatialReferenceData spatialReferenceData = SpatialReferenceData.newBuilder().setWkid(4326).build();
+        Polygon polygon = new Polygon();
+        polygon.startPath(-1, 1);
+        polygon.lineTo(1, 1);
+        polygon.lineTo(1, -1);
+        polygon.lineTo(-1, -1);
+        polygon.closeAllPaths();
+        OperatorExportToWkb operatorExportToWkb = (OperatorExportToWkb)OperatorFactoryLocal.getInstance().getOperator(Operator.Type.ExportToWkb);
+        ByteBuffer buffer = operatorExportToWkb.execute(0, polygon,null);
+        GeometryData geometryData = GeometryData
+                .newBuilder()
+                .setWkb(ByteString.copyFrom(buffer))
+                .setSr(spatialReferenceData).build();
+        GeometryRequest geometryRequest = GeometryRequest.newBuilder()
+                .setOperator(OperatorType.GEODETIC_AREA)
+                .setGeometry(geometryData)
+                .build();
+
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse geometryResponse = stub.geometryOperationUnary(geometryRequest);
+//        assertEquals(geometryResponse.getMeasure(), 90000.0);
+
+        GeometryRequest projectThenArea = GeometryRequest.newBuilder()
+                .setOperator(OperatorType.GEODETIC_AREA)
+                .setGeometryRequest(GeometryRequest.newBuilder()
+                        .setOperator(OperatorType.PROJECT)
+                        .setGeometry(geometryData)
+                        .setResultSr(SpatialReferenceData.newBuilder().setWkid(32632)))
+                .build();
+
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub2 = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse geometryResponse2 = stub2.geometryOperationUnary(projectThenArea);
+        assertEquals(geometryResponse.getMeasure(), geometryResponse2.getMeasure(), 0.000001);
     }
 }

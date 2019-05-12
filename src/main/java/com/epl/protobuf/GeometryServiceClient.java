@@ -126,7 +126,7 @@ public class GeometryServiceClient {
         String projectionWKT = new String(Files.readAllBytes(Paths.get(prfFile)));
 
         SpatialReferenceData serviceSpatialReference = SpatialReferenceData.newBuilder()
-                .setEsriWkt(projectionWKT).build();
+                .setWkt(projectionWKT).build();
 
         SpatialReferenceData wgs84SpatiralReference = SpatialReferenceData.newBuilder()
                 .setWkid(4326).build();

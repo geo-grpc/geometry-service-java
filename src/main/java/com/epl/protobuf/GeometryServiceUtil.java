@@ -181,7 +181,7 @@ class SpatialReferenceGroup {
         } else if (spatialReference.getProj4().length() > 0) {
             return SpatialReferenceData.newBuilder().setProj4(spatialReference.getProj4()).build();
         } else if (spatialReference.getText().length() > 0) {
-            return SpatialReferenceData.newBuilder().setEsriWkt(spatialReference.getText()).build();
+            return SpatialReferenceData.newBuilder().setWkt(spatialReference.getText()).build();
         }
         return null;
     }
@@ -408,7 +408,7 @@ public class GeometryServiceUtil {
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryResponse.Builder operatorResultBuilder = GeometryResponse.newBuilder();
-        Operator.Type operatorType = getOp(operatorRequest);// m_operatorTypeMap.get(operatorRequest.getOperator().toString().toLowerCase());
+        Operator.Type operatorType = getOp(operatorRequest);
         switch (operatorType) {
             case Proximity2D:
                 break;
@@ -445,6 +445,10 @@ public class GeometryServiceUtil {
             case GeodeticLength:
                 break;
             case GeodeticArea:
+                Geometry geometry = leftCursor.next();
+                ProjectionTransformation forwardProjectionTransformation = ProjectionTransformation.getEqualArea(geometry, srGroup.leftSR);
+                double measure = OperatorProject.local().execute(geometry, forwardProjectionTransformation, null).calculateArea2D();
+                operatorResultBuilder.setMeasure(measure);
                 break;
             default:
                 throw new IllegalArgumentException();
@@ -461,8 +465,7 @@ public class GeometryServiceUtil {
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryCursor resultCursor = null;
-//        Operator.Type operatorType = Operator.Type.valueOf(operatorRequest.getOperator().toString());
-        Operator.Type operatorType = getOp(operatorRequest);// m_operatorTypeMap.get(operatorRequest.getOperator().toString().toLowerCase());
+        Operator.Type operatorType = getOp(operatorRequest);
         switch (operatorType) {
             case DensifyByAngle:
                 break;
@@ -671,7 +674,7 @@ public class GeometryServiceUtil {
     public static GeometryResponsesIterator buildResultsIterable(GeometryRequest operatorRequest,
                                                                GeometryCursor leftCursor,
                                                                boolean bForceCompact) throws IOException {
-        Operator.Type operatorType = getOp(operatorRequest);// m_operatorTypeMap.get(operatorRequest.getOperator().toString().toLowerCase().replaceAll("[_]", ""));
+        Operator.Type operatorType = getOp(operatorRequest);
         Encoding encodingType = Encoding.UNKNOWN_ENCODING;
         GeometryCursor resultCursor = null;
         switch (operatorType) {
@@ -789,12 +792,14 @@ public class GeometryServiceUtil {
         // TODO there seems to be a bug where hasWkid() is not getting generated. check back later
         if (serviceSpatialReference.getWkid() != 0)
             return SpatialReference.create(serviceSpatialReference.getWkid());
-        else if (serviceSpatialReference.getEsriWkt().length() > 0)
-            return SpatialReference.create(serviceSpatialReference.getEsriWkt());
+        else if (serviceSpatialReference.getWkt().length() > 0)
+            return SpatialReference.create(serviceSpatialReference.getWkt());
         else if (serviceSpatialReference.getProj4().length() > 0)
             return SpatialReference.createFromProj4(serviceSpatialReference.getProj4());
-
-        return null;
+        else if (serviceSpatialReference.hasCustom() && serviceSpatialReference.getCustom().getCsType() == SpatialReferenceData.CSType.LAMBERT_AZI)
+            return SpatialReference.createEqualArea(serviceSpatialReference.getCustom().getLon0(), serviceSpatialReference.getCustom().getLat0());
+        else
+            return null;
     }
 
 
