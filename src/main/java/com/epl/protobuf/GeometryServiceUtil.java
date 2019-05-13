@@ -153,6 +153,8 @@ class SpatialReferenceGroup {
         if (operatorSR == null && leftSR != null
                 && (rightSR == null || leftSR.equals(rightSR))) {
             operatorSR = leftSR;
+        } else if (operatorSR == null && resultSR != null) {
+            operatorSR = resultSR;
         }
 
         if (leftSR == null) {

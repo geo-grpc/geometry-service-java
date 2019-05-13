@@ -1342,4 +1342,60 @@ public class GeometryServerTest {
         GeometryResponse geometryResponse2 = stub2.geometryOperationUnary(projectThenArea);
         assertEquals(geometryResponse.getMeasure(), geometryResponse2.getMeasure(), 0.000001);
     }
+
+    @Test
+    public void testPointGeodetic() {
+        // POINT (4322181.519435114 3212199.338618969) proj4: "+proj=laea +lat_0=31.593750 +lon_0=-94.718750 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+        SpatialReferenceData spatialReferenceData = SpatialReferenceData.newBuilder().setProj4("+proj=laea +lat_0=31.593750 +lon_0=-94.718750 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs").build();
+        GeometryData geometryData = GeometryData.newBuilder().setWkt("POINT (4322181.519435114 3212199.338618969)").setSr(spatialReferenceData).build();
+        GeometryRequest geometryRequest = GeometryRequest
+                .newBuilder()
+                .setGeometry(geometryData)
+                .setOperator(OperatorType.GEODESIC_BUFFER)
+                .setBufferParams(GeometryRequest.BufferParams.newBuilder().setDistance(200).build())
+                .setResultEncoding(Encoding.WKT)
+                .build();
+
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse geometryResponse = stub.geometryOperationUnary(geometryRequest);
+
+        GeometryRequest geometryRequest1 = GeometryRequest
+                .newBuilder()
+                .setLeftGeometry(geometryResponse.getGeometry())
+                .setRightGeometry(geometryData)
+                .setOperator(OperatorType.INTERSECTS)
+                .build();
+
+        GeometryResponse geometryResponse1 = stub.geometryOperationUnary(geometryRequest1);
+        assertTrue(geometryResponse1.getSpatialRelationship());
+    }
+
+    @Test
+    public void testIntersection() {
+        String wkt = "POLYGON ((-116.25 46.37499999905793, -116.1875 46.37499999905793, -116.1875 46.31249999905781, -116.25 46.31249999905781, -116.25 46.37499999905793))";
+        double x = -116.21874999999999;
+        double y = 46.34374999905787;
+        SpatialReferenceData wgs84 = SpatialReferenceData.newBuilder().setWkid(4326).build();
+        GeometryData geometryData = GeometryData.newBuilder().setWkt(wkt).setSr(wgs84).build();
+
+        SpatialReferenceData spatialReferenceDataLocal = SpatialReferenceData.newBuilder().setCustom(SpatialReferenceData.Custom.newBuilder().setLon0(x).setLat0(y).build()).build();
+        GeometryRequest geometryRequest = GeometryRequest.newBuilder().setGeometry(geometryData).setResultEncoding(Encoding.WKT).setOperator(OperatorType.PROJECT).setResultSr(spatialReferenceDataLocal).build();
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse operatorResult = stub.geometryOperationUnary(geometryRequest);
+        GeometryData localGeometry = operatorResult.getGeometry();
+
+        SpatialReference spatialReference = SpatialReference.createUTM(x, y);
+        SpatialReferenceData spatialReferenceDataUtm = SpatialReferenceData.newBuilder().setProj4(spatialReference.getProj4()).build();
+
+        GeometryRequest geometryRequestIntersection = GeometryRequest
+                .newBuilder()
+                .setLeftGeometry(geometryData)
+                .setRightGeometry(localGeometry)
+                .setOperator(OperatorType.INTERSECTION)
+                .setOperationSr(spatialReferenceDataUtm)
+                .setResultEncoding(Encoding.WKT)
+                .build();
+
+        assertTrue(geometryRequestIntersection.hasGeometry());
+    }
 }
