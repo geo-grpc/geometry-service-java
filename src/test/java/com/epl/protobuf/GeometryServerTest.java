@@ -1392,10 +1392,18 @@ public class GeometryServerTest {
                 .setLeftGeometry(geometryData)
                 .setRightGeometry(localGeometry)
                 .setOperator(OperatorType.INTERSECTION)
-                .setOperationSr(spatialReferenceDataUtm)
+                .setResultSr(spatialReferenceDataUtm)
                 .setResultEncoding(Encoding.WKT)
                 .build();
+        GeometryResponse operatorResult2 = stub.geometryOperationUnary(geometryRequestIntersection);
 
-        assertTrue(geometryRequestIntersection.hasGeometry());
+        GeometryRequest geometryRequest1 = GeometryRequest.newBuilder()
+                .setLeftGeometry(operatorResult2.getGeometry())
+                .setRightGeometry(geometryData)
+                .setOperationSr(wgs84)
+                .setOperator(OperatorType.INTERSECTS)
+                .build();
+        GeometryResponse operatorResult3 = stub.geometryOperationUnary(geometryRequest1);
+        assertTrue(operatorResult3.getSpatialRelationship());
     }
 }

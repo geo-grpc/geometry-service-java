@@ -178,7 +178,7 @@ class SpatialReferenceGroup {
             if (rightSR == null || (leftSR != null && leftSR.equals(rightSR))) {
                 resultSR = leftSR;
             } else {
-                throw new GeometryException("if the left and right sr are different, the result sr must be defined");
+                resultSR = operatorSR;
             }
         }
     }
