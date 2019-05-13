@@ -319,7 +319,7 @@ public class GeometryServerTest {
                 .newBuilder()
                 .setLeftGeometry(geometryData)
                 .setOperator(OperatorType.PROJECT)
-                .setOperationSr(outputSpatialReference)
+                .setResultSr(outputSpatialReference)
                 .build();
 
         GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
@@ -1105,6 +1105,7 @@ public class GeometryServerTest {
         GeometryResponse operatorResult = stub.geometryOperationUnary(operatorRequestSymDifference);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResult.getGeometry().getWkb().asReadOnlyByteBuffer());
         assertTrue(GeometryEngine.equals(differenceProjected, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4269)));
+        assertEquals(operatorResult.getGeometry().getSr().getWkid(), 4269);
 
     }
 

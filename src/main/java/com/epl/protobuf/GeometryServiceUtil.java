@@ -169,9 +169,15 @@ class SpatialReferenceGroup {
             throw new IllegalArgumentException("either both spatial references are local or neither");
         }
 
-        // if there is no resultSpatialReference set it to be the operatorSpatialReference
+        // if there is no resultSpatialReference set it to be the leftSpatialReference. the idea is that if an operation
+        // spatial reference has been set then that should only be the projection for the duration of the operation, and
+        // if a result hasn't been set, then it should revert back to the input spatial reference.
         if (resultSR == null) {
-            resultSR = operatorSR;
+            if (rightSR == null || (leftSR != null && leftSR.equals(rightSR))) {
+                resultSR = leftSR;
+            } else {
+                throw new GeometryException("if the left and right sr are different, the result sr must be defined");
+            }
         }
     }
 
@@ -658,6 +664,7 @@ public class GeometryServiceUtil {
                         srGroup.operatorSR,
                         null);
                 break;
+
             default:
                 throw new IllegalArgumentException();
 
