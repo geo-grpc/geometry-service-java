@@ -134,7 +134,7 @@ public class GeometryServer {
     private static class GeometryService extends GeometryServiceGrpc.GeometryServiceImplBase {
 
         @Override
-        public void geometryOperationServerStream(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver)  {
+        public void operateServerStream(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver)  {
             try {
                 GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(request, null, false);
                 while (operatorResultsIterator.hasNext()) {
@@ -147,7 +147,7 @@ public class GeometryServer {
         }
 
         @Override
-        public StreamObserver<GeometryRequest> geometryOperationBiStream(StreamObserver<GeometryResponse> responseObserver) {
+        public StreamObserver<GeometryRequest> operateBiStream(StreamObserver<GeometryResponse> responseObserver) {
 
             return new StreamObserver<GeometryRequest>() {
                 @Override
@@ -180,7 +180,7 @@ public class GeometryServer {
 
         @SuppressWarnings("Duplicates")
         @Override
-        public StreamObserver<GeometryRequest> geometryOperationBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
+        public StreamObserver<GeometryRequest> operateBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
             // Set up manual flow control for the request stream. It feels backwards to configure the request
             // stream's flow control using the response stream's observer, but this is the way it is.
             final ServerCallStreamObserver<GeometryResponse> serverCallStreamObserver =
@@ -281,7 +281,7 @@ public class GeometryServer {
 
         @SuppressWarnings("Duplicates")
         @Override
-        public StreamObserver<FileRequestChunk> fileOperationBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
+        public StreamObserver<FileRequestChunk> fileOperateBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
             // Set up manual flow control for the request stream. It feels backwards to configure the request
             // stream's flow control using the response stream's observer, but this is the way it is.
             final ServerCallStreamObserver<GeometryResponse> serverCallStreamObserver =
@@ -408,7 +408,7 @@ public class GeometryServer {
         }
 
         @Override
-        public void geometryOperationUnary(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver) {
+        public void operate(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver) {
             try {
                 if (request.getOperator() == OperatorType.CUT) {
                     // TODO, you need to search the whole request chain for a cut

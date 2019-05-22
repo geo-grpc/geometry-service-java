@@ -232,7 +232,7 @@ public class GeometryServiceClient {
                     }
                 };
 
-        geometryServiceStub.fileOperationBiStreamFlow(clientResponseObserver);
+        geometryServiceStub.fileOperateBiStreamFlow(clientResponseObserver);
 
         done.await();
 
@@ -331,7 +331,7 @@ public class GeometryServiceClient {
                     }
                 };
         // Note: clientResponseObserver is handling both request and response stream processing.
-        geometryServiceStub.geometryOperationBiStream(clientResponseObserver);
+        geometryServiceStub.operateBiStream(clientResponseObserver);
 
 
         done.await();
@@ -369,7 +369,7 @@ public class GeometryServiceClient {
                 .build();
 
         System.out.println("executing request");
-        GeometryResponse operatorResult = blockingStub.geometryOperationUnary(serviceProjectOp);
+        GeometryResponse operatorResult = blockingStub.operate(serviceProjectOp);
         System.out.println("finished request");
 
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
