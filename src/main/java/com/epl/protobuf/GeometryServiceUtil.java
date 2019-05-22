@@ -534,10 +534,14 @@ public class GeometryServiceUtil {
                 resultCursor = leftCursor;
                 break;
             case Union:
-                resultCursor = OperatorUnion.local().execute(
-                        leftCursor,
-                        srGroup.operatorSR,
-                        null);
+                if (rightCursor != null) {
+                    resultCursor = new SimpleGeometryCursor(OperatorUnion.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, null));
+                } else {
+                    resultCursor = OperatorUnion.local().execute(
+                            leftCursor,
+                            srGroup.operatorSR,
+                            null);
+                }
                 break;
             case Difference:
                 resultCursor = OperatorDifference.local().execute(
