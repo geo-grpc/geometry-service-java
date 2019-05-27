@@ -416,22 +416,22 @@ public class GeometryServiceUtil {
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryResponse.Builder operatorResultBuilder = GeometryResponse.newBuilder();
-        Operator.Type operatorType = getOp(operatorRequest);
-        switch (operatorType) {
-            case Proximity2D:
+        switch (operatorRequest.getOperator()) {
+            case PROXIMITY_2D:
                 break;
-            case Relate:
+            case RELATE:
                 boolean result = OperatorRelate.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, operatorRequest.getRelateParams().getDe9Im(), null);
                 operatorResultBuilder.setSpatialRelationship(result);
                 break;
-            case Equals:
-            case Disjoint:
-            case Intersects:
-            case Within:
-            case Contains:
-            case Crosses:
-            case Touches:
-            case Overlaps:
+            case EQUALS:
+            case DISJOINT:
+            case INTERSECTS:
+            case WITHIN:
+            case CONTAINS:
+            case CROSSES:
+            case TOUCHES:
+            case OVERLAPS:
+                Operator.Type operatorType = getOp(operatorRequest);
                 HashMap<Long, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal
                         .getInstance()
                         .getOperator(operatorType)).execute(
@@ -447,12 +447,12 @@ public class GeometryServiceUtil {
                     operatorResultBuilder.putAllRelateMap(result_map);
                 }
                 break;
-            case Distance:
+            case DISTANCE:
                 operatorResultBuilder.setMeasure(OperatorDistance.local().execute(leftCursor.next(), rightCursor.next(), null));
                 break;
-            case GeodeticLength:
-                break;
-            case GeodeticArea:
+//            case GeodeticLength:
+//                break;
+            case GEODETIC_AREA:
                 Geometry geometry = leftCursor.next();
                 ProjectionTransformation forwardProjectionTransformation = ProjectionTransformation.getEqualArea(geometry, srGroup.leftSR);
                 double measure = OperatorProject.local().execute(geometry, forwardProjectionTransformation, null).calculateArea2D();
@@ -473,13 +473,8 @@ public class GeometryServiceUtil {
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
 
         GeometryCursor resultCursor = null;
-        Operator.Type operatorType = getOp(operatorRequest);
-        switch (operatorType) {
-            case DensifyByAngle:
-                break;
-            case LabelPoint:
-                break;
-            case GeodesicBuffer:
+        switch (operatorRequest.getOperator()) {
+            case GEODESIC_BUFFER:
                 // TODO this should recycled or a member variable
                 var doubleList = new double[] {operatorRequest.getBufferParams().getDistance()};
                 double maxDeviation = Double.NaN;
@@ -496,7 +491,7 @@ public class GeometryServiceUtil {
                         operatorRequest.getBufferParams().getUnionResult(),
                         null);
                 break;
-            case GeodeticDensifyByLength:
+            case GEODETIC_DENSIFY_BY_LENGTH:
                 resultCursor = OperatorGeodeticDensifyByLength.local().execute(
                         leftCursor,
                         srGroup.operatorSR,
@@ -504,9 +499,7 @@ public class GeometryServiceUtil {
                         0,
                         null);
                 break;
-            case ShapePreservingDensify:
-                break;
-            case GeneralizeByArea:
+            case GENERALIZE_BY_AREA:
                 GeometryRequest.GeneralizeByAreaParams generalizeByAreaParams = operatorRequest.getGeneralizeByAreaParams();
                 if (generalizeByAreaParams.getPercentReduction() > 0) {
                     resultCursor = OperatorGeneralizeByArea.local().execute(
@@ -530,10 +523,10 @@ public class GeometryServiceUtil {
                     resultCursor = leftCursor;
                 }
                 break;
-            case Project:
+            case PROJECT:
                 resultCursor = leftCursor;
                 break;
-            case Union:
+            case UNION:
                 if (rightCursor != null) {
                     resultCursor = new SimpleGeometryCursor(OperatorUnion.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, null));
                 } else {
@@ -543,14 +536,14 @@ public class GeometryServiceUtil {
                             null);
                 }
                 break;
-            case Difference:
+            case DIFFERENCE:
                 resultCursor = OperatorDifference.local().execute(
                         leftCursor,
                         rightCursor,
                         srGroup.operatorSR,
                         null);
                 break;
-            case Buffer:
+            case BUFFER:
                 // TODO clean this up
                 //                GeometryCursor inputGeometryBag,
                 //                SpatialReference sr,
@@ -576,7 +569,7 @@ public class GeometryServiceUtil {
                                                               null);
 
                 break;
-            case Intersection:
+            case INTERSECTION:
                 // TODO hasIntersectionDimensionMask needs to be automagically generated
                 if (operatorRequest.hasIntersectionParams() &&
                         operatorRequest.getIntersectionParams().getDimensionMask() != 0) {
@@ -590,11 +583,11 @@ public class GeometryServiceUtil {
                     resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
                 }
                 break;
-            case Clip:
+            case CLIP:
                 Envelope2D envelope2D = extractEnvelope2D(operatorRequest.getClipParams().getEnvelope());
                 resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, srGroup.operatorSR, null);
                 break;
-            case Cut:
+            case CUT:
                 resultCursor = OperatorCut.local().execute(
                         operatorRequest.getCutParams().getConsiderTouch(),
                         leftCursor.next(),
@@ -602,27 +595,27 @@ public class GeometryServiceUtil {
                         srGroup.operatorSR,
                         null);
                 break;
-            case DensifyByLength:
+            case DENSIFY_BY_LENGTH:
                 resultCursor = OperatorDensifyByLength.local().execute(
                         leftCursor,
                         operatorRequest.getDensifyParams().getMaxLength(),
                         null);
                 break;
-            case Simplify:
+            case SIMPLIFY:
                 resultCursor = OperatorSimplify.local().execute(
                         leftCursor,
                         srGroup.operatorSR,
                         operatorRequest.getSimplifyParams().getForce(),
                         null);
                 break;
-            case SimplifyOGC:
+            case SIMPLIFY_OGC:
                 resultCursor = OperatorSimplifyOGC.local().execute(
                         leftCursor,
                         srGroup.operatorSR,
                         operatorRequest.getSimplifyParams().getForce(),
                         null);
                 break;
-            case Offset:
+            case OFFSET:
                 resultCursor = OperatorOffset.local().execute(
                         leftCursor,
                         srGroup.operatorSR,
@@ -631,33 +624,33 @@ public class GeometryServiceUtil {
                         operatorRequest.getOffsetParams().getBevelRatio(),
                         operatorRequest.getOffsetParams().getFlattenError(), null);
                 break;
-            case Generalize:
+            case GENERALIZE:
                 resultCursor = OperatorGeneralize.local().execute(
                         leftCursor,
                         operatorRequest.getGeneralizeParams().getMaxDeviation(),
                         operatorRequest.getGeneralizeParams().getRemoveDegenerates(),
                         null);
                 break;
-            case SymmetricDifference:
+            case SYMMETRIC_DIFFERENCE:
                 resultCursor = OperatorSymmetricDifference.local().execute(
                         leftCursor,
                         rightCursor,
                         srGroup.operatorSR,
                         null);
                 break;
-            case ConvexHull:
+            case CONVEX_HULL:
                 resultCursor = OperatorConvexHull.local().execute(
                         leftCursor,
                         operatorRequest.getConvexParams().getMerge(),
                         null);
                 break;
-            case Boundary:
+            case BOUNDARY:
                 resultCursor = OperatorBoundary.local().execute(leftCursor, null);
                 break;
-            case EnclosingCircle:
+            case ENCLOSING_CIRCLE:
                 resultCursor = new OperatorEnclosingCircleCursor(leftCursor, srGroup.operatorSR, null);
                 break;
-            case RandomPoints:
+            case RANDOM_POINTS:
                 double[] pointsPerSqrKm = new double [] {operatorRequest
                         .getRandomPointsParams()
                         .getPointsPerSquareKm()};
@@ -670,7 +663,14 @@ public class GeometryServiceUtil {
                         srGroup.operatorSR,
                         null);
                 break;
-
+            case AFFINE_TRANSFORM:
+                Transformation2D transformation2D = new Transformation2D();
+                transformation2D.setShift(operatorRequest.getAffineTransformParams().getXOffset(),
+                                          operatorRequest.getAffineTransformParams().getYOffset());
+                Geometry geometry = leftCursor.next();
+                geometry.applyTransformation(transformation2D);
+                resultCursor = new SimpleGeometryCursor(geometry);
+                break;
             default:
                 throw new IllegalArgumentException();
 
@@ -687,62 +687,58 @@ public class GeometryServiceUtil {
     public static GeometryResponsesIterator buildResultsIterable(GeometryRequest operatorRequest,
                                                                GeometryCursor leftCursor,
                                                                boolean bForceCompact) throws IOException {
-        Operator.Type operatorType = getOp(operatorRequest);
         Encoding encodingType = Encoding.UNKNOWN_ENCODING;
         GeometryCursor resultCursor = null;
-        switch (operatorType) {
+        switch (operatorRequest.getOperator()) {
             // results
-            case Proximity2D:
-            case Relate:
-            case Equals:
-            case Disjoint:
-            case Intersects:
-            case Within:
-            case Contains:
-            case Crosses:
-            case Touches:
-            case Overlaps:
-            case Distance:
-            case GeodeticLength:
-            case GeodeticArea:
+            case PROXIMITY_2D:
+            case RELATE:
+            case EQUALS:
+            case DISJOINT:
+            case INTERSECTS:
+            case WITHIN:
+            case CONTAINS:
+            case CROSSES:
+            case TOUCHES:
+            case OVERLAPS:
+            case DISTANCE:
+            case GEODETIC_AREA:
                 return new GeometryResponsesIterator(nonCursorFromRequest(operatorRequest, leftCursor, null));
 
             // cursors
-            case Project:
-            case Union:
-            case Difference:
-            case Buffer:
-            case Intersection:
-            case Clip:
-            case Cut:
-            case DensifyByLength:
-            case DensifyByAngle:
-            case LabelPoint:
-            case GeodesicBuffer:
-            case GeodeticDensifyByLength:
-            case ShapePreservingDensify:
-            case Simplify:
-            case SimplifyOGC:
-            case Offset:
-            case Generalize:
-            case GeneralizeByArea:
-            case SymmetricDifference:
-            case ConvexHull:
-            case Boundary:
-            case RandomPoints:
-            case EnclosingCircle:
+            case PROJECT:
+            case UNION:
+            case DIFFERENCE:
+            case BUFFER:
+            case INTERSECTION:
+            case CLIP:
+            case CUT:
+            case DENSIFY_BY_LENGTH:
+            case GEODESIC_BUFFER:
+            case GEODETIC_DENSIFY_BY_LENGTH:
+            case SIMPLIFY:
+            case SIMPLIFY_OGC:
+            case OFFSET:
+            case GENERALIZE:
+            case GENERALIZE_BY_AREA:
+            case SYMMETRIC_DIFFERENCE:
+            case CONVEX_HULL:
+            case BOUNDARY:
+            case RANDOM_POINTS:
+            case ENCLOSING_CIRCLE:
+            case AFFINE_TRANSFORM:
                 resultCursor = cursorFromRequest(operatorRequest, leftCursor, null);
                 break;
-            case ExportToESRIShape:
+            case EXPORT_TO_ESRI_SHAPE:
                 encodingType = Encoding.ESRI_SHAPE;
                 break;
-            case ExportToWkb:
+            case EXPORT_TO_WKB:
                 encodingType = Encoding.WKB;
                 break;
-            case ExportToWkt:
+            case EXPORT_TO_WKT:
                 encodingType = Encoding.WKT;
                 break;
-            case ExportToGeoJson:
+            case EXPORT_TO_GEOJSON:
                 encodingType = Encoding.GEOJSON;
                 break;
         }
