@@ -450,13 +450,15 @@ public class GeometryServiceUtil {
             case DISTANCE:
                 operatorResultBuilder.setMeasure(OperatorDistance.local().execute(leftCursor.next(), rightCursor.next(), null));
                 break;
-//            case GeodeticLength:
-//                break;
             case GEODETIC_AREA:
                 Geometry geometry = leftCursor.next();
                 ProjectionTransformation forwardProjectionTransformation = ProjectionTransformation.getEqualArea(geometry, srGroup.leftSR);
-                double measure = OperatorProject.local().execute(geometry, forwardProjectionTransformation, null).calculateArea2D();
-                operatorResultBuilder.setMeasure(measure);
+                double geodeticArea = OperatorProject.local().execute(geometry, forwardProjectionTransformation, null).calculateArea2D();
+                operatorResultBuilder.setMeasure(geodeticArea);
+                break;
+            case GEODETIC_LENGTH:
+                double geodeticLength = OperatorGeodeticLength.local().execute(leftCursor.next(), srGroup.leftSR, GeodeticCurveType.Geodesic, null);
+                operatorResultBuilder.setMeasure(geodeticLength);
                 break;
             default:
                 throw new IllegalArgumentException();
@@ -703,6 +705,7 @@ public class GeometryServiceUtil {
             case OVERLAPS:
             case DISTANCE:
             case GEODETIC_AREA:
+            case GEODETIC_LENGTH:
                 return new GeometryResponsesIterator(nonCursorFromRequest(operatorRequest, leftCursor, null));
 
             // cursors

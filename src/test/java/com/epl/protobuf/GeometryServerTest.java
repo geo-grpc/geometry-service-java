@@ -1431,4 +1431,16 @@ public class GeometryServerTest {
         GeometryResponse operatorResult3 = stub.operate(geometryRequest1);
         assertTrue(operatorResult3.getSpatialRelationship());
     }
+
+    @Test
+    public void testLength() {
+        String wkt = "LINESTRING (0 0, 1 0)";
+        SpatialReferenceData wgs84 = SpatialReferenceData.newBuilder().setWkid(4326).build();
+        GeometryData geometryData = GeometryData.newBuilder().setWkt(wkt).setSr(wgs84).build();
+        GeometryRequest geometryRequest = GeometryRequest.newBuilder().setGeometry(geometryData).setOperator(OperatorType.GEODETIC_LENGTH).build();
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse geometryResponse = stub.operate(geometryRequest);
+        assertEquals(111319.4907932264, geometryResponse.getMeasure(), 8);
+
+    }
 }
