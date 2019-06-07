@@ -194,7 +194,7 @@ class SpatialReferenceGroup {
         return null;
     }
 
-    public SpatialReferenceData getFinalSpatialRef() {
+    SpatialReferenceData getFinalSpatialRef() {
         if (resultSR != null) {
             return createSpatialReferenceData(resultSR);
         } else if (operatorSR != null) {
@@ -203,6 +203,20 @@ class SpatialReferenceGroup {
             return createSpatialReferenceData(leftSR);
         }
         return null;
+    }
+
+    boolean checkLeftRightTopoOperation() {
+        if (leftSR != null && rightSR != null && operatorSR == null && resultSR == null && leftSR != rightSR) {
+            return false;
+        }
+        return true;
+    }
+
+    boolean checkLeftRightSpatialOperation() {
+        if (leftSR != null && rightSR != null && operatorSR == null && leftSR != rightSR) {
+            return false;
+        }
+        return true;
     }
 }
 
@@ -420,6 +434,9 @@ public class GeometryServiceUtil {
             case PROXIMITY_2D:
                 break;
             case RELATE:
+                if (!srGroup.checkLeftRightSpatialOperation()) {
+                    throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation spatial reference isn't defined");
+                }
                 boolean result = OperatorRelate.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, operatorRequest.getRelateParams().getDe9Im(), null);
                 operatorResultBuilder.setSpatialRelationship(result);
                 break;
@@ -431,6 +448,9 @@ public class GeometryServiceUtil {
             case CROSSES:
             case TOUCHES:
             case OVERLAPS:
+                if (!srGroup.checkLeftRightSpatialOperation()) {
+                    throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation spatial reference isn't defined");
+                }
                 Operator.Type operatorType = getOp(operatorRequest);
                 HashMap<Long, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal
                         .getInstance()
@@ -448,6 +468,9 @@ public class GeometryServiceUtil {
                 }
                 break;
             case DISTANCE:
+                if (!srGroup.checkLeftRightTopoOperation()) {
+                    throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation and the result spatial reference aren't defined");
+                }
                 operatorResultBuilder.setMeasure(OperatorDistance.local().execute(leftCursor.next(), rightCursor.next(), null));
                 break;
             case GEODETIC_AREA:
@@ -530,6 +553,9 @@ public class GeometryServiceUtil {
                 break;
             case UNION:
                 if (rightCursor != null) {
+                    if (!srGroup.checkLeftRightTopoOperation()) {
+                        throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation and the result spatial reference aren't defined");
+                    }
                     resultCursor = new SimpleGeometryCursor(OperatorUnion.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, null));
                 } else {
                     resultCursor = OperatorUnion.local().execute(
@@ -539,6 +565,9 @@ public class GeometryServiceUtil {
                 }
                 break;
             case DIFFERENCE:
+                if (!srGroup.checkLeftRightTopoOperation()) {
+                    throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation and the result spatial reference aren't defined");
+                }
                 resultCursor = OperatorDifference.local().execute(
                         leftCursor,
                         rightCursor,
@@ -573,6 +602,9 @@ public class GeometryServiceUtil {
                 break;
             case INTERSECTION:
                 // TODO hasIntersectionDimensionMask needs to be automagically generated
+                if (!srGroup.checkLeftRightTopoOperation()) {
+                    throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation and the result spatial reference aren't defined");
+                }
                 if (operatorRequest.hasIntersectionParams() &&
                         operatorRequest.getIntersectionParams().getDimensionMask() != 0) {
                     resultCursor = OperatorIntersection.local().execute(
@@ -590,6 +622,9 @@ public class GeometryServiceUtil {
                 resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, srGroup.operatorSR, null);
                 break;
             case CUT:
+                if (!srGroup.checkLeftRightTopoOperation()) {
+                    throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation and the result spatial reference aren't defined");
+                }
                 resultCursor = OperatorCut.local().execute(
                         operatorRequest.getCutParams().getConsiderTouch(),
                         leftCursor.next(),
@@ -634,6 +669,9 @@ public class GeometryServiceUtil {
                         null);
                 break;
             case SYMMETRIC_DIFFERENCE:
+                if (!srGroup.checkLeftRightTopoOperation()) {
+                    throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation and the result spatial reference aren't defined");
+                }
                 resultCursor = OperatorSymmetricDifference.local().execute(
                         leftCursor,
                         rightCursor,
