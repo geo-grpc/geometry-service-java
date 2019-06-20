@@ -531,7 +531,7 @@ public class GeometryServiceUtil {
                             leftCursor,
                             generalizeByAreaParams.getPercentReduction(),
                             generalizeByAreaParams.getRemoveDegenerates(),
-                            GeneralizeType.ResultContainsOriginal,
+                            GeneralizeType.Neither,
                             srGroup.operatorSR,
                             null);
                 } else if (generalizeByAreaParams.getMaxPointCount() > 0) {
@@ -539,7 +539,7 @@ public class GeometryServiceUtil {
                             leftCursor,
                             generalizeByAreaParams.getRemoveDegenerates(),
                             generalizeByAreaParams.getMaxPointCount(),
-                            GeneralizeType.ResultContainsOriginal,
+                            GeneralizeType.Neither,
                             srGroup.operatorSR,
                             null);
                 } else {
