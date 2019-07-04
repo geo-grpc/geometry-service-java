@@ -1473,4 +1473,23 @@ public class GeometryServerTest {
         Polygon polyResult = (Polygon) GeometryEngine.geometryFromWkt(geometryResponse.getGeometry().getWkt(), 0, Geometry.Type.Unknown);
         assertEquals(polyResult.getPointCount(), 4);
     }
+
+    @Test
+    public void testInverse() {
+        SpatialReference sr = SpatialReference.create(4326);
+        SpatialReferenceData spatialReferenceData = SpatialReferenceData.newBuilder().setWkid(4326).build();
+        GeometryData geometryData1 = GeometryData.newBuilder().setWkt("POINT (0 0)").setSr(spatialReferenceData).build();
+        GeometryData geometryData2 = GeometryData.newBuilder().setWkt("POINT (-1 0)").setSr(spatialReferenceData).build();
+        GeometryRequest geometryRequest = GeometryRequest.newBuilder()
+                .setLeftGeometry(geometryData1)
+                .setRightGeometry(geometryData2)
+                .setOperator(OperatorType.GEODETIC_INVERSE)
+                .build();
+        GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
+        GeometryResponse geometryResponse = stub.operate(geometryRequest);
+
+        assertEquals(111319.4907932264, geometryResponse.getGeodeticInverse().getDistance(), 0);
+        assertEquals(-Math.PI / 2, geometryResponse.getGeodeticInverse().getAz12(), 0);
+        assertEquals(Math.PI / 2, geometryResponse.getGeodeticInverse().getAz21(), 0);
+    }
 }

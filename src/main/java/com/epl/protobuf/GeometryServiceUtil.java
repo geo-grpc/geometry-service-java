@@ -483,6 +483,15 @@ public class GeometryServiceUtil {
                 double geodeticLength = OperatorGeodeticLength.local().execute(leftCursor.next(), srGroup.leftSR, GeodeticCurveType.Geodesic, null);
                 operatorResultBuilder.setMeasure(geodeticLength);
                 break;
+            case GEODETIC_INVERSE:
+                InverseResult inverseResult = OperatorGeodeticInverse.local().execute(leftCursor.next(), rightCursor.next(), srGroup.leftSR, srGroup.rightSR, GeodeticCurveType.Geodesic, null);
+                operatorResultBuilder.setGeodeticInverse(GeodeticInverse.
+                        newBuilder().
+                        setAz12(inverseResult.getAz12_rad()).
+                        setAz21(inverseResult.getAz21_rad()).
+                        setDistance(inverseResult.getDistance_m()).
+                        build());
+                break;
             default:
                 throw new IllegalArgumentException();
         }
@@ -744,6 +753,7 @@ public class GeometryServiceUtil {
             case DISTANCE:
             case GEODETIC_AREA:
             case GEODETIC_LENGTH:
+            case GEODETIC_INVERSE:
                 return new GeometryResponsesIterator(nonCursorFromRequest(operatorRequest, leftCursor, null));
 
             // cursors
