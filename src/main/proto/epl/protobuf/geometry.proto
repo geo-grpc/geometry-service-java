@@ -53,13 +53,11 @@ message GeometryData {
     // spatial reference of geometry
     SpatialReferenceData sr = 7;
 
-    // envelope or bounding box of geometry
-    // TODO, is this used anywhere? if not, we should remove this and reserve it for arrays of values
-    EnvelopeData envelope = 8;
-
     // reserved for xy array, z array, m array, vertex attributes?
-    reserved 9 to 13;
+    reserved 8 to 12;
 
+    // envelope or bounding box of geometry
+    EnvelopeData envelope = 13;
     // state of the geometry topological correctness. at geometry creation, it is unknown if it is simple
     SimpleState simple = 14;
 }
