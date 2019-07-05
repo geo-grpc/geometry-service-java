@@ -78,7 +78,11 @@ public class GeometryServerTest {
         OperatorExportToWkt op = OperatorExportToWkt.local();
         String geom = op.execute(0, polyline, null);
 
-        GeometryData geometryData = GeometryData.newBuilder().setWkt(geom).setGeometryId(42).build();
+        GeometryData geometryData = GeometryData.newBuilder()
+                .setWkt(geom)
+                .setGeometryId(42)
+                .setFeatureId("Pancakes")
+                .build();
 
         GeometryRequest requestOp = GeometryRequest.newBuilder()
                 .setGeometry(geometryData)
@@ -90,6 +94,8 @@ public class GeometryServerTest {
 
         assertEquals(operatorResult.getGeometry().getWkt(), geometryData.getWkt());
         assertEquals(operatorResult.getGeometry().getGeometryId(), 42);
+        assertEquals(operatorResult.getGeometry().getFeatureId(), "Pancakes");
+        assertEquals(operatorResult.getGeometry().getSimple(), SimpleState.STRONG_SIMPLE);
     }
 
     @Test
@@ -328,6 +334,8 @@ public class GeometryServerTest {
         OperatorImportFromWkb op2 = OperatorImportFromWkb.local();
         Polyline result = (Polyline) op2.execute(0, Geometry.Type.Unknown, operatorResult.getGeometry().getWkb().asReadOnlyByteBuffer(), null);
         TestCase.assertNotNull(result);
+
+        assertEquals(operatorResult.getGeometry().getSimple(), SimpleState.STRONG_SIMPLE);
 
         TestCase.assertFalse(polyline.equals(result));
         assertEquals(polyline.getPointCount(), result.getPointCount());
@@ -1262,7 +1270,11 @@ public class GeometryServerTest {
 
     @Test
     public void testCut() {
-        GeometryData geometryDataPolygon = GeometryData.newBuilder().setWkt("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 45 20, 30 5, 10 10, 10 30, 20 35), (30 20, 20 25, 20 15, 30 20))) ").build();
+        GeometryData geometryDataPolygon = GeometryData.newBuilder()
+                .setFeatureId("Barber")
+                .setGeometryId(17)
+                .setWkt("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 45 20, 30 5, 10 10, 10 30, 20 35), (30 20, 20 25, 20 15, 30 20))) ")
+                .build();
         GeometryData geometryDataCutter = GeometryData.newBuilder().setWkt("LINESTRING(0 0, 45 45)").build();
         GeometryRequest geometryRequest = GeometryRequest.newBuilder()
                 .setLeftGeometry(geometryDataPolygon)
@@ -1271,8 +1283,9 @@ public class GeometryServerTest {
                 .setResultEncoding(Encoding.WKT)
                 .build();
         CountDownLatch done = new CountDownLatch(1);
-        ClientResponseObserver<GeometryRequest, GeometryResponse> clientResponseObserver = new ClientResponseObserver<GeometryRequest, GeometryResponse>() {
+        ClientResponseObserver<GeometryRequest, GeometryResponse> clientResponseObserver = new ClientResponseObserver<>() {
             int count = 0;
+
             @Override
             public void beforeStart(ClientCallStreamObserver<GeometryRequest> clientCallStreamObserver) {
 
@@ -1280,12 +1293,14 @@ public class GeometryServerTest {
 
             @Override
             public void onNext(GeometryResponse geometryResponse) {
+                assertEquals(geometryResponse.getGeometry().getGeometryId(), 18);
+                assertEquals(geometryResponse.getGeometry().getFeatureId(), "Barber");
                 count += 1;
             }
 
             @Override
             public void onError(Throwable throwable) {
-                assertFalse("threw exception", false);
+                done.countDown();
             }
 
             @Override
@@ -1303,6 +1318,7 @@ public class GeometryServerTest {
             done.await();
         } catch (InterruptedException e) {
             e.printStackTrace();
+            fail("threw exception");
         }
     }
 

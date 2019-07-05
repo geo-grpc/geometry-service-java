@@ -292,13 +292,10 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
             return tempResults;
         }
 
-
-        GeometryData.Builder geometryBuilder = GeometryData
-                .newBuilder();
+        GeometryData.Builder geometryBuilder = GeometryData.newBuilder();
         if (m_spatialReferenceData != null) {
             geometryBuilder.setSr(m_spatialReferenceData);
         }
-
 
         while (hasNext()) {
             switch (m_encodingType) {
@@ -306,22 +303,26 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
                 case WKB:
                     geometryBuilder.setWkb(ByteString.copyFrom(m_byteBufferCursor.next()));
                     geometryBuilder.setGeometryId(m_byteBufferCursor.getByteBufferID());
-                    //        TODO add feature IDs
+                    geometryBuilder.setSimpleValue(m_byteBufferCursor.getSimpleState().ordinal());
+                    geometryBuilder.setFeatureId(m_byteBufferCursor.getFeatureID());
                     break;
                 case WKT:
                     geometryBuilder.setWkt(m_stringCursor.next());
                     geometryBuilder.setGeometryId(m_stringCursor.getID());
-                    //        TODO add feature IDs
+                    geometryBuilder.setSimpleValue(m_stringCursor.getSimpleState().ordinal());
+                    geometryBuilder.setFeatureId(m_stringCursor.getFeatureID());
                     break;
                 case GEOJSON:
                     geometryBuilder.setGeojson(m_stringCursor.next());
                     geometryBuilder.setGeometryId(m_stringCursor.getID());
-                    //        TODO add feature IDs
+                    geometryBuilder.setSimpleValue(m_stringCursor.getSimpleState().ordinal());
+                    geometryBuilder.setFeatureId(m_stringCursor.getFeatureID());
                     break;
                 case ESRI_SHAPE:
                     geometryBuilder.setEsriShape(ByteString.copyFrom(m_byteBufferCursor.next()));
                     geometryBuilder.setGeometryId(m_byteBufferCursor.getByteBufferID());
-                    //        TODO add feature IDs
+                    geometryBuilder.setSimpleValue(m_byteBufferCursor.getSimpleState().ordinal());
+                    geometryBuilder.setFeatureId(m_byteBufferCursor.getFeatureID());
                     break;
                 case ENVELOPE:
                     Envelope2D envelope2D = new Envelope2D();
@@ -636,7 +637,7 @@ public class GeometryServiceUtil {
                 }
                 resultCursor = OperatorCut.local().execute(
                         operatorRequest.getCutParams().getConsiderTouch(),
-                        leftCursor.next(),
+                        leftCursor,
                         (Polyline) rightCursor.next(),
                         srGroup.operatorSR,
                         null);
@@ -872,16 +873,32 @@ public class GeometryServiceUtil {
         GeometryCursor geometryCursor = null;
 
         if (geometryData.getWkb().size() > 0) {
-            SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(geometryData.getWkb().asReadOnlyByteBuffer(), geometryData.getGeometryId()); //simpleByteBufferCursor = new SimpleByteBufferCursor(byteBufferArrayDeque, idsDeque);
+            SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(
+                    geometryData.getWkb().asReadOnlyByteBuffer(),
+                    geometryData.getGeometryId(),
+                    SimpleStateEnum.valueOf(geometryData.getSimple().name()),
+                    geometryData.getFeatureId());
             geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
         } else if (geometryData.getEsriShape().size() > 0) {
-            SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(geometryData.getEsriShape().asReadOnlyByteBuffer(), geometryData.getGeometryId());
+            SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(
+                    geometryData.getEsriShape().asReadOnlyByteBuffer(),
+                    geometryData.getGeometryId(),
+                    SimpleStateEnum.valueOf(geometryData.getSimple().name()),
+                    geometryData.getFeatureId());
             geometryCursor = new OperatorImportFromESRIShapeCursor(0, 0, simpleByteBufferCursor);
         } else if (geometryData.getWkt().length() > 0) {
-            SimpleStringCursor simpleStringCursor = new SimpleStringCursor(geometryData.getWkt(), geometryData.getGeometryId());
+            SimpleStringCursor simpleStringCursor = new SimpleStringCursor(
+                    geometryData.getWkt(),
+                    geometryData.getGeometryId(),
+                    SimpleStateEnum.valueOf(geometryData.getSimple().name()),
+                    geometryData.getFeatureId());
             geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
         } else if (geometryData.getGeojson().length() > 0) {
-            SimpleStringCursor simpleStringCursor = new SimpleStringCursor(geometryData.getGeojson(), geometryData.getGeometryId());
+            SimpleStringCursor simpleStringCursor = new SimpleStringCursor(
+                    geometryData.getGeojson(),
+                    geometryData.getGeometryId(),
+                    SimpleStateEnum.valueOf(geometryData.getSimple().name()),
+                    geometryData.getFeatureId());
             MapGeometryCursor mapGeometryCursor = new OperatorImportFromGeoJsonCursor(
                     GeoJsonImportFlags.geoJsonImportSkipCRS,
                     simpleStringCursor,

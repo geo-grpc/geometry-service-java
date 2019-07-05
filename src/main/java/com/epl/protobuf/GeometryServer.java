@@ -149,7 +149,7 @@ public class GeometryServer {
         @Override
         public StreamObserver<GeometryRequest> operateBiStream(StreamObserver<GeometryResponse> responseObserver) {
 
-            return new StreamObserver<GeometryRequest>() {
+            return new StreamObserver<>() {
                 @Override
                 public void onNext(GeometryRequest value) {
                     try {

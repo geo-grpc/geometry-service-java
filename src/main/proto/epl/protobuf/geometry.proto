@@ -54,7 +54,62 @@ message GeometryData {
     SpatialReferenceData sr = 7;
 
     // envelope or bounding box of geometry
+    // TODO, is this used anywhere? if not, we should remove this and reserve it for arrays of values
     EnvelopeData envelope = 8;
+
+    // reserved for xy array, z array, m array, vertex attributes?
+    reserved 9 to 13;
+
+    // state of the geometry topological correctness. at geometry creation, it is unknown if it is simple
+    SimpleState simple = 14;
+}
+
+/**
+ * the state of a geometry topological correctness
+ */
+enum SimpleState {
+    // on creation, after projection and after generalization a geometry has state simple unknown (not know if simple or not)
+    SIMPLE_UNKNOWN = 0;
+    // weak simple (no self intersections, ring orientation is correct, but ring order is not)
+    WEAK_SIMPLE = 1;
+    // same as weak simple + OGC ring order.
+    STRONG_SIMPLE = 2;
+    // is_simple method has been run on the geometry and it is known to be non-simple, but the reason is unknown
+    NON_SIMPLE = 3;
+    // non-simple, because the structure is bad (0 size path, for example).
+    STRUCTURE_FLAW = 4;
+    // Non-simple, because there are degenerate segments.
+    DEGENERATE_SEGMENTS = 5;
+    // Non-simple, because not clustered properly, that is there are non-coincident vertices closer than tolerance.
+    CLUSTERING = 6;
+    // Non-simple, because not cracked properly (intersecting segments, overlaping segments)
+    CRACKING = 7;
+    // Non-simple, because there are crossovers (self intersections that are not cracking case).
+    CROSS_OVER = 8;
+    // Non-simple, because holes or exteriors have wrong orientation.
+    RING_ORIENTATION = 9;
+    //    /**
+    //     * The geometry is simple, but not strong-simple, because exteriors
+    //     * and holes are not in the correct order, and separation into sub polygons is not possible.
+    //     * Geometry needs to be resimplified with the bForceTest = true to fix this.
+    //     */
+    //    RingOrder,
+    //    /**
+    //     * There is a self tangency or cross-over situation (strong simple, but not OGC simple)
+    //     * Only OperatorSimplifyOGC returns this.
+    //     */
+    //    OGCPolylineSelfTangency,
+    //    /**
+    //     * There is a self tangency situation (strong simple, but not OGC simple)
+    //     * Only OperatorSimplifyOGC returns this.
+    //     */
+    //    OGCPolygonSelfTangency,
+    //    /**
+    //     * Touching interioir rings make a disconnected point set from polygon interior
+    //     * (strong simple, but not OGC simple).
+    //     * Only OperatorSimplifyOGC returns this.
+    //     */
+    //    OGCDisconnectedInterior
 }
 
 /**
@@ -219,6 +274,7 @@ message GeometryRequest {
     // (optional) after the operation has been completed, project the results to a new spatial reference.
     SpatialReferenceData result_sr = 10;
 
+
     message BufferParams {
         double distance = 1;
         double max_deviation = 2;
@@ -292,13 +348,12 @@ message GeometryRequest {
     }
 
     message AffineTransformParams {
-//        repeated double transform_matrix = 1; // @exclude deprecated
+        //        repeated double transform_matrix = 1; // @exclude deprecated
         reserved 1;
         bool geodetic = 2;
         double x_offset = 3;
         double y_offset = 4;
     }
-
 
     // oneof https://github.com/golang/protobuf/issues/283
 
