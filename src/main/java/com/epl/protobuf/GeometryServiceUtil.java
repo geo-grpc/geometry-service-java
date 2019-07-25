@@ -47,7 +47,7 @@ class SpatialReferenceGroup {
             return GeometryServiceUtil.extractSpatialReference(geometryBagData);
         }
 
-        return GeometryServiceUtil.extractSpatialReferenceCursor(geometryRequest);
+        return GeometryServiceUtil.extractSpatialReference(geometryRequest);
     }
 
     SpatialReferenceGroup(GeometryRequest operatorRequest1,
@@ -134,10 +134,10 @@ class SpatialReferenceGroup {
         } else if (operatorRequest.hasGeometry() && operatorRequest.getGeometry().hasSr()) {
             leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getGeometry());
         } else if (operatorRequest.hasLeftGeometryRequest()) {
-            leftSR = GeometryServiceUtil.extractSpatialReferenceCursor(operatorRequest.getLeftGeometryRequest());
+            leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getLeftGeometryRequest());
         } else {
             // assumes left cursor exists
-            leftSR = GeometryServiceUtil.extractSpatialReferenceCursor(operatorRequest.getGeometryRequest());
+            leftSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getGeometryRequest());
         }
 
 //        if (operatorRequest.hasRightGeometryBag() && operatorRequest.getRightGeometryBag().hasSr()) {
@@ -145,7 +145,7 @@ class SpatialReferenceGroup {
         if (operatorRequest.hasRightGeometry() && operatorRequest.getRightGeometry().hasSr()) {
             rightSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getRightGeometry());
         } else if (operatorRequest.hasRightGeometryRequest()){
-            rightSR = GeometryServiceUtil.extractSpatialReferenceCursor(operatorRequest.getRightGeometryRequest());
+            rightSR = GeometryServiceUtil.extractSpatialReference(operatorRequest.getRightGeometryRequest());
         }
 
         // TODO, there are possibilities for error in here. Also possiblities for too many assumptions. ass of you an me.
@@ -235,10 +235,10 @@ class GeometryResponsesIterator implements Iterator<GeometryResponse> {
         m_precookedResult = operatorResult;
     }
 
-    GeometryResponsesIterator(GeometryCursor geometryCursor,
-                              GeometryRequest operatorRequest,
-                              Encoding geometryEncodingType,
-                              boolean bForceCompact) {
+    protected GeometryResponsesIterator(GeometryCursor geometryCursor,
+                                        GeometryRequest operatorRequest,
+                                        Encoding geometryEncodingType,
+                                        boolean bForceCompact) {
         m_bForceCompact = bForceCompact;
         m_encodingType = geometryEncodingType;
         SpatialReferenceGroup spatialRefGroup = new SpatialReferenceGroup(operatorRequest);
@@ -652,7 +652,7 @@ public class GeometryServiceUtil {
                 resultCursor = OperatorSimplify.local().execute(
                         leftCursor,
                         srGroup.operatorSR,
-                        operatorRequest.getSimplifyParams().getForce(),
+                        true,
                         null);
                 break;
             case SIMPLIFY_OGC:
@@ -735,8 +735,8 @@ public class GeometryServiceUtil {
     }
 
     public static GeometryResponsesIterator buildResultsIterable(GeometryRequest operatorRequest,
-                                                               GeometryCursor leftCursor,
-                                                               boolean bForceCompact) throws IOException {
+                                                                 GeometryCursor leftCursor,
+                                                                 boolean bForceCompact) throws IOException {
         Encoding encodingType = Encoding.UNKNOWN_ENCODING;
         GeometryCursor resultCursor = null;
         switch (operatorRequest.getOperator()) {
@@ -831,19 +831,19 @@ public class GeometryServiceUtil {
     }
 
 
-    protected static SpatialReference extractSpatialReferenceCursor(GeometryRequest operatorRequestCursor) {
-        if (operatorRequestCursor.hasResultSr()) {
-            return extractSpatialReference(operatorRequestCursor.getResultSr());
-        } else if (operatorRequestCursor.hasOperationSr()) {
-            return extractSpatialReference(operatorRequestCursor.getOperationSr());
-        } else if (operatorRequestCursor.hasLeftGeometryRequest()) {
-            return extractSpatialReferenceCursor(operatorRequestCursor.getLeftGeometryRequest());
-        } else if (operatorRequestCursor.hasLeftGeometry()) {
-            return extractSpatialReference(operatorRequestCursor.getLeftGeometry().getSr());
-        } else if (operatorRequestCursor.hasGeometryRequest()) {
-            return extractSpatialReferenceCursor(operatorRequestCursor.getGeometryRequest());
-        } else if (operatorRequestCursor.hasRightGeometry()) {
-            return extractSpatialReference(operatorRequestCursor.getRightGeometry().getSr());
+    protected static SpatialReference extractSpatialReference(GeometryRequest geometryRequest) {
+        if (geometryRequest.hasResultSr()) {
+            return extractSpatialReference(geometryRequest.getResultSr());
+        } else if (geometryRequest.hasOperationSr()) {
+            return extractSpatialReference(geometryRequest.getOperationSr());
+        } else if (geometryRequest.hasLeftGeometryRequest()) {
+            return extractSpatialReference(geometryRequest.getLeftGeometryRequest());
+        } else if (geometryRequest.hasLeftGeometry()) {
+            return extractSpatialReference(geometryRequest.getLeftGeometry().getSr());
+        } else if (geometryRequest.hasGeometryRequest()) {
+            return extractSpatialReference(geometryRequest.getGeometryRequest());
+        } else if (geometryRequest.hasRightGeometry()) {
+            return extractSpatialReference(geometryRequest.getRightGeometry().getSr());
         }
         return null;
     }
@@ -866,6 +866,26 @@ public class GeometryServiceUtil {
 
     private static Envelope2D extractEnvelope2D(EnvelopeData env) {
         return Envelope2D.construct(env.getXmin(), env.getYmin(), env.getXmax(), env.getYmax());
+    }
+
+
+    protected static Geometry extractGeometry(GeometryData geometryData) {
+        OperatorFactoryLocal factory = OperatorFactoryLocal.getInstance();
+        if (geometryData.getWkb().size() > 0) {
+            OperatorImportFromWkb operatorImport = (OperatorImportFromWkb) factory.getOperator(Operator.Type.ImportFromWkb);
+            return operatorImport.execute(0, Geometry.Type.Unknown, geometryData.getWkb().asReadOnlyByteBuffer(), null);
+        } else if (geometryData.getEsriShape().size() > 0) {
+            OperatorImportFromESRIShape operatorImport = (OperatorImportFromESRIShape) factory.getOperator(Operator.Type.ImportFromESRIShape);
+            return operatorImport.execute(0, Geometry.Type.Unknown, geometryData.getEsriShape().asReadOnlyByteBuffer());
+        } else if (geometryData.getWkt().length() > 0) {
+            OperatorImportFromWkt operatorImport = (OperatorImportFromWkt) factory.getOperator(Operator.Type.ImportFromWkt);
+            return operatorImport.execute(0, Geometry.Type.Unknown, geometryData.getWkt(), null);
+        } else if (geometryData.getGeojson().length() > 0) {
+            OperatorImportFromGeoJson operatorImport = (OperatorImportFromGeoJson) factory.getOperator(Operator.Type.ImportFromGeoJson);
+            return operatorImport.execute(0, Geometry.Type.Unknown, geometryData.getGeojson(), null).getGeometry();
+        } else {
+            throw new GeometryException("No geometry data found");
+        }
     }
 
 

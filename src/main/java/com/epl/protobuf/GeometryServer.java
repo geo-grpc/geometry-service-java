@@ -20,6 +20,7 @@ email: info@echoparklabs.io
 
 package com.epl.protobuf;
 
+import com.esri.core.geometry.*;
 import io.grpc.*;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.ServerCallStreamObserver;
@@ -132,6 +133,34 @@ public class GeometryServer {
      * Our implementation of GeometryService service.
      */
     private static class GeometryService extends GeometryServiceGrpc.GeometryServiceImplBase {
+
+        @Override
+        public io.grpc.stub.StreamObserver<com.epl.protobuf.GeometryRequest> operateClientStream(io.grpc.stub.StreamObserver<com.epl.protobuf.GeometryResponse> responseObserver) {
+            return new StreamObserver<>() {
+                GeometryRequest lastRequest = null;
+                ListeningGeometryCursor listeningGeometryCursor = new ListeningGeometryCursor();
+                // todo assumes all same spatial reference
+                @Override
+                public void onNext(GeometryRequest geometryRequest) {
+                    lastRequest = geometryRequest;
+                    listeningGeometryCursor.tick(GeometryServiceUtil.extractGeometry(geometryRequest.getGeometry()));
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    logger.info("ERROR");
+                    responseObserver.onCompleted();
+                }
+
+                @Override
+                public void onCompleted() {
+                    GeometryCursor operationCursor = OperatorUnion.local().execute(listeningGeometryCursor, null,null);
+                    GeometryResponsesIterator geometryResponsesIterator = new GeometryResponsesIterator(operationCursor, lastRequest, Encoding.WKB, true);
+                    responseObserver.onNext(geometryResponsesIterator.next());
+                    responseObserver.onCompleted();
+                }
+            };
+        }
 
         @Override
         public void operateServerStream(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver)  {
