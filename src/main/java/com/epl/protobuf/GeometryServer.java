@@ -30,6 +30,7 @@ import java.io.*;
 import java.util.LinkedList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -59,7 +60,7 @@ public class GeometryServer {
         this(NettyServerBuilder
                 .forPort(port)
                 .executor(Executors.newFixedThreadPool(8))
-                .maxMessageSize(2147483647), port);
+                .maxInboundMessageSize(2147483647), port);
     }
 
     /**
@@ -133,17 +134,23 @@ public class GeometryServer {
      * Our implementation of GeometryService service.
      */
     private static class GeometryService extends GeometryServiceGrpc.GeometryServiceImplBase {
-
         @Override
         public io.grpc.stub.StreamObserver<com.epl.protobuf.GeometryRequest> operateClientStream(io.grpc.stub.StreamObserver<com.epl.protobuf.GeometryResponse> responseObserver) {
             return new StreamObserver<>() {
                 GeometryRequest lastRequest = null;
                 ListeningGeometryCursor listeningGeometryCursor = new ListeningGeometryCursor();
+                AtomicInteger count = new AtomicInteger(0);
+                int interval = 25;
+                GeometryCursor operationCursor = OperatorUnion.local().execute(listeningGeometryCursor, null,null);
                 // todo assumes all same spatial reference
                 @Override
                 public void onNext(GeometryRequest geometryRequest) {
                     lastRequest = geometryRequest;
-                    listeningGeometryCursor.tick(GeometryServiceUtil.extractGeometry(geometryRequest.getGeometry()));
+                    Geometry geometry = GeometryServiceUtil.extractGeometry(geometryRequest.getGeometry());
+                    listeningGeometryCursor.tick(geometry);
+                    if (count.incrementAndGet() % interval == 0) {
+                        listeningGeometryCursor.tock();
+                    }
                 }
 
                 @Override
@@ -154,7 +161,6 @@ public class GeometryServer {
 
                 @Override
                 public void onCompleted() {
-                    GeometryCursor operationCursor = OperatorUnion.local().execute(listeningGeometryCursor, null,null);
                     GeometryResponsesIterator geometryResponsesIterator = new GeometryResponsesIterator(operationCursor, lastRequest, Encoding.WKB, true);
                     responseObserver.onNext(geometryResponsesIterator.next());
                     responseObserver.onCompleted();
@@ -280,34 +286,6 @@ public class GeometryServer {
             };
         }
 
-//        @Override
-//        public StreamObserver<GeometryRequest> geometryOperationClientStream(StreamObserver<GeometryResponse> responseStreamObserver) {
-//            try {
-//                // logger.info("server name" + System.getenv("MY_NODE_NAME"));
-//                // System.out.println("Start process");
-//                GeometryResponsesIterator operatorResults = GeometryServiceUtil.buildResultsIterable(request, null, true);
-//                while (operatorResults.hasNext()) {
-//                    responseStreamObserver.onNext(operatorResults.next());
-//                }
-//                responseStreamObserver.onCompleted();
-//                // System.out.println("End process");
-//            } catch (StatusRuntimeException sre) {
-//                logger.log(Level.WARNING, "executeOperation error : ".concat(sre.getMessage()));
-//                StatusRuntimeException s = new StatusRuntimeException(Status.fromThrowable(sre));
-//                responseStreamObserver.onError(s
-//                        .getStatus()
-//                        .withDescription(exceptionDetails(sre))
-//                        .asRuntimeException());
-//            } catch (Throwable t) {
-//                logger.log(Level.WARNING, "executeOperation error : ".concat(t.toString()));
-//                StatusRuntimeException s = new StatusRuntimeException(Status.fromThrowable(t));
-//                responseStreamObserver.onError(s
-//                        .getStatus()
-//                        .withDescription(exceptionDetails(t))
-//                        .asRuntimeException());
-//            }
-//        }
-
         @SuppressWarnings("Duplicates")
         @Override
         public StreamObserver<FileRequestChunk> fileOperateBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
@@ -325,7 +303,7 @@ public class GeometryServer {
 
             serverCallStreamObserver.setOnReadyHandler(() -> {
                 if (serverCallStreamObserver.isReady() && wasReady.compareAndSet(false, true)) {
-//                    logger.info("READY");
+                    // logger.info("READY");
                     // Signal the request sender to send one message. This happens when isReady() turns true, signaling that
                     // the receive buffer has enough free space to receive more messages. Calling request() serves to prime
                     // the message pump.
@@ -333,7 +311,7 @@ public class GeometryServer {
                 }
             });
 
-            return new StreamObserver<FileRequestChunk>() {
+            return new StreamObserver<>() {
                 ShapefileChunkedReader shapefileChunkedReader = null;
                 @Override
                 public void onNext(FileRequestChunk value) {
@@ -390,44 +368,6 @@ public class GeometryServer {
                 }
             };
         }
-
-//            return new StreamObserver<FileRequestChunk>() {
-//                ArrayList<FileRequestChunk> fileChunks = new ArrayList<>();
-//                ShapefileChunkedReader shapefileChunkedReader = null;
-//                @Override
-//                public void onNext(FileRequestChunk value) {
-//                    InputStream inputStream = value.getData().newInput();
-//                    try {
-//                        if (shapefileChunkedReader == null) {
-//                            shapefileChunkedReader = new ShapefileChunkedReader(inputStream, (int)value.getSize());
-//                        } else {
-//                            shapefileChunkedReader.addStream(inputStream, (int)value.getSize());
-//                        }
-//
-//                        if (shapefileChunkedReader.hasNext()) {
-//                            resultStreamObserver.onNext(GeometryServiceUtil.buildCursor(value.getNestedRequest(), shapefileChunkedReader));
-//                        }
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//
-//                    }
-//
-//                    fileChunks.add(value);
-//                }
-//
-//                @Override
-//                public void onError(Throwable t) {
-//                    logger.info("ERROR file chunk reader");
-//                    resultStreamObserver.onCompleted();
-//                }
-//
-//                @Override
-//                public void onCompleted() {
-//                    logger.info("Completed file request");
-//                    resultStreamObserver.onCompleted();
-//                }
-//            };
-//        }
 
         private String exceptionDetails(Throwable e) {
             StringWriter sw = new StringWriter();
