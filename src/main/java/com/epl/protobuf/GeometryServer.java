@@ -90,8 +90,8 @@ public class GeometryServer {
     public void start() throws IOException {
         server.start();
         logger.info("Server started, listening on " + port);
-        logger.info("server name" + System.getenv("MY_NODE_NAME"));
-        logger.info("server name" + System.getenv("MY_POD_NAME"));
+        logger.info("node name" + System.getenv("MY_NODE_NAME"));
+        logger.info("pod name" + System.getenv("MY_POD_NAME"));
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
@@ -136,6 +136,7 @@ public class GeometryServer {
     private static class GeometryService extends GeometryServiceGrpc.GeometryServiceImplBase {
         @Override
         public io.grpc.stub.StreamObserver<com.epl.protobuf.GeometryRequest> operateClientStream(io.grpc.stub.StreamObserver<com.epl.protobuf.GeometryResponse> responseObserver) {
+            String nameofCurrMethod = new Object() {}.getClass().getEnclosingMethod().getName();
             return new StreamObserver<>() {
                 GeometryRequest lastRequest = null;
                 ListeningGeometryCursor listeningGeometryCursor = new ListeningGeometryCursor();
@@ -145,6 +146,10 @@ public class GeometryServer {
                 // todo assumes all same spatial reference
                 @Override
                 public void onNext(GeometryRequest geometryRequest) {
+                    String requestDetails = String.format("grpc operator type: %s, geometry request type: %s",
+                            nameofCurrMethod, geometryRequest.getOperator().name());
+                    logger.log(Level.INFO, requestDetails);
+
                     lastRequest = geometryRequest;
                     Geometry geometry = GeometryServiceUtil.extractGeometry(geometryRequest.getGeometry());
                     listeningGeometryCursor.tick(geometry);
@@ -169,9 +174,14 @@ public class GeometryServer {
         }
 
         @Override
-        public void operateServerStream(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver)  {
+        public void operateServerStream(GeometryRequest geometryRequest, StreamObserver<GeometryResponse> responseObserver)  {
             try {
-                GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(request, null, false);
+                String nameofCurrMethod = new Object() {}.getClass().getEnclosingMethod().getName();
+                String requestDetails = String.format("grpc operator type: %s, geometry request type: %s",
+                        nameofCurrMethod, geometryRequest.getOperator().name());
+                logger.log(Level.INFO, requestDetails);
+
+                GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(geometryRequest, null, false);
                 while (operatorResultsIterator.hasNext()) {
                     responseObserver.onNext(operatorResultsIterator.next());
                 }
@@ -183,12 +193,16 @@ public class GeometryServer {
 
         @Override
         public StreamObserver<GeometryRequest> operateBiStream(StreamObserver<GeometryResponse> responseObserver) {
-
+            String nameofCurrMethod = new Object() {}.getClass().getEnclosingMethod().getName();
             return new StreamObserver<>() {
                 @Override
-                public void onNext(GeometryRequest value) {
+                public void onNext(GeometryRequest geometryRequest) {
                     try {
-                        GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(value, null, false);
+                        String requestDetails = String.format("grpc operator type: %s, geometry request type: %s",
+                                nameofCurrMethod, geometryRequest.getOperator().name());
+                        logger.log(Level.INFO, requestDetails);
+
+                        GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(geometryRequest, null, false);
                         while (operatorResultsIterator.hasNext()) {
                             responseObserver.onNext(operatorResultsIterator.next());
                         }
@@ -216,6 +230,7 @@ public class GeometryServer {
         @SuppressWarnings("Duplicates")
         @Override
         public StreamObserver<GeometryRequest> operateBiStreamFlow(StreamObserver<GeometryResponse> responseObserver) {
+            String nameofCurrMethod = new Object() {}.getClass().getEnclosingMethod().getName();
             // Set up manual flow control for the request stream. It feels backwards to configure the request
             // stream's flow control using the response stream's observer, but this is the way it is.
             final ServerCallStreamObserver<GeometryResponse> serverCallStreamObserver =
@@ -240,11 +255,15 @@ public class GeometryServer {
 
             return new StreamObserver<GeometryRequest>() {
                 @Override
-                public void onNext(GeometryRequest value) {
+                public void onNext(GeometryRequest geometryRequest) {
                     // Process the request and send a response or an error.
                     try {
+                        String requestDetails = String.format("grpc operator type: %s, geometry request type: %s",
+                                nameofCurrMethod, geometryRequest.getOperator().name());
+                        logger.log(Level.INFO, requestDetails);
+
                         // Accept and enqueue the request.
-                        GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(value, null, false);
+                        GeometryResponsesIterator operatorResultsIterator = GeometryServiceUtil.buildResultsIterable(geometryRequest, null, false);
                         while (operatorResultsIterator.hasNext()) {
                             responseObserver.onNext(operatorResultsIterator.next());
                         }
@@ -377,16 +396,22 @@ public class GeometryServer {
         }
 
         @Override
-        public void operate(GeometryRequest request, StreamObserver<GeometryResponse> responseObserver) {
+        public void operate(GeometryRequest geometryRequest, StreamObserver<GeometryResponse> responseObserver) {
             try {
-                if (request.getOperator() == OperatorType.CUT) {
+                if (geometryRequest.getOperator() == OperatorType.CUT) {
                     // TODO, you need to search the whole request chain for a cut
                     responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Cut is Not a Unary Operation").asException());
                 }
 
                 // logger.info("server name" + System.getenv("MY_NODE_NAME"));
                 // System.out.println("Start process");
-                GeometryResponsesIterator operatorResults = GeometryServiceUtil.buildResultsIterable(request, null, true);
+
+                String nameofCurrMethod = new Object() {}.getClass().getEnclosingMethod().getName();
+                String requestDetails = String.format("grpc operator type: %s, geometry request type: %s",
+                        nameofCurrMethod, geometryRequest.getOperator().name());
+                logger.log(Level.INFO, requestDetails);
+
+                GeometryResponsesIterator operatorResults = GeometryServiceUtil.buildResultsIterable(geometryRequest, null, true);
                 while (operatorResults.hasNext()) {
                     responseObserver.onNext(operatorResults.next());
                 }
