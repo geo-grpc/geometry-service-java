@@ -758,7 +758,7 @@ public class GeometryServerTest {
         SpatialReferenceData spatialReferenceNAD = SpatialReferenceData.newBuilder().setWkid(4269).build();
         SpatialReferenceData spatialReferenceMerc = SpatialReferenceData.newBuilder().setWkid(3857).build();
         SpatialReferenceData spatialReferenceWGS = SpatialReferenceData.newBuilder().setWkid(4326).build();
-        SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(54016).build();
+        SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(4088).build();
         //TODO why does esri shape fail
 
 
@@ -834,7 +834,7 @@ public class GeometryServerTest {
         SpatialReferenceData spatialReferenceNAD = SpatialReferenceData.newBuilder().setWkid(4269).build();
         SpatialReferenceData spatialReferenceMerc = SpatialReferenceData.newBuilder().setWkid(3857).build();
         SpatialReferenceData spatialReferenceWGS = SpatialReferenceData.newBuilder().setWkid(4326).build();
-        SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(54016).build();
+        SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(4088).build();
         //TODO why does esri shape fail
 
 
@@ -913,7 +913,7 @@ public class GeometryServerTest {
         SpatialReferenceData spatialReferenceNAD = SpatialReferenceData.newBuilder().setWkid(4269).build();
         SpatialReferenceData spatialReferenceMerc = SpatialReferenceData.newBuilder().setWkid(3857).build();
         SpatialReferenceData spatialReferenceWGS = SpatialReferenceData.newBuilder().setWkid(4326).build();
-        SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(54016).build();
+        SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(4088).build();
         //TODO why does esri shape fail
         GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
 
@@ -945,10 +945,10 @@ public class GeometryServerTest {
                 .setResultSr(spatialReferenceGall)
                 .build();
         Geometry projectedBufferedConvex = GeometryEngine.convexHull(projectedBuffered);
-        Geometry reProjectedBufferedCONVEX_HULL = GeometryEngine.project(projectedBufferedConvex, SpatialReference.create(4326), SpatialReference.create(54016));
+        Geometry reProjectedBufferedCONVEX_HULL = GeometryEngine.project(projectedBufferedConvex, SpatialReference.create(4326), SpatialReference.create(4088));
         GeometryResponse operatorResultLeftNested = stub.operate(nestedLeft);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeftNested.getGeometry().getWkb().asReadOnlyByteBuffer());
-        assertTrue(GeometryEngine.equals(reProjectedBufferedCONVEX_HULL, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
+        assertTrue(GeometryEngine.equals(reProjectedBufferedCONVEX_HULL, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4088)));
 
         GeometryData geometryDataRight = GeometryData.newBuilder()
                 .setWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
@@ -980,10 +980,10 @@ public class GeometryServerTest {
                 .build();
 
         Geometry projectedBufferedConvexRight = GeometryEngine.convexHull(projectedBufferedRight);
-        Geometry reProjectedBufferedCONVEX_HULLRight = GeometryEngine.project(projectedBufferedConvexRight, SpatialReference.create(4326), SpatialReference.create(54016));
+        Geometry reProjectedBufferedCONVEX_HULLRight = GeometryEngine.project(projectedBufferedConvexRight, SpatialReference.create(4326), SpatialReference.create(4088));
         GeometryResponse operatorResultRightNested = stub.operate(nestedRight);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRightNested.getGeometry().getWkb().asReadOnlyByteBuffer());
-        assertTrue(GeometryEngine.equals(reProjectedBufferedCONVEX_HULLRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
+        assertTrue(GeometryEngine.equals(reProjectedBufferedCONVEX_HULLRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4088)));
 
         GeometryRequest operatorRequestSymDifference = GeometryRequest
                 .newBuilder()
@@ -995,8 +995,8 @@ public class GeometryServerTest {
                 .build();
 
 
-        Geometry rightFinal = GeometryEngine.project(reProjectedBufferedCONVEX_HULLRight, SpatialReference.create(54016), SpatialReference.create(3857));
-        Geometry leftFinal = GeometryEngine.project(reProjectedBufferedCONVEX_HULL, SpatialReference.create(54016), SpatialReference.create(3857));
+        Geometry rightFinal = GeometryEngine.project(reProjectedBufferedCONVEX_HULLRight, SpatialReference.create(4088), SpatialReference.create(3857));
+        Geometry leftFinal = GeometryEngine.project(reProjectedBufferedCONVEX_HULL, SpatialReference.create(4088), SpatialReference.create(3857));
         Geometry difference = GeometryEngine.symmetricDifference(leftFinal, rightFinal, SpatialReference.create(3857));
         Geometry differenceProjected = GeometryEngine.project(difference, SpatialReference.create(3857), SpatialReference.create(4269));
 
@@ -1023,7 +1023,7 @@ public class GeometryServerTest {
         SpatialReferenceData spatialReferenceNAD = SpatialReferenceData.newBuilder().setWkid(4269).build();
         SpatialReferenceData spatialReferenceMerc = SpatialReferenceData.newBuilder().setWkid(3857).build();
         SpatialReferenceData spatialReferenceWGS = SpatialReferenceData.newBuilder().setWkid(4326).build();
-        SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(54016).build();
+        SpatialReferenceData spatialReferenceGall = SpatialReferenceData.newBuilder().setWkid(4088).build();
         //TODO why does esri shape fail
         GeometryServiceGrpc.GeometryServiceBlockingStub stub = GeometryServiceGrpc.newBlockingStub(inProcessChannel);
 
@@ -1055,10 +1055,10 @@ public class GeometryServerTest {
                 .setResultSr(spatialReferenceGall)
                 .build();
         Geometry projectedBufferedConvex = GeometryEngine.convexHull(projectedBuffered);
-        Geometry reProjectedBufferedCONVEX_HULL = GeometryEngine.project(projectedBufferedConvex, SpatialReference.create(4326), SpatialReference.create(54016));
+        Geometry reProjectedBufferedCONVEX_HULL = GeometryEngine.project(projectedBufferedConvex, SpatialReference.create(4326), SpatialReference.create(4088));
         GeometryResponse operatorResultLeftNested = stub.operate(nestedLeft);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultLeftNested.getGeometry().getWkb().asReadOnlyByteBuffer());
-        assertTrue(GeometryEngine.equals(reProjectedBufferedCONVEX_HULL, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
+        assertTrue(GeometryEngine.equals(reProjectedBufferedCONVEX_HULL, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4088)));
 
         GeometryData geometryDataRight = GeometryData.newBuilder()
                 .setWkb(ByteString.copyFrom(op.execute(0, polyline, null)))
@@ -1090,10 +1090,10 @@ public class GeometryServerTest {
                 .build();
 
         Geometry projectedBufferedConvexRight = GeometryEngine.convexHull(projectedBufferedRight);
-        Geometry reProjectedBufferedCONVEX_HULLRight = GeometryEngine.project(projectedBufferedConvexRight, SpatialReference.create(4326), SpatialReference.create(54016));
+        Geometry reProjectedBufferedCONVEX_HULLRight = GeometryEngine.project(projectedBufferedConvexRight, SpatialReference.create(4326), SpatialReference.create(4088));
         GeometryResponse operatorResultRightNested = stub.operate(nestedRight);
         simpleByteBufferCursor = new SimpleByteBufferCursor(operatorResultRightNested.getGeometry().getWkb().asReadOnlyByteBuffer());
-        assertTrue(GeometryEngine.equals(reProjectedBufferedCONVEX_HULLRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(54016)));
+        assertTrue(GeometryEngine.equals(reProjectedBufferedCONVEX_HULLRight, operatorImportFromWkb.execute(0, simpleByteBufferCursor, null).next(), SpatialReference.create(4088)));
 
         GeometryRequest operatorRequestSymDifference = GeometryRequest
                 .newBuilder()
@@ -1105,8 +1105,8 @@ public class GeometryServerTest {
                 .build();
 
 
-        Geometry rightFinal = GeometryEngine.project(reProjectedBufferedCONVEX_HULLRight, SpatialReference.create(54016), SpatialReference.create(3857));
-        Geometry leftFinal = GeometryEngine.project(reProjectedBufferedCONVEX_HULL, SpatialReference.create(54016), SpatialReference.create(3857));
+        Geometry rightFinal = GeometryEngine.project(reProjectedBufferedCONVEX_HULLRight, SpatialReference.create(4088), SpatialReference.create(3857));
+        Geometry leftFinal = GeometryEngine.project(reProjectedBufferedCONVEX_HULL, SpatialReference.create(4088), SpatialReference.create(3857));
         Geometry difference = GeometryEngine.symmetricDifference(leftFinal, rightFinal, SpatialReference.create(3857));
         Geometry differenceProjected = GeometryEngine.project(difference, SpatialReference.create(3857), SpatialReference.create(4269));
 
