@@ -90,8 +90,8 @@ public class GeometryServer {
     public void start() throws IOException {
         server.start();
         logger.info("Server started, listening on " + port);
-        logger.info("node name" + System.getenv("MY_NODE_NAME"));
-        logger.info("pod name" + System.getenv("MY_POD_NAME"));
+        logger.info("node name: " + System.getenv("MY_NODE_NAME"));
+        logger.info("pod name: " + System.getenv("MY_POD_NAME"));
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
