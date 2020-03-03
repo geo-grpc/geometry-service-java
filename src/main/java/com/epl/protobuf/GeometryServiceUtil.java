@@ -407,7 +407,7 @@ public class GeometryServiceUtil {
             GeometryRequest operatorRequest,
             GeometryCursor leftCursor,
             GeometryCursor rightCursor,
-            SpatialReferenceGroup srGroup) throws IOException {
+            SpatialReferenceGroup srGroup) throws GeometryException, IOException {
         if (leftCursor != null && rightCursor == null) {
             rightCursor = createGeometryCursor(operatorRequest, Side.Right);
             if (rightCursor == null && operatorRequest.hasRightGeometryRequest()) {
@@ -425,7 +425,7 @@ public class GeometryServiceUtil {
     public static GeometryResponse nonCursorFromRequest(
             GeometryRequest operatorRequest,
             GeometryCursor leftCursor,
-            GeometryCursor rightCursor) throws IOException {
+            GeometryCursor rightCursor) throws GeometryException, IOException {
         SpatialReferenceGroup srGroup = new SpatialReferenceGroup(operatorRequest);
         leftCursor = getLeftGeometryRequestFromRequest(operatorRequest, leftCursor, srGroup);
         rightCursor = getRightGeometryRequestFromRequest(operatorRequest, leftCursor, rightCursor, srGroup);
@@ -804,7 +804,7 @@ public class GeometryServiceUtil {
     }
 
 
-    private static GeometryCursor createGeometryCursor(GeometryRequest operatorRequest, Side side) throws IOException {
+    private static GeometryCursor createGeometryCursor(GeometryRequest operatorRequest, Side side) throws GeometryException {
         GeometryCursor resultCursor = null;
         if (side == Side.Left) {
             if (operatorRequest.hasGeometry()) {
@@ -822,7 +822,7 @@ public class GeometryServiceUtil {
     }
 
 
-    private static GeometryCursor createGeometryCursor(GeometryData geometryData) throws IOException {
+    private static GeometryCursor createGeometryCursor(GeometryData geometryData) throws GeometryException {
         return extractGeometryCursor(geometryData);
     }
 
@@ -889,7 +889,7 @@ public class GeometryServiceUtil {
     }
 
 
-    private static GeometryCursor extractGeometryCursor(GeometryData geometryData) throws IOException {
+    private static GeometryCursor extractGeometryCursor(GeometryData geometryData) throws GeometryException {
         GeometryCursor geometryCursor = null;
 
         if (geometryData.getWkb().size() > 0) {
