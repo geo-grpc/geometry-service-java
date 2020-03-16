@@ -61,7 +61,8 @@ public class GeometryServer {
         // https://github.com/grpc/grpc-java/blob/master/SECURITY.md
         this(NettyServerBuilder
                 .forPort(port)
-                .executor(Executors.newFixedThreadPool(8))
+                // https://stackoverflow.com/a/42422045/445372
+                .executor(Executors.newFixedThreadPool(16))
                 .maxInboundMessageSize(2147483647), port);
     }
 
@@ -408,7 +409,6 @@ public class GeometryServer {
                 // logger.info("server name" + System.getenv("MY_NODE_NAME"));
                 // System.out.println("Start process");
 
-//                String nameofCurrMethod = new Object() {}.getClass().getEnclosingMethod().getName();
                 String uuid = UUID.randomUUID().toString();
                 long startTime = System.nanoTime();
                 String requestDetails = String.format("%s:\treceived geometry request type:\t%s",
