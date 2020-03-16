@@ -27,7 +27,9 @@ import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 import java.io.*;
+import java.util.Date;
 import java.util.LinkedList;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -406,15 +408,23 @@ public class GeometryServer {
                 // logger.info("server name" + System.getenv("MY_NODE_NAME"));
                 // System.out.println("Start process");
 
-                String nameofCurrMethod = new Object() {}.getClass().getEnclosingMethod().getName();
-                String requestDetails = String.format("grpc operator type: %s, geometry request type: %s",
-                        nameofCurrMethod, geometryRequest.getOperator().name());
+//                String nameofCurrMethod = new Object() {}.getClass().getEnclosingMethod().getName();
+                String uuid = UUID.randomUUID().toString();
+                long startTime = System.nanoTime();
+                String requestDetails = String.format("%s:\treceived geometry request type:\t%s",
+                        uuid, geometryRequest.getOperator().name());
                 logger.log(Level.INFO, requestDetails);
 
                 GeometryResponsesIterator operatorResults = GeometryServiceUtil.buildResultsIterable(geometryRequest, null, true);
                 while (operatorResults.hasNext()) {
                     responseObserver.onNext(operatorResults.next());
                 }
+
+                long endTime = System.nanoTime();
+                long durationMilli = (endTime - startTime) /  1000000;
+                String executionDetails = String.format("%s:\tcompleted geometry request type:\t%s, duration:\t%d ms",
+                        uuid, geometryRequest.getOperator().name(), durationMilli);
+                logger.log(Level.INFO, executionDetails);
                 responseObserver.onCompleted();
                 // System.out.println("End process");
             } catch (StatusRuntimeException sre) {
