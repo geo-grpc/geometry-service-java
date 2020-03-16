@@ -162,7 +162,7 @@ public class ShapefileChunkedReader extends GeometryCursor {
     }
 
     @Override
-    public long getGeometryID() {
+    public int getGeometryID() {
         return currentRecordNumber;
     }
 

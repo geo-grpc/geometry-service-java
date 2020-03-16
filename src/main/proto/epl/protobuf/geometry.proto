@@ -399,7 +399,7 @@ message GeometryResponse {
     // a measure result will be a float for area and length requests
     double measure = 3;
 
-    map<int64, bool> relate_map = 4;
+    map<int32, bool> relate_map = 4;
 
     EnvelopeData envelope = 5;
 

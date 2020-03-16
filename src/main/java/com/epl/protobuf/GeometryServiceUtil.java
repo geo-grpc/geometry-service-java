@@ -21,7 +21,7 @@ email: info@echoparklabs.io
 package com.epl.protobuf;
 
 import com.esri.core.geometry.*;
-
+import org.epl.geometry.*;
 import com.google.protobuf.ByteString;
 
 import java.io.IOException;
@@ -36,12 +36,12 @@ enum Side {
  * Common utilities for the GeometryService demo.
  */
 class SpatialReferenceGroup {
-    SpatialReference leftSR;
-    SpatialReference rightSR;
-    SpatialReference resultSR;
-    SpatialReference operatorSR;
+    SpatialReferenceEx leftSR;
+    SpatialReferenceEx rightSR;
+    SpatialReferenceEx resultSR;
+    SpatialReferenceEx operatorSR;
 
-    static SpatialReference spatialFromGeometry(GeometryData geometryBagData,
+    static SpatialReferenceEx spatialFromGeometry(GeometryData geometryBagData,
                                                 GeometryRequest geometryRequest) {
         if (geometryBagData.hasSr()) {
             return GeometryServiceUtil.extractSpatialReference(geometryBagData);
@@ -183,7 +183,7 @@ class SpatialReferenceGroup {
         }
     }
 
-    static SpatialReferenceData createSpatialReferenceData(SpatialReference spatialReference) {
+    static SpatialReferenceData createSpatialReferenceData(SpatialReferenceEx spatialReference) {
         if (spatialReference.getID() != 0) {
             return SpatialReferenceData.newBuilder().setWkid(spatialReference.getID()).build();
         } else if (spatialReference.getProj4().length() > 0) {
@@ -438,7 +438,7 @@ public class GeometryServiceUtil {
                 if (!srGroup.checkLeftRightSpatialOperation()) {
                     throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation spatial reference isn't defined");
                 }
-                boolean result = OperatorRelate.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, operatorRequest.getRelateParams().getDe9Im(), null);
+                boolean result = OperatorRelate.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR.toSpatialReference(), operatorRequest.getRelateParams().getDe9Im(), null);
                 operatorResultBuilder.setSpatialRelationship(result);
                 break;
             case EQUALS:
@@ -453,16 +453,11 @@ public class GeometryServiceUtil {
                     throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation spatial reference isn't defined");
                 }
                 Operator.Type operatorType = getOp(operatorRequest);
-                HashMap<Long, Boolean> result_map = ((OperatorSimpleRelation) OperatorFactoryLocal
-                        .getInstance()
-                        .getOperator(operatorType)).execute(
-                                leftCursor.next(),
-                                rightCursor,
-                                srGroup.operatorSR,
-                                null);
+                HashMap<Integer, Boolean> result_map = ((OperatorSimpleRelationEx)OperatorFactoryLocalEx.getInstance().getOperator(OperatorEx.Type.SimpleRelation))
+                        .execute(leftCursor.next(), rightCursor, srGroup.operatorSR.toSpatialReference(), null, operatorType);
 
                 if (result_map.size() == 1) {
-                    operatorResultBuilder.setSpatialRelationship(result_map.get(0L));
+                    operatorResultBuilder.setSpatialRelationship(result_map.get(0));
                     operatorResultBuilder.putAllRelateMap(result_map);
                 } else {
                     operatorResultBuilder.putAllRelateMap(result_map);
@@ -566,11 +561,11 @@ public class GeometryServiceUtil {
                     if (!srGroup.checkLeftRightTopoOperation()) {
                         throw new GeometryException("for spatial operations the left and right spatial reference must equal one another if the operation and the result spatial reference aren't defined");
                     }
-                    resultCursor = new SimpleGeometryCursor(OperatorUnion.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR, null));
+                    resultCursor = new SimpleGeometryCursor(OperatorUnion.local().execute(leftCursor.next(), rightCursor.next(), srGroup.operatorSR.toSpatialReference(), null));
                 } else {
                     resultCursor = OperatorUnion.local().execute(
                             leftCursor,
-                            srGroup.operatorSR,
+                            srGroup.operatorSR.toSpatialReference(),
                             null);
                 }
                 break;
@@ -581,13 +576,13 @@ public class GeometryServiceUtil {
                 resultCursor = OperatorDifference.local().execute(
                         leftCursor,
                         rightCursor,
-                        srGroup.operatorSR,
+                        srGroup.operatorSR.toSpatialReference(),
                         null);
                 break;
             case BUFFER:
                 // TODO clean this up
                 //                GeometryCursor inputGeometryBag,
-                //                SpatialReference sr,
+                //                SpatialReferenceEx sr,
                 //                double[] distances,
                 //                double max_deviation,
                 //                int max_vertices_in_full_circle,
@@ -601,8 +596,7 @@ public class GeometryServiceUtil {
 
                 double[] d = new double[] {operatorRequest.getBufferParams().getDistance()};
 
-                resultCursor = OperatorBuffer.local().execute(leftCursor,
-                                                              srGroup.operatorSR,
+                resultCursor = OperatorBufferEx.local().execute(leftCursor, srGroup.operatorSR,
                                                               d,
                                                               Double.NaN,
                                                               maxverticesFullCircle,
@@ -620,16 +614,16 @@ public class GeometryServiceUtil {
                     resultCursor = OperatorIntersection.local().execute(
                             leftCursor,
                             rightCursor,
-                            srGroup.operatorSR,
+                            srGroup.operatorSR.toSpatialReference(),
                             null,
                             operatorRequest.getIntersectionParams().getDimensionMask());
                 } else {
-                    resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR, null);
+                    resultCursor = OperatorIntersection.local().execute(leftCursor, rightCursor, srGroup.operatorSR.toSpatialReference(), null);
                 }
                 break;
             case CLIP:
                 Envelope2D envelope2D = extractEnvelope2D(operatorRequest.getClipParams().getEnvelope());
-                resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, srGroup.operatorSR, null);
+                resultCursor = OperatorClip.local().execute(leftCursor, envelope2D, srGroup.operatorSR.toSpatialReference(), null);
                 break;
             case CUT:
                 if (!srGroup.checkLeftRightTopoOperation()) {
@@ -639,7 +633,7 @@ public class GeometryServiceUtil {
                         operatorRequest.getCutParams().getConsiderTouch(),
                         leftCursor,
                         (Polyline) rightCursor.next(),
-                        srGroup.operatorSR,
+                        srGroup.operatorSR.toSpatialReference(),
                         null);
                 break;
             case DENSIFY_BY_LENGTH:
@@ -651,21 +645,21 @@ public class GeometryServiceUtil {
             case SIMPLIFY:
                 resultCursor = OperatorSimplify.local().execute(
                         leftCursor,
-                        srGroup.operatorSR,
+                        srGroup.operatorSR.toSpatialReference(),
                         true,
                         null);
                 break;
             case SIMPLIFY_OGC:
                 resultCursor = OperatorSimplifyOGC.local().execute(
                         leftCursor,
-                        srGroup.operatorSR,
+                        srGroup.operatorSR.toSpatialReference(),
                         operatorRequest.getSimplifyParams().getForce(),
                         null);
                 break;
             case OFFSET:
                 resultCursor = OperatorOffset.local().execute(
                         leftCursor,
-                        srGroup.operatorSR,
+                        srGroup.operatorSR.toSpatialReference(),
                         operatorRequest.getOffsetParams().getDistance(),
                         OperatorOffset.JoinType.valueOf(operatorRequest.getOffsetParams().getJoinType().toString()),
                         operatorRequest.getOffsetParams().getBevelRatio(),
@@ -685,7 +679,7 @@ public class GeometryServiceUtil {
                 resultCursor = OperatorSymmetricDifference.local().execute(
                         leftCursor,
                         rightCursor,
-                        srGroup.operatorSR,
+                        srGroup.operatorSR.toSpatialReference(),
                         null);
                 break;
             case CONVEX_HULL:
@@ -826,12 +820,12 @@ public class GeometryServiceUtil {
         return extractGeometryCursor(geometryData);
     }
 
-    static SpatialReference extractSpatialReference(GeometryData geometryData) {
+    static SpatialReferenceEx extractSpatialReference(GeometryData geometryData) {
         return geometryData.hasSr() ? extractSpatialReference(geometryData.getSr()) : null;
     }
 
 
-    protected static SpatialReference extractSpatialReference(GeometryRequest geometryRequest) {
+    protected static SpatialReferenceEx extractSpatialReference(GeometryRequest geometryRequest) {
         if (geometryRequest.hasResultSr()) {
             return extractSpatialReference(geometryRequest.getResultSr());
         } else if (geometryRequest.hasOperationSr()) {
@@ -849,16 +843,16 @@ public class GeometryServiceUtil {
     }
 
 
-    protected static SpatialReference extractSpatialReference(SpatialReferenceData serviceSpatialReference) {
+    protected static SpatialReferenceEx extractSpatialReference(SpatialReferenceData serviceSpatialReference) {
         // TODO there seems to be a bug where hasWkid() is not getting generated. check back later
         if (serviceSpatialReference.getWkid() != 0)
-            return SpatialReference.create(serviceSpatialReference.getWkid());
+            return SpatialReferenceEx.create(serviceSpatialReference.getWkid());
         else if (serviceSpatialReference.getWkt().length() > 0)
-            return SpatialReference.create(serviceSpatialReference.getWkt());
+            return SpatialReferenceEx.create(serviceSpatialReference.getWkt());
         else if (serviceSpatialReference.getProj4().length() > 0)
-            return SpatialReference.createFromProj4(serviceSpatialReference.getProj4());
+            return SpatialReferenceEx.createFromProj4(serviceSpatialReference.getProj4());
         else if (serviceSpatialReference.hasCustom() && serviceSpatialReference.getCustom().getCsType() == SpatialReferenceData.CSType.LAMBERT_AZI)
-            return SpatialReference.createEqualArea(serviceSpatialReference.getCustom().getLon0(), serviceSpatialReference.getCustom().getLat0());
+            return SpatialReferenceEx.createEqualArea(serviceSpatialReference.getCustom().getLon0(), serviceSpatialReference.getCustom().getLat0());
         else
             return null;
     }
@@ -895,28 +889,28 @@ public class GeometryServiceUtil {
         if (geometryData.getWkb().size() > 0) {
             SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(
                     geometryData.getWkb().asReadOnlyByteBuffer(),
-                    geometryData.getGeometryId(),
+                    (int)geometryData.getGeometryId(),
                     SimpleStateEnum.valueOf(geometryData.getSimple().name()),
                     geometryData.getFeatureId());
             geometryCursor = new OperatorImportFromWkbCursor(0, simpleByteBufferCursor);
         } else if (geometryData.getEsriShape().size() > 0) {
             SimpleByteBufferCursor simpleByteBufferCursor = new SimpleByteBufferCursor(
                     geometryData.getEsriShape().asReadOnlyByteBuffer(),
-                    geometryData.getGeometryId(),
+                    (int)geometryData.getGeometryId(),
                     SimpleStateEnum.valueOf(geometryData.getSimple().name()),
                     geometryData.getFeatureId());
             geometryCursor = new OperatorImportFromESRIShapeCursor(0, 0, simpleByteBufferCursor);
         } else if (geometryData.getWkt().length() > 0) {
             SimpleStringCursor simpleStringCursor = new SimpleStringCursor(
                     geometryData.getWkt(),
-                    geometryData.getGeometryId(),
+                    (int)geometryData.getGeometryId(),
                     SimpleStateEnum.valueOf(geometryData.getSimple().name()),
                     geometryData.getFeatureId());
             geometryCursor = new OperatorImportFromWktCursor(0, simpleStringCursor);
         } else if (geometryData.getGeojson().length() > 0) {
             SimpleStringCursor simpleStringCursor = new SimpleStringCursor(
                     geometryData.getGeojson(),
-                    geometryData.getGeometryId(),
+                    (int)geometryData.getGeometryId(),
                     SimpleStateEnum.valueOf(geometryData.getSimple().name()),
                     geometryData.getFeatureId());
             MapGeometryCursor mapGeometryCursor = new OperatorImportFromGeoJsonCursor(

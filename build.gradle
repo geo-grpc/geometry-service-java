@@ -36,9 +36,10 @@ dependencies {
     compile 'javax.annotation:javax.annotation-api:1.3.2'
 //  compile project(':esri-geometry-api')
     compile files('/usr/local/lib/proj.jar')
-    compile files('../geometry-api-java/build/libs/jackson-core-2.6.2.jar')
-    compile files('../geometry-api-java/build/libs/epl-geometry-api-2.0.0.jar')
-    compile files('../geometry-api-java/build/libs/json-20170516.jar')
+
+//    compile files('../geometry-api-java-ex/build/libs/jackson-core-2.9.6.jar')
+    compile files('/Users/davidraleigh/code/davidraleigh/geometry-api-java/build/libs/epl-geometry-api-2.2.3.jar')
+    compile files('/Users/davidraleigh/code/geo-grpc/geometry-api-java-ex/build/libs/geometry-chain-2.2.3.jar')
 //  compile files('/Users/davidraleigh/code/google/grpc-java/grpclb/build/libs/grpc-grpclb-1.2.0.jar')
 //  compile 'com.esri.geometry:esri-geometry-api:1.2.1'
 
